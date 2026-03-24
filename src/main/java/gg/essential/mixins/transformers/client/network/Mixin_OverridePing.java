@@ -26,6 +26,9 @@ public class Mixin_OverridePing {
 
     @Final
     @Shadow(aliases = {
+        //#if MC >= 26.1
+        //$$ "val$data",
+        //#else
         //#if NEOFORGE
         //#if MC>=12106
         //$$ "val$p_105460_"
@@ -37,6 +40,7 @@ public class Mixin_OverridePing {
         "field_3776",
         "val$p_147224_1_",
         "val$p_105460_",
+        //#endif
         //#endif
     })
     private ServerData server;

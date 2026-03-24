@@ -12,6 +12,8 @@
 package gg.essential.gui.friends.previews
 
 import com.sparkuniverse.toolbox.chat.model.Channel
+import com.sparkuniverse.toolbox.chat.model.MessageContent.Media
+import gg.essential.cosmetics.CosmeticId
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
@@ -29,7 +31,6 @@ import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.elementa.state.v2.toV2
-import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.friends.message.v2.ClientMessage
 import gg.essential.gui.friends.state.PlayerActivity
 import gg.essential.gui.friends.state.SocialStates
@@ -37,7 +38,6 @@ import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.studio.Tag
 import gg.essential.gui.util.hoveredState
-import gg.essential.sps.SpsAddress
 import gg.essential.universal.USound
 import gg.essential.util.*
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
@@ -48,7 +48,6 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.NodeRenderer
 import org.commonmark.renderer.text.TextContentNodeRendererContext
 import org.commonmark.renderer.text.TextContentRenderer
-import okhttp3.HttpUrl
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -56,7 +55,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
-import gg.essential.gui.elementa.state.v2.stateBy as stateByV2
 
 class ChannelPreview(
     val channel: Channel,
@@ -277,39 +275,27 @@ class ChannelPreview(
                 "Click to send a message!"
             })
         )
-        val content = message.contents
-
-        val urlMatches = MessageUtils.URL_REGEX.findAll(content)
-        val onlyUrls = urlMatches.count() > 0 && content.replace(MessageUtils.URL_REGEX, "").isBlank()
-
-        val inviteMatch = MessageUtils.INVITE_URL_REGEX.find(content)
-        val skinMatch = MessageUtils.SKIN_URL_REGEX.find(content)
-        val giftMatch = MessageUtils.GIFT_URL_REGEX.find(content)
-        if (onlyUrls) {
-            return when {
-                MessageUtils.SCREENSHOT_URL_REGEX.find(content) != null ->
-                    Pair(EssentialPalette.PICTURES_SHORT_9X7, State { pictureDescription(message) })
-                inviteMatch != null ->
-                    Pair(EssentialPalette.ENVELOPE_9X7, inviteDescription(inviteMatch.value))
-                skinMatch != null ->
-                    Pair(EssentialPalette.PERSON_4X6, stateOf("Shared a skin"))
-                giftMatch != null ->
-                    Pair(EssentialPalette.WARDROBE_GIFT_7X, giftDescription(giftMatch.value))
-                false ->
-                    Pair(EssentialPalette.COSMETICS_10X7, stateOf("Shared an outfit")) // TODO: Add outfit message condition
-                else ->
-                    Pair(EssentialPalette.LINK_8X7, textDescription(message))
-            }
+        return when (val part = message.parts.firstOrNull()) {
+            is ClientMessage.Part.Text ->
+                Pair(null, textDescription(part.content))
+            is ClientMessage.Part.Image ->
+                Pair(EssentialPalette.PICTURES_SHORT_9X7, State { pictureDescription(message) })
+            is ClientMessage.Part.Skin ->
+                Pair(EssentialPalette.PERSON_4X6, stateOf("Shared a skin"))
+            is ClientMessage.Part.Gift ->
+                Pair(EssentialPalette.WARDROBE_GIFT_7X, giftDescription(part.id))
+            // is Outfit ->
+            //    Pair(EssentialPalette.COSMETICS_10X7, stateOf("Shared an outfit")) // TODO: Add outfit message condition
+            null ->
+                Pair(null, stateOf("Unknown"))
         }
-
-        return Pair(null, textDescription(message))
     }
 
-    private fun textDescription(message: ClientMessage): State<String> {
+    private fun textDescription(text: String): State<String> {
         return stateOf(markdownRenderer.render(
             Parser.builder()
                 .build()
-                .parse(message.contents)
+                .parse(text)
         ).split("\n")[0]) // stop at new line
     }
 
@@ -320,36 +306,15 @@ class ChannelPreview(
             if (message.sender != loopMessage.sender) {
                 break
             }
-            val numberOfScreenshotsInMessage =
-                MessageUtils.SCREENSHOT_URL_REGEX.findAll(loopMessage.contents).count()
-            if (numberOfScreenshotsInMessage == 0) {
+            if (loopMessage.content !is Media) {
                 break
             }
-            numberOfPictures += numberOfScreenshotsInMessage
+            numberOfPictures += loopMessage.content.mediaIds.size
         }
         return "$numberOfPictures Picture" + (if (numberOfPictures == 1) "" else "s")
     }
 
-    private fun inviteDescription(inviteUrl: String): State<String> {
-        val url = HttpUrl.parse(inviteUrl) ?: return stateOf("Invite")
-        val name = url.queryParameter("name")
-        if (name != null) {
-            return stateOf(name)
-        }
-
-        val address = url.pathSegments().getOrNull(1) ?: return stateOf("Invite")
-        val host = SpsAddress.parse(address)?.host
-            ?: return stateOf(address)
-
-        return stateByV2 {
-            val username = UuidNameLookup.nameState(host)()
-            if (username.isNotBlank()) "$username's World" else "Invite"
-        }
-    }
-
-    private fun giftDescription(giftUrl: String): State<String> {
-        val url = HttpUrl.parse(giftUrl) ?: return stateOf("Gift")
-        val cosmeticId = url.pathSegments()[1] ?: return stateOf("Gift")
+    private fun giftDescription(cosmeticId: CosmeticId): State<String> {
         val cosmetic = platform.cosmeticsManager.cosmeticsData.getCosmetic(cosmeticId) ?: return stateOf("Gift")
 
         return stateOf("Gift: ${cosmetic.displayName}")

@@ -43,9 +43,10 @@ import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.elementa.state.v2.toV2
 import gg.essential.gui.friends.message.MessageScreen
 import gg.essential.gui.friends.message.MessageUtils
-import gg.essential.gui.friends.message.MessageUtils.handleMarkdownUrls
 import gg.essential.gui.friends.message.NewReportMessageModal
 import gg.essential.gui.friends.state.IMessengerStates
+import gg.essential.gui.notification.Notifications
+import gg.essential.gui.notification.error
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.sendCheckmarkNotification
 import gg.essential.gui.util.hoveredState
@@ -145,16 +146,10 @@ class MessageWrapperImpl(
                 height *= GuiScaleOffsetConstraint(getGuiScaleOffset())
             } childOf this
 
-
-            val cleanedText = replyTo.contents.handleMarkdownUrls()
-            val trimmedLength = cleanedText.trim().removePrefix("<").removeSuffix(">").length
-            val messageIsOnlyImage = MessageUtils.URL_REGEX.findAll(cleanedText).any {
-                it.value.removeSuffix(">").length >= trimmedLength
-            }
-            val messagePreviewText = if (messageIsOnlyImage) {
-                "Image"
-            } else {
-                cleanedText
+            val messagePreviewText = when (val part = replyTo.parts.firstOrNull()) {
+                is ClientMessage.Part.Text -> part.content
+                is ClientMessage.Part.Image -> "Image"
+                else -> "Unknown"
             }
 
             val replyTextContent = if (replyTo == MessageRef.DELETED) {
@@ -261,10 +256,9 @@ class MessageWrapperImpl(
             x = 0.pixels(alignOpposite = message.sender == USession.activeNow().uuid)
         } childOf messageContainer
 
-        if (!actionButtonHitbox.hasParent && !message.channel.isAnnouncement() // Don't add reply button to invite embeds
+        if (!actionButtonHitbox.hasParent && !message.channel.isAnnouncement()
             && !((message.sendState is SendState.Blocked || messageScreen.preview.isChannelSuspendedState.getUntracked()))
-            && !(line is GiftEmbed)
-            && !(line is SkinEmbed)
+            && (line is ParagraphLine || (line is ImageEmbed && !sentByClient))
         ) {
             val messageBox = (line as? ParagraphLineImpl)?.bubble ?: line
             val actionTooltipText = BasicState(if (sentByClient) "Edit" else "Reply")
@@ -391,10 +385,13 @@ class MessageWrapperImpl(
                     "Copy Link",
                     image = EssentialPalette.LINK_10X7
                 ) {
-                    UDesktop.setClipboardString(component.url.toString())
-
-                    sendCheckmarkNotification("Link copied to clipboard")
-
+                    val url = component.url
+                    if (url != null) {
+                        UDesktop.setClipboardString(url.toString())
+                        sendCheckmarkNotification("Link copied to clipboard")
+                    } else {
+                        Notifications.error("Failed to copy link", "")
+                    }
                 }
                 val copyImageOption = ContextOptionMenu.Option("Copy Picture", image = EssentialPalette.COPY_10X7) {
                     component.copyImageToClipboard()
@@ -404,7 +401,12 @@ class MessageWrapperImpl(
                 }
                 val openInBrowserOption =
                     ContextOptionMenu.Option("Open in Browser", image = EssentialPalette.ARROW_UP_RIGHT_5X5) {
-                        UDesktop.browse(component.url.toURI())
+                        val url = component.url
+                        if (url != null) {
+                            UDesktop.browse(url.toURI())
+                        } else {
+                            Notifications.error("Failed to open link", "")
+                        }
                     }
 
                 if (channelType != ChannelType.ANNOUNCEMENT) {

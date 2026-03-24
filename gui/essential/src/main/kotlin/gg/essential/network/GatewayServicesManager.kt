@@ -173,6 +173,8 @@ class GatewayServicesManager(
 
         override suspend fun <T> request(path: String, configure: Request.Builder.() -> Unit, handleResponse: suspend (Response) -> T): T =
             request(httpClient(), path, configure, handleResponse)
+
+        override suspend fun baseUrl() = serviceInfo().baseUrl
     }
 
     companion object {

@@ -98,6 +98,10 @@ public class Plugin implements IMixinConfigPlugin {
         //$$ );
         //#endif
 
+        //#if FORGE && MC >= 1.16 && MC < 1.21.6
+        //$$ gg.essential.util.WorkaroundBrokenEventSubclassTransformer.apply();
+        //#endif
+
 
         // Note: These are not properly supported! Use only for debugging!
         List<MixinTransformerWrapper.Transformer> globalTransformers = new ArrayList<>();

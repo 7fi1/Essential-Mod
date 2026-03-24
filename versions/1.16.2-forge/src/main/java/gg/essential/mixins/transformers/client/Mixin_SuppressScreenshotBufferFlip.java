@@ -25,12 +25,22 @@ public class Mixin_SuppressScreenshotBufferFlip {
 
     @WrapWithCondition(
             method = "flipFrame",
+            //#if MC >= 26.1
+            //$$ at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuDevice;presentFrame()V", remap = false)
+            //#else
             at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapBuffers(J)V", remap = false)
+            //#endif
             //#if FABRIC || MC>=12000
             //$$ , remap = false
             //#endif
     )
-    private static boolean essential$swapBuffers(long unused) {
+    private static boolean essential$swapBuffers(
+        //#if MC >= 26.1
+        //$$ com.mojang.blaze3d.systems.GpuDevice unused
+        //#else
+        long unused
+        //#endif
+    ) {
         return !Essential.getInstance().getConnectionManager().getScreenshotManager().suppressBufferSwap();
     }
 }

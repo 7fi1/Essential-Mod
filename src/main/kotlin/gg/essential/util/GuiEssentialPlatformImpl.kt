@@ -250,6 +250,9 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
     override val essentialBaseDir: Path
         get() = Essential.getInstance().baseDir.toPath()
 
+    override val mcBaseDir: Path
+        get() = UMinecraft.getMinecraft().mcDataDir.toPath()
+
     override val config: GuiEssentialPlatform.Config
         get() = EssentialConfig
 
@@ -264,6 +267,9 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         //#else
         //$$ get() = "1.8.9"
         //#endif
+
+    override val localModList: Map<String, String>
+        get() = ModLoaderUtil.getMods().associate { it.name to it.version }
 
     override fun currentServerType(): ServerType? {
         val minecraft = Minecraft.getMinecraft()

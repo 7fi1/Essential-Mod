@@ -12,15 +12,18 @@
 package gg.essential.gui.friends.message.v2
 
 import com.sparkuniverse.toolbox.chat.model.Channel
+import com.sparkuniverse.toolbox.chat.model.MessageContent
+import com.sparkuniverse.toolbox.chat.model.MessageContent.CosmeticGift
+import com.sparkuniverse.toolbox.chat.model.MessageContent.Media
+import com.sparkuniverse.toolbox.chat.model.MessageContent.Plain
+import com.sparkuniverse.toolbox.chat.model.MessageContent.Unknown
+import gg.essential.config.EssentialConfig
 import gg.essential.cosmetics.CosmeticId
 import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.friends.message.MessageUtils.handleMarkdownUrls
-import gg.essential.mod.Model
 import gg.essential.mod.Skin
-import okhttp3.HttpUrl
+import gg.essential.network.cosmetics.toMod
 import org.slf4j.LoggerFactory
-import java.net.MalformedURLException
-import java.net.URL
 import java.time.Instant
 import java.util.*
 
@@ -28,7 +31,7 @@ data class ClientMessage(
     val id: Long,
     val channel: Channel,
     val sender: UUID,
-    val contents: String,
+    val content: MessageContent,
     val sendState: SendState,
     val replyTo: MessageRef?,
     val lastEditTime: Long?,
@@ -37,54 +40,36 @@ data class ClientMessage(
     val sendTime: Instant = Instant.ofEpochMilli(createdAt)
     val sent = sendState == SendState.Confirmed
     val parts: List<Part> = buildList {
-        val cleanedText = contents.handleMarkdownUrls()
-        var strippedText = cleanedText
-
-        fun stripUrl(url: String) {
-            val bracketedUrl = "<$url>"
-            strippedText = if (strippedText.indexOf(bracketedUrl) != -1) {
-                strippedText.replace(bracketedUrl, "")
-            } else {
-                strippedText.replace(url, "")
+        when (content) {
+            is Plain -> {
+                add(0, Part.Text(content.getText(EssentialConfig.chatFilterWithSource.getUntracked().first).handleMarkdownUrls()))
             }
-        }
 
-        // Replace no embed urls with "" so they are not parsed for embeds
-        MessageUtils.SCREENSHOT_URL_REGEX.findAll(MessageUtils.URL_NO_EMBED_REGEX.replace(cleanedText, "")).forEach {
-            val match = it.value.removeSuffix(">")
-
-            try {
-                add(Part.Image(URL(match)))
-                stripUrl(match)
-            } catch (e: MalformedURLException) {
-                LOGGER.debug("Ignoring invalid URL:", e)
-            }
-        }
-
-        MessageUtils.URL_REGEX.findAll(MessageUtils.URL_NO_EMBED_REGEX.replace(cleanedText, "")).forEach {
-            val match = it.value.removeSuffix(">")
-
-            HttpUrl.parse(match)?.let { url ->
-                if (url.host() == "essential.gg" && url.pathSegments().size > 1) {
-                    if (url.pathSegments()[0] == "gift") {
-                        add(Part.Gift(url.pathSegments()[1]))
-                        stripUrl(match)
-                    } else if (url.pathSegments()[0] == "skin" && url.pathSegments().size > 2) {
-                        add(Part.Skin(Skin(url.pathSegments()[2], Model.byVariantOrDefault(url.pathSegments()[1]))))
-                        stripUrl(match)
-                    }
+            is Media -> {
+                for (mediaId in content.mediaIds) {
+                    add(Part.Image(mediaId))
                 }
             }
-        }
 
-        if (strippedText.isNotBlank()) {
-            add(0, Part.Text(MessageUtils.URL_NO_EMBED_REGEX.replace(cleanedText, "<$1>"))) // Strip outer < > from no embed urls
+            // TODO: EM-3088 - Server and SPS invites
+
+            is CosmeticGift -> {
+                add(Part.Gift(content.cosmeticId))
+            }
+
+            is MessageContent.Skin -> {
+                add(Part.Skin(Skin(content.hash, content.model.toMod())))
+            }
+
+            is Unknown -> {
+                add(Part.Text("Message Unavailable: Please update Essential"))
+            }
         }
     }
 
     sealed interface Part {
         data class Text(val content: String) : Part
-        data class Image(val url: URL) : Part
+        data class Image(val id: String) : Part
         data class Gift(val id: CosmeticId) : Part
         data class Skin(val skin: gg.essential.mod.Skin) : Part
     }

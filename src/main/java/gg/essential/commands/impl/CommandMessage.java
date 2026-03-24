@@ -13,6 +13,8 @@ package gg.essential.commands.impl;
 
 import com.google.common.collect.ImmutableSet;
 import com.sparkuniverse.toolbox.chat.model.Message;
+import com.sparkuniverse.toolbox.chat.model.MessageContent;
+import gg.essential.Essential;
 import gg.essential.api.commands.*;
 import gg.essential.commands.engine.EssentialFriend;
 import gg.essential.config.EssentialConfig;
@@ -60,7 +62,18 @@ public class CommandMessage extends Command {
         public void accept(Optional<Packet> packet) {
             if (packet.isPresent() && packet.get() instanceof ServerChatChannelMessagePacket) {
                 Message messageObj = CollectionsKt.first(Arrays.asList(((ServerChatChannelMessagePacket) packet.get()).getMessages()));
-                onConfirm("§dTo " + friend.getIgn() + "§r: " + messageObj.getContents(EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst()));
+                switch (messageObj.getContent().getType()) {
+                    case PLAIN:
+                        onConfirm("§dTo " + friend.getIgn() + "§r: " + ((MessageContent.Plain) messageObj.getContent()).getText(EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst()));
+                        break;
+                    case MEDIA:
+                        onConfirm("Sent picture to " + friend.getIgn());
+                        break;
+                    default:
+                        Essential.logger.error("Unsupported message type for CommandMessage: {}", messageObj.getContent().getType());
+                        onConfirm("Error!");
+                        break;
+                }
             } else {
                 onConfirm("Error!");
             }

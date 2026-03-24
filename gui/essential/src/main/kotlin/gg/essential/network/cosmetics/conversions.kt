@@ -96,7 +96,6 @@ fun InfraCosmeticTier?.toMod() = when (this) {
 
 fun InfraCosmeticCategory.toMod() = CosmeticCategory(
     id,
-    icon.toMod(),
     displayNames,
     compactNames,
     descriptions,
@@ -124,21 +123,18 @@ fun InfraCosmetic.toMod(type: CosmeticType, settings: List<CosmeticProperty>): C
     return Cosmetic(
         CosmeticBase(
             id,
-            type,
+            type.slot,
             tier.toMod(),
             displayNames,
             assetsMap.mapValues { it.value.toMod() },
             settings,
         ),
         CosmeticStoreInfo(
-            storePackageId,
-            priceCoins?.let { mapOf("coins" to it.toDouble()) } ?: mapOf(),
+            prices["coins"]?.toInt(),
             tags,
-            createdAt.toInstant(),
             availableAfter?.toInstant(),
             availableUntil?.toInstant(),
             showTimerAfter?.toInstant(),
-            skinLayers.toMod(),
             categories,
             defaultSortWeight ?: 20,
         ),

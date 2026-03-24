@@ -28,6 +28,10 @@ import net.minecraft.client.render.RenderLayer
 import net.minecraft.util.Identifier
 import net.minecraft.util.TriState
 
+//#if MC >= 26.1
+//$$ import com.mojang.blaze3d.pipeline.ColorTargetState
+//#endif
+
 //#if MC>=12111
 //$$ import net.minecraft.client.render.LayeringTransform
 //$$ import net.minecraft.client.render.OutputTarget
@@ -67,19 +71,29 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
             pipeline.uniforms.forEach { uniform ->
                 withUniform(uniform.name(), uniform.type())
             }
-            withDepthTestFunction(pipeline.depthTestFunction)
             withPolygonMode(pipeline.polygonMode)
             withCull(pipeline.isCull)
+            //#if MC >= 26.1
+            //$$ withColorTargetState(pipeline.colorTargetState)
+            //#else
             if (pipeline.blendFunction.isPresent) {
                 withBlend(pipeline.blendFunction.get())
             } else {
                 withoutBlend()
             }
             withColorWrite(pipeline.isWriteColor, pipeline.isWriteAlpha)
-            withDepthWrite(pipeline.isWriteDepth)
-            withColorLogic(pipeline.colorLogic)
-            withVertexFormat(pipeline.vertexFormat, pipeline.vertexFormatMode)
+            //#endif
+            //#if MC >= 26.1
+            //$$ withDepthStencilState(java.util.Optional.ofNullable(pipeline.depthStencilState))
+            //#else
+            withDepthTestFunction(pipeline.depthTestFunction)
             withDepthBias(pipeline.depthBiasScaleFactor, pipeline.depthBiasConstant)
+            withDepthWrite(pipeline.isWriteDepth)
+            //#endif
+            //#if MC < 26.1
+            withColorLogic(pipeline.colorLogic)
+            //#endif
+            withVertexFormat(pipeline.vertexFormat, pipeline.vertexFormatMode)
         }
         //#endif
 
@@ -150,7 +164,11 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
             )
 
         private val particleAdditivePipeline = RenderPipelines.TRANSLUCENT_PARTICLE.toBuilder()
+            //#if MC >= 26.1
+            //$$ .withColorTargetState(ColorTargetState(BlendFunction.LIGHTNING))
+            //#else
             .withBlend(BlendFunction.LIGHTNING)
+            //#endif
             .build()
             //#if FABRIC
             .assignIrisProgram {{ IrisProgram.PARTICLES_TRANSLUCENT }}

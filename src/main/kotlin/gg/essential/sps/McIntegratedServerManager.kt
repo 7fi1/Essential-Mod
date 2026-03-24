@@ -30,9 +30,11 @@ import gg.essential.mixins.transformers.server.integrated.LanConnectionsAccessor
 import gg.essential.sps.IntegratedServerManager.Difficulty
 import gg.essential.sps.IntegratedServerManager.GameMode
 import gg.essential.sps.IntegratedServerManager.ServerResourcePack
+import gg.essential.sps.IntegratedServerManager.SuspendingMutableState
 import gg.essential.universal.wrappers.UPlayer
 import gg.essential.util.Client
 import gg.essential.util.ModLoaderUtil
+import gg.essential.util.TaskQueueWithResultOnFinish
 import gg.essential.util.USession
 import gg.essential.util.UuidNameLookup
 import gg.essential.util.textTranslatable
@@ -47,12 +49,34 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import net.minecraft.client.resources.I18n
+import net.minecraft.nbt.CompressedStreamTools
 import net.minecraft.server.integrated.IntegratedServer
 import net.minecraft.server.management.UserListWhitelistEntry
+import net.minecraft.world.GameRules
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import net.minecraft.world.EnumDifficulty as McDifficulty
 import net.minecraft.world.GameType as McGameMode
+import java.time.Instant
 import java.util.*
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
+
+//#if MC >= 1.21.11
+//$$ import net.minecraft.world.rule.GameRule;
+//#endif
+
+//#if MC >= 1.16 && MC < 1.21.11
+//$$ import gg.essential.mixins.transformers.feature.gamerules.MixinGameRulesAccessor
+//#endif
+
+//#if MC >= 1.21.5
+//$$ import kotlin.jvm.optionals.getOrNull
+//#endif
+
+//#if MC >= 1.20.4
+//$$ import net.minecraft.nbt.NbtSizeTracker
+//#endif
 
 //#if MC>=12109
 //$$ import net.minecraft.server.PlayerConfigEntry
@@ -72,6 +96,8 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     override val thirdPartyVoicePort: MutableState<Int?> = mutableStateOf(null)
     override val connectedPlayers: MutableListState<UUID> = mutableListStateOf()
     override val maxPlayers: MutableState<Int?> = mutableStateOf(null)
+
+    override val lastPlayed: Instant
 
     private val hostUuid = USession.activeNow().uuid
     override val connectedGuests: ListState<UUID>
@@ -93,6 +119,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     private val difficultySourceState = mutableStateOf<MutableState<Difficulty>?>(null)
     private val difficultyLockedSourceState = mutableStateOf<MutableState<Boolean>?>(null)
     private val defaultGameModeSourceState = mutableStateOf<MutableState<GameMode>?>(null)
+    private val gameRulesSourceState = mutableStateOf<SuspendingMutableState<Map<String, String>>?>(null)
     private val cheatsEnabledSourceState = mutableStateOf<State<Boolean>?>(null)
     private var openToLanUpdateJob: Job? = null
     private var whitelistUpdateJob: Job? = null
@@ -110,7 +137,59 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
 
     var appliedOpenToLan: Boolean = false
 
+    private val gameRuleUpdateQueue = TaskQueueWithResultOnFinish(coroutineScope, server.coroutineScope) { gameRulesSourceAsMap: Map<String, String>? ->
+        if (gameRulesSourceAsMap == null) return@TaskQueueWithResultOnFinish
+        isGameRulesControlledByState = false
+        val serverGameRules = getServerGameRules()
+        //#if MC >= 1.21.11
+        //$$ serverGameRules.accept(object : net.minecraft.world.rule.GameRuleVisitor {
+        //$$     override fun visitBoolean(rule: GameRule<Boolean>) {
+        //$$         val valueStr: String = gameRulesSourceAsMap[rule.getId().toString()] ?: return
+        //$$         serverGameRules.setValue(rule, valueStr.toBoolean(), server)
+        //$$     }
+        //$$     override fun visitInt(rule: GameRule<Int>) {
+        //$$         val valueStr: String = gameRulesSourceAsMap[rule.getId().toString()] ?: return
+        //$$         serverGameRules.setValue(rule, valueStr.toInt(), server)
+        //$$     }
+        //$$ })
+        //#elseif MC >= 1.16
+        //#if MC >= 1.21.2
+        //$$ serverGameRules.accept(object : GameRules.Visitor {
+        //#else
+        //$$ @Suppress("UNCHECKED_CAST")
+        //$$ GameRules.visitAll(object : GameRules.IRuleEntryVisitor {
+        //#endif
+        //$$    override fun <T : GameRules.RuleValue<T>> visit(
+        //$$        key: GameRules.RuleKey<T>,
+        //$$        type: GameRules.RuleType<T>
+        //$$    ) {
+        //$$        val valueStr = gameRulesSourceAsMap[key.name] ?: return
+        //$$        val value = serverGameRules.get(key)
+        //$$
+        //$$        if (value is GameRules.BooleanValue) {
+        //$$            val newValue = GameRules.BooleanValue(
+        //$$                type as GameRules.RuleType<GameRules.BooleanValue>,
+        //$$                valueStr.toBoolean()
+        //$$            )
+        //$$            value.changeValue(newValue, server)
+        //$$        } else if (value is GameRules.IntegerValue) {
+        //$$            val newValue = GameRules.IntegerValue(
+        //$$                type as GameRules.RuleType<GameRules.IntegerValue>,
+        //$$                valueStr.toInt()
+        //$$            )
+        //$$            value.changeValue(newValue, server)
+        //$$        }
+        //$$    }
+        //$$ })
+        //#else
+        gameRulesSourceAsMap.forEach(serverGameRules::setOrCreateGameRule)
+        //#endif
+        isGameRulesControlledByState = true
+    }
+
     init {
+        lastPlayed = readServerLastPlayedTime()
+
         effect(refHolder) {
             val openToLan = (openToLanSourceState() ?: return@effect)()
 
@@ -267,6 +346,10 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         }
 
         effect(refHolder) {
+            gameRuleUpdateQueue.enqueue { gameRulesSourceState()?.invoke() }
+        }
+
+        effect(refHolder) {
             val cheatsEnabled = (cheatsEnabledSourceState() ?: return@effect)()
 
             server.coroutineScope.launch {
@@ -292,6 +375,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     override fun setDifficultySource(source: MutableState<Difficulty>) = difficultySourceState.set(source.memo().withSetter { source.set(it) })
     override fun setDifficultyLockedSource(source: MutableState<Boolean>) = difficultyLockedSourceState.set(source.memo().withSetter { source.set(it) })
     override fun setDefaultGameModeSource(source: MutableState<GameMode>) = defaultGameModeSourceState.set(source.memo().withSetter { source.set(it) })
+    override fun setGameRulesSource(source: SuspendingMutableState<Map<String, String>>) = gameRulesSourceState.set(source.memo().withSuspendingSetter { source.set(it) })
     override fun setCheatsEnabledSource(source: State<Boolean>) = cheatsEnabledSourceState.set(source.memo())
 
     override val whitelist: State<Set<UUID>?> = State { whitelistSourceState()?.invoke() }
@@ -402,7 +486,82 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     var isDifficultyControlledByState: Boolean = false
     var isDifficultyLockedControlledByState: Boolean = false
     var isDefaultGameModeControlledByState: Boolean = false
+    var isGameRulesControlledByState: Boolean = false
 
+    // NOTE: Called from server main thread!
+    fun updateServerGameRules(changes: Map<String, String>) {
+        gameRuleUpdateQueue.enqueue {
+            gameRulesSourceState.getUntracked()?.set { it + changes }
+            gameRulesSourceState.getUntracked()?.getUntracked()
+        }
+    }
+
+    // NOTE: Called from server main thread!
+    // Called when value changes are unknown, used in Mixin_SetGameRules 1.16 - 1.21.9
+    //#if MC >= 1.16 && MC < 1.21.11
+    //$$ fun updateServerGameRules() {
+    //$$     val serverGameRules = getServerGameRules()
+    //$$     val gameRulesToUpdate = mutableMapOf<String, String>()
+    //$$     (serverGameRules as MixinGameRulesAccessor).rules.forEach { (rule, value) ->
+    //$$         val stringRule = rule.toString()
+            //#if MC >= 1.17
+            //$$ val stringValue = value.serialize()
+            //#else
+            //$$ val stringValue = value.stringValue()
+            //#endif
+    //$$         gameRulesToUpdate[stringRule] = stringValue
+    //$$     }
+    //$$     updateServerGameRules(gameRulesToUpdate)
+    //$$ }
+    //#endif
+
+    private fun getServerGameRules(): GameRules {
+        return server
+            //#if MC >= 26.1
+            //$$ .gameRules
+            //#elseif MC >= 1.21.11
+            //$$ .saveProperties.gameRules
+            //#elseif MC >= 1.16
+            //$$ .gameRules
+            //#else
+            .getWorld(0).gameRules
+            //#endif
+    }
+
+    private fun readServerLastPlayedTime(): Instant {
+        val normalizedWorldFolder = worldFolder.normalize()
+        val levelDatFile =
+            //#if MC >= 1.16
+            //$$ // We need to use level.dat_old in 1.16+ because the level.dat file has already been saved before this
+            //$$ normalizedWorldFolder.resolve("level.dat_old").takeIf { it.exists() } ?:
+            //#endif
+            normalizedWorldFolder.resolve("level.dat").takeIf { it.exists() }
+                ?: return Instant.MIN
+        return try {
+            val nbt = levelDatFile.inputStream().use {
+                //#if MC >= 1.20.4
+                //$$ // Max size from LevelStorage#readLevelProperties
+                //$$ NbtIo.readCompressed(it, NbtSizeTracker.of(0x6400000))
+                //#else
+                CompressedStreamTools.readCompressed(it)
+                //#endif
+            }
+            //#if MC >= 1.21.5
+            //$$ val data = nbt.getCompound("Data").getOrNull()
+            //$$ Instant.ofEpochMilli(data?.getLong("LastPlayed")?.getOrNull() ?: 0)
+            //#else
+            val data = nbt.getCompoundTag("Data")
+            Instant.ofEpochMilli(data.getLong("LastPlayed"))
+            //#endif
+        } catch (e: Exception) {
+            LOGGER.warn("An error occurred when reading last played time at ${normalizedWorldFolder}.", e)
+            Instant.MIN
+        }
+    }
+
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(McIntegratedServerManager::class.java)
+    }
 }
 
 fun Difficulty.toMc(): McDifficulty = McDifficulty.getDifficultyEnum(ordinal)

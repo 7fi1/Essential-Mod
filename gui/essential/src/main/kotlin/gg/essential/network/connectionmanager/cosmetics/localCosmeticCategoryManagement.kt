@@ -12,7 +12,6 @@
 package gg.essential.network.connectionmanager.cosmetics
 
 import gg.essential.cosmetics.CosmeticCategoryId
-import gg.essential.mod.EssentialAsset
 import gg.essential.mod.cosmetics.CosmeticCategory
 import gg.essential.model.util.Instant
 
@@ -21,7 +20,6 @@ import gg.essential.model.util.Instant
  */
 fun CosmeticsDataWithChanges.registerCategory(
     id: String,
-    icon: EssentialAsset,
     displayName: String,
     description: String,
     compactName: String,
@@ -37,7 +35,6 @@ fun CosmeticsDataWithChanges.registerCategory(
         id,
         CosmeticCategory(
             id,
-            icon,
             mapOf("en_us" to displayName),
             mapOf("en_us" to description),
             mapOf("en_us" to compactName),

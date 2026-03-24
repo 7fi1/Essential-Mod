@@ -153,18 +153,55 @@ public class EssentialKeybinding implements GuiEssentialPlatform.Keybind {
         }
     }
 
+    private int heldCount = 0;
+
     private void tickWorld() {
         if (getRequiresEssentialFull() && !EssentialConfig.INSTANCE.getEssentialFull()) return;
-        if (keyBinding.isPressed() && onInitialPress != null) {
+        // keyBinding.isPressed() will detect presses that have occurred between ticks, including if it has since been released
+        // The following blocks check keyBinding.isKeyDown() to see if the key is still being held at the moment of the call
+        if (!pressed && keyBinding.isPressed()) {
+            pressed = true;
+            heldCount = 0;
             keyBindGuiBlocker.block();
-            onInitialPress.run();
-        } else if (keyBinding.isKeyDown() && onRepeatedHold != null) {
-            keyBindGuiBlocker.block(); // TODO should only be needed in the initial block once this method is fixed
-            onRepeatedHold.run();
-        } else if (pressed && !keyBinding.isKeyDown() && onRelease != null) {
-            onRelease.run();
+            if (onInitialPress != null)
+                onInitialPress.run();
         }
-        pressed = keyBinding.isKeyDown();
+
+        // There may have been more keypresses between ticks, so we will drain those here.
+        while (pressed
+                // Avoid counting multiple presses from long holds due to MC-118107
+                && heldCount <= 3
+                // isPressed() internally checks and decrements a counter of queued keypresses, so we can just loop on it
+                && keyBinding.isPressed()) {
+            // Complete the missed keypress event, skipping onRepeatedHold as they didn't hold for even 1 tick
+            if (onRelease != null) onRelease.run();
+
+            // Set us back up for the next keypress to resolve, either next loop, or the rest of the method
+            if (onInitialPress != null) onInitialPress.run();
+            heldCount = 0;
+        }
+
+        // Note: This block can intentionally run in the same tick that `pressed` was set to true, incase `onRelease` needs
+        // to occur immediately
+        if (pressed) {
+            if (keyBinding.isKeyDown()) {
+                heldCount++;
+                if (onRepeatedHold != null)
+                    onRepeatedHold.run();
+            } else {
+                pressed = false;
+
+                // MC's Keybinding doesn't properly interpret OS-level key repeats in all situations and may accumulate
+                // extra "between tick clicks", as detected by the .isPressed() method, when held for a few seconds (MC-118107).
+                // This results in the Keybinding thinking multiple keypresses have been queued up when in reality the key was just held down once.
+                // To counter this, we will forcibly unpress the key to reset it's internal state if we detect a long hold.
+                if (heldCount > 3) ((KeyBindingAccessor) keyBinding).invokeUnpressKey();
+                heldCount = 0;
+
+                if (onRelease != null)
+                    onRelease.run();
+            }
+        }
     }
 
     public boolean isRegisteredWithMinecraft() {
@@ -274,7 +311,13 @@ public class EssentialKeybinding implements GuiEssentialPlatform.Keybind {
         //#endif
         .build();
 
-    // Handles blocking the keybind from reaching GUIs until released
+    /**
+     * Handler to facilitate blocking certain GuiKeyTypedEvent from reaching GUIs while the keybind is held.
+     * <p>
+     * Note: In 1.16+ [GuiKeyTypedEvent]s are split into a keycode event, and a character event. And since there is no
+     * guaranteed way to map a keycode to a character, we cannot consistently cancel ONLY the desired character event.
+     * So this class will simply block ALL character typing events while this keybind's keycode remains held.
+     */
     private class KeyBindGuiBlocker {
         private boolean registered = false;
 
@@ -289,7 +332,7 @@ public class EssentialKeybinding implements GuiEssentialPlatform.Keybind {
         // before any other GuiKeyTypedEvent listener, not just that specific one.
         @Subscribe(priority = 100)
         public void keybindBlocker(GuiKeyTypedEvent event) {
-            if (event.getKeyCode() == getKeyCode()) {
+            if (event.getKeyCode() == getKeyCode() || event.getTypedChar() != '\0') {
                 event.setCancelled(true);
             }
         }

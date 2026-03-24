@@ -32,7 +32,7 @@ import java.util.concurrent.CompletionException
 fun diagnose(modelLoader: ModelLoader, cosmetic: Cosmetic): State<List<Diagnostic>?> {
     val existingDiagnostics = cosmetic.diagnostics ?: listOf()
 
-    if (cosmetic.type.id == "ERROR") {
+    if (cosmetic.slot.id == "ERROR") {
         // metadata failed to load, can't do any further checks until that's fixed
         return stateOf(existingDiagnostics)
     }

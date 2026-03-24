@@ -20,7 +20,6 @@ import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.universal.UMinecraft
 import kotlin.io.path.*
-import org.apache.commons.codec.digest.DigestUtils
 
 //#if FABRIC
 //$$ import gg.essential.lib.gson.JsonObject
@@ -46,13 +45,11 @@ import net.minecraftforge.fml.common.Loader
 //$$ import net.neoforged.neoforge.internal.versions.neoforge.NeoForgeVersion
 //#endif
 
-import java.io.IOException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarFile
-import java.util.jar.Manifest
 
 object ModLoaderUtil {
 
@@ -125,8 +122,10 @@ object ModLoaderUtil {
 
     @JvmStatic
     fun createModsAnnouncePacket() = ClientModsAnnouncePacket(
-        VersionData.getMinecraftVersion(), getModChecksums().values.toTypedArray(),
-        getPlatform(), getPlatformVersion(), modpackId
+        VersionData.getMinecraftVersion(),
+        getPlatform(),
+        getPlatformVersion(),
+        modpackId
     )
 
     private fun getPlatform(): ClientModsAnnouncePacket.Platform {
@@ -158,6 +157,7 @@ object ModLoaderUtil {
         //$$     val modId = modContainer.metadata.id
         //$$     var sourceFile = modContainer.rootPath
         //$$     val modName = modContainer.metadata.name
+        //$$     val version = modContainer.metadata.version.friendlyString
         //#else
         //#if MC>=11400
         //$$ return LoadingModList.get().modFiles.flatMap { fileInfo ->
@@ -171,6 +171,7 @@ object ModLoaderUtil {
             val modName = modContainer.name
         //#endif
             val modId = modContainer.modId
+            val version = modContainer.version.toString() // Not itself a string in 1.16+
         //#endif
             try {
 
@@ -193,10 +194,10 @@ object ModLoaderUtil {
                 if (!sourceFile.isRegularFile()) {
                     return@mapNotNull null
                 }
-                return@mapNotNull ModInfo(modId, modName, sourceFile)
+                return@mapNotNull ModInfo(modId, modName, sourceFile, version)
             } catch (e: Throwable) {
                 Essential.logger.error("Error occurred trying to find source file of $modId", e)
-                return@mapNotNull ModInfo(modId, modName, null)
+                return@mapNotNull ModInfo(modId, modName, null, version)
             }
         }
     }
@@ -298,34 +299,6 @@ object ModLoaderUtil {
         return dependsOnEssential
     }
 
-    private fun getModChecksums(): Map<String, String> {
-        return getMods().mapNotNull { modInfo ->
-            val modId = modInfo.id
-            val sourceFile = modInfo.path ?: return@mapNotNull modId to "ffffffffffffffffffffffffffffffff"
-
-            val checksum = try {
-                FileSystems.newFileSystem(sourceFile, null as ClassLoader?).use { fileSystem ->
-                    val manifestPath = fileSystem.getPath("META-INF", "MANIFEST.MF")
-                    manifestPath.takeIf { Files.exists(it) }
-                        ?.let(Files::newInputStream)
-                        ?.use(::Manifest)
-                        ?.mainAttributes
-                        ?.getValue("Essential-Mod-Checksum")
-                } ?: DigestUtils.md5Hex(sourceFile.readBytes())
-            } catch (e: IOException) {
-                Essential.logger.error(
-                    "Error occurred when getting md5 checksum for mod {} (file={}).",
-                    modId, sourceFile, e
-                )
-                return@mapNotNull null
-            }
-
-            //we cannot possibly know all of feathers checksums so
-            //we will always use this one
-            modId to if (modId != "feather") checksum else "e3d04e686b28b34b5a98ce078e4f9da8"
-        }.toMap()
-    }
-
     private fun getPlatformVersion(): String {
         //#if FABRIC
         //$$ val loader = FabricLoader.getInstance()
@@ -389,6 +362,6 @@ object ModLoaderUtil {
         //#endif
     }
 
-    data class ModInfo(val id: String, val name: String, val path: Path?)
+    data class ModInfo(val id: String, val name: String, val path: Path?, val version: String)
 
 }

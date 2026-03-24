@@ -742,6 +742,9 @@ object EssentialPalette {
     val INFO_9X: ImageFactory = ResourceImageFactory("/assets/essential/textures/info_9x9.png")
 
     @JvmField
+    val INFO_DARK_9X: ImageFactory = ResourceImageFactory("/assets/essential/textures/info_dark_9x9.png")
+
+    @JvmField
     val NOTICE_11X: ImageFactory = ResourceImageFactory("/assets/essential/textures/notice_11x11.png")
 
     @JvmField

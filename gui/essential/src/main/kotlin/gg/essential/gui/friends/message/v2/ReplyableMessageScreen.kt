@@ -11,6 +11,7 @@
  */
 package gg.essential.gui.friends.message.v2
 
+import com.sparkuniverse.toolbox.chat.model.MessageContent.Plain
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessageRejectedPacket
 import gg.essential.elementa.UIComponent
@@ -462,7 +463,7 @@ class ReplyableMessageScreen(
         for (part in message.parts) {
             messages.add(when (part) {
                 is ClientMessage.Part.Gift -> GiftEmbedImpl(part.id, messageWrapper)
-                is ClientMessage.Part.Image -> ImageEmbedImpl(part.url, messageWrapper)
+                is ClientMessage.Part.Image -> ImageEmbedImpl(part.id, messageWrapper)
                 is ClientMessage.Part.Skin -> SkinEmbedImpl(part.skin, messageWrapper)
                 is ClientMessage.Part.Text -> ParagraphLineImpl(messageWrapper, part.content)
             })
@@ -477,7 +478,9 @@ class ReplyableMessageScreen(
         val originalMessage = editingMessage.get() ?: return
         editingMessage.set(null)
 
-        if (message == originalMessage.contents) {
+        require(originalMessage.content is Plain)
+
+        if (message == originalMessage.content.unfilteredText) {
             return
         }
 
@@ -503,7 +506,7 @@ class ReplyableMessageScreen(
             fakeID,
             preview.channel,
             USession.activeNow().uuid,
-            message,
+            Plain(message, null),
             SendState.Sending,
             replyingTo?.let {
                 MessageRef(preview.channel.id, it.id)
@@ -515,11 +518,13 @@ class ReplyableMessageScreen(
     }
 
     private fun sendMessage(message: ClientMessage) {
+        require(message.content is Plain)
+
         // Add to sendQueue, so we can track the order of messages
         // and manage time desync between client and server
         sendQueue.add(message)
 
-        val trimmed = message.contents.trim().replace("`", "").replace("(?<!  )\\n".toRegex(), "  \n")
+        val trimmed = message.content.unfilteredText.trim().replace("`", "").replace("(?<!  )\\n".toRegex(), "  \n")
 
         socialStates.messages.sendMessage(message.channel.id, trimmed, message.replyTo?.messageId) { packet ->
             sendQueue.removeAll { it.id == message.id }
@@ -641,5 +646,6 @@ class ReplyableMessageScreen(
 
         var fakeID = Long.MIN_VALUE
             get() = field++
+
     }
 }

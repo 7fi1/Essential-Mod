@@ -12,6 +12,8 @@
 import essential.*
 import gg.essential.gradle.util.*
 import gg.essential.gradle.util.StripKotlinMetadataTransform.Companion.registerStripKotlinMetadataAttribute
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+import org.objectweb.asm.TypePath
 
 plugins {
     id("kotlin")
@@ -45,7 +47,7 @@ dependencies {
     implementation(bundle(project(":gui:elementa"))!!)
     implementation(bundle(project(":gui:essential"))!!)
     implementation(bundle(project(":gui:vigilance"))!!)
-    implementation(project(":api:" + project.name, configuration = "namedElements"))
+    implementation(project(":api:" + project.name, configuration = if (platform.isUnobfuscated) null else "namedElements"))
     bundle(project(":api:" + project.name))
 
     implementation(bundle("com.github.KevinPriv:keventbus:c52e0a2") {
@@ -98,6 +100,7 @@ dependencies {
     if (platform.isFabric && mcVersion >= 11600) {
         repositories.modrinth()
         val modMenuDependency = "maven.modrinth:modmenu:${when {
+            platform.mcVersion >= 26_01_00 -> "18.0.0-alpha.3"
             platform.mcVersion >= 11800 -> "3.0.0"
             platform.mcVersion <= 11700 -> "1.16.22"
             else -> "2.0.14"
@@ -133,6 +136,7 @@ dependencies {
             12107 -> "0.128.1+1.21.7"
             12109 -> "0.133.13+1.21.9"
             12111 -> "0.139.4+1.21.11"
+            26_01_00 -> "0.143.14+26.1"
             else -> error("No fabric API version configured!")
         }
         include(modImplementation(fabricApi.module("fabric-api-base", fapiVersion))!!)
@@ -216,7 +220,7 @@ loom.runs.named("client") {
 
 // We need to use the compatibility mode on old versions because we used to use the old Kotlin defaults for those, and
 // we need to match the API to be able to override its methods.
-tasks.compileKotlin.setJvmDefault(if (platform.mcVersion >= 11400) "all" else "all-compatibility")
+kotlin.compilerOptions.jvmDefault.set(if (platform.mcVersion >= 11400) JvmDefaultMode.NO_COMPATIBILITY else JvmDefaultMode.ENABLE)
 
 tasks.relocatedJar {
     //Discord
@@ -249,9 +253,10 @@ tasks.relocatedJar {
 }
 
 tasks.processResources {
-    inputs.property("project_version", project.version)
+    val version = project.provider { project.version }
+    inputs.property("project_version", version)
     filesMatching("assets/essential/version.txt") {
-        expand(mapOf("version" to project.version))
+        expand(mapOf("version" to version))
     }
     if (platform.isNeoForge && platform.mcVersion < 12005) {
         // NeoForge still uses the old mods.toml name until 1.20.5
@@ -264,5 +269,34 @@ tasks.processResources {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+if (platform.isUnobfuscated) {
+    val nullableAnnotationsSpec = NullableAnnotationProcessor.spec {
+        "net.minecraft.world.entity.Entity" {
+            method("equals", "obj")
+        }
+        "net.minecraft.client.renderer.entity.EntityRenderDispatcher" {
+            method("prepare", "crosshairPickEntity")
+        }
+        "com.mojang.blaze3d.systems.RenderSystem" {
+            method("setProjectionMatrix", "projectionMatrixBuffer")
+            method("setShaderFog", "fog")
+            method("setShaderLights", "buffer")
+        }
+        "net.minecraft.server.packs.resources.PreparableReloadListener" {
+            method("reload") {
+                returnType(TypePath.fromString("0")) // CompletableFuture<Void?>
+            }
+        }
+        "net.minecraft.server.packs.resources.PreparableReloadListener\$PreparationBarrier" {
+            method("wait") {
+                generic("T")
+            }
+        }
+    }
+    loom {
+        addMinecraftJarProcessor(NullableAnnotationProcessor::class.java, "essential:nullable_annotations", nullableAnnotationsSpec)
+    }
 }
 

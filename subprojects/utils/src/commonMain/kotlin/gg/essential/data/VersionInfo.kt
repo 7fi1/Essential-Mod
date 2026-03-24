@@ -29,7 +29,7 @@ open class VersionInfo {
 
         if (hash.startsWith("g")) {
             hash.drop(1)
-        } else if (version == "\${version}"){
+        } else if (version == "\${version.get()}"){
             "dev"
         } else {
             "SNAPSHOT"

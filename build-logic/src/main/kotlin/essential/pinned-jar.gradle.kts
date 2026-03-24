@@ -14,6 +14,7 @@ package essential
 import com.google.common.hash.Hashing
 import gg.essential.gradle.multiversion.Platform
 import gg.essential.gradle.util.CONSTANT_TIME_FOR_ZIP_ENTRIES
+import org.gradle.kotlin.dsl.support.serviceOf
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -41,13 +42,37 @@ dependencies {
 }
 
 tasks.named<Jar>("bundleJar") {
+    val archiveOps = serviceOf<ArchiveOperations>()
+    val loaderStage2File = loaderStage2.elements.map { it.single() }
     val loaderStage2Properties = layout.buildDirectory.file("essential-loader-stage2.properties")
 
-    dependsOn(loaderContainer)
-    from({ zipTree(loaderContainer.singleFile) }) {
+    from(loaderContainer.elements.map { archiveOps.zipTree(it.single()) }) {
         into("pinned")
+
+        // Inject a fabric-loader dependency into the container's fabric.mod.json where necessary
+        val requiredFabricLoader = when {
+            !platform.isFabric -> null
+            // our bundled fabric-networking-api-v1 will fail to apply its mixins with 0.17.3
+            platform.mcVersion >= 26_01_00 -> ">=0.18.4"
+            else -> null
+        }
+        if (requiredFabricLoader != null) {
+            inputs.property("minFabricLoader", requiredFabricLoader)
+            filesMatching("fabric.mod.json") {
+                // For original content, see `/loader/container/fabric/resources/fabric.mod.json`
+                // Unfortunately Gradle doesn't provide any function to modify the content as a whole, so we'll have to
+                // make do with the line-wise filtering.
+                filter { line ->
+                    if ("\"jars\"" in line) {
+                        "  \"depends\": { \"fabricloader\": \"$requiredFabricLoader\" },\n$line"
+                    } else {
+                        line
+                    }
+                }
+            }
+        }
     }
-    from(loaderStage2) {
+    from(loaderStage2File) {
         into("pinned")
     }
     from(loaderStage2Properties) {
@@ -64,9 +89,9 @@ tasks.named<Jar>("bundleJar") {
         // Not using java.util.Properties because we want reproducible results (fairly sure the values won't need
         // escaping anyway, so this should be decently safe)
         loaderStage2Properties.get().asFile.writeText("""
-            pinnedFile=/${loaderStage2.singleFile.name}
+            pinnedFile=/${loaderStage2File.get().asFile.name}
             pinnedFileVersion=${loaderStage2Version.get()}
-            pinnedFileMd5=${Hashing.md5().hashBytes(loaderStage2.singleFile.readBytes())}
+            pinnedFileMd5=${Hashing.md5().hashBytes(loaderStage2File.get().asFile.readBytes())}
         """.trimIndent())
     }
 }

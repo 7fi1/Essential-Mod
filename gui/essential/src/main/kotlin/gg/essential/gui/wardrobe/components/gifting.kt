@@ -12,13 +12,11 @@
 @file:JvmName("Gifting")
 package gg.essential.gui.wardrobe.components
 
-import com.sparkuniverse.toolbox.chat.enums.ChannelType
 import gg.essential.api.gui.NotificationType
 import gg.essential.api.gui.Slot
 import gg.essential.connectionmanager.common.packet.cosmetic.ClientCosmeticBulkRequestUnlockStatePacket
 import gg.essential.connectionmanager.common.packet.cosmetic.ServerCosmeticBulkRequestUnlockStateResponsePacket
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket
-import gg.essential.cosmetics.CosmeticId
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.dsl.minus
 import gg.essential.elementa.dsl.provideDelegate
@@ -64,7 +62,6 @@ import gg.essential.vigilance.utils.onLeftClick
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.launch
-import okhttp3.HttpUrl
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import kotlin.coroutines.resume
@@ -169,7 +166,6 @@ private suspend fun giftItemToFriends(item: Item.CosmeticOrEmote, uuids: Set<UUI
                 }
                 EssentialSounds.playPurchaseConfirmationSound()
                 showGiftSentToast(item.cosmetic, username)
-                sendGiftEmbed(uuid, item.cosmetic.id)
             }
         }
     }
@@ -295,14 +291,3 @@ suspend fun ModalFlow.cannotGiftYetModal(requiredCoinsSpent: Int) {
     }
 }
 
-private fun sendGiftEmbed(receiver: UUID, cosmeticId: CosmeticId) {
-    val messages = platform.createSocialStates().messages
-    val channel = messages.getObservableChannelList().find { it.type == ChannelType.DIRECT_MESSAGE && receiver in it.members } ?: return
-    val url = HttpUrl.Builder()
-        .scheme("https")
-        .host("essential.gg")
-        .addPathSegment("gift")
-        .addPathSegment(cosmeticId)
-        .build()
-    messages.sendMessage(channel.id, url.toString())
-}

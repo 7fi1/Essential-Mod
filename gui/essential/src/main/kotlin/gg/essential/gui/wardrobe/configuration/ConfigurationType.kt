@@ -96,7 +96,6 @@ class ConfigurationType<I, T> private constructor(
                         }
                         cosmeticsDataWithChanges.registerCategory(
                             id,
-                            ConfigurationUtils.blankImageEssentialAsset,
                             "Category Name",
                             "Category Description",
                             "Compact Name",

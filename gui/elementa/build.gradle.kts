@@ -11,7 +11,6 @@
  */
 import essential.universalLibs
 import gg.essential.gradle.util.KotlinVersion
-import gg.essential.gradle.util.setJvmDefault
 
 plugins {
     kotlin("jvm")
@@ -29,10 +28,6 @@ dependencies {
     api(libs.commonmark.ext.gfm.strikethrough)
     api(libs.commonmark.ext.ins)
 }
-
-// We need to use the compatibility mode on old versions because we used to use the old Kotlin defaults for those
-// And while this isn't currently part of our ABI, once stuff migrates to Elementa, it will be, so we consider it now.
-tasks.compileKotlin.setJvmDefault("all-compatibility")
 
 kotlin.jvmToolchain(8)
 kotlin.compilerOptions.moduleName.set("essential" + project.path.replace(':', '-').lowercase())

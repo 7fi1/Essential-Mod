@@ -116,22 +116,6 @@ public class Essential implements EssentialAPI {
             ctx.updateLoggers(conf);
         }
 
-        // Workaround for https://github.com/MinecraftForge/EventBus/issues/44
-        // Specifically, we may use UIImage before the game is fully initialized.
-        // UIImage will use the common fork join pool to load the image via UGraphics, which will (via some chain not
-        // clear in the debugger) load RegisterShadersEvent on those threads.
-        // EventSubclassTransformer will then try to load its parent class via the context class loader (which on common
-        // fork join pool threads is set to the app class loader), thereby getting a different Event class than the
-        // Event class it expects, failing the `isAssignableFrom` check, and thereby silently failing to transform the
-        // class, which will later result in a hard NoSuchMethodException failure when the event bus tries to create the
-        // listener list for the event.
-        // To work around the issue, we explicitly load the relevant classes very early on the main thread (where it
-        // loads properly), such that it is then already loaded for any subsequent uses.
-        //#if FORGE && MC>=11400
-        //$$ gg.essential.universal.UGraphics.getTexture(
-        //$$     new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB));
-        //#endif
-
         dispatchIndependentStaticInitializers();
     }
 

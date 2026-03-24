@@ -99,24 +99,6 @@ abstract class ConnectionManagerKt : CMConnection {
         connectLoopJob.start()
     }
 
-    suspend fun forceImmediateReconnect() {
-        withContext(Dispatchers.Client) { // single threaded to avoid having to deal with races
-            if (connectLoopJob.isCancelled) {
-                // Someone is already doing it, let's leave it to them and just wait for it
-                connectLoopJob.join()
-            } else {
-                // We are in charge, but once we start this, we must finish it. So we'll launch a job, which will
-                // continue to run even if `forceImmediateReconnect` is cancelled, into our internal scope to finish it.
-                connectLoopJob.cancel()
-                mutableConnectionStatus.set(ConnectionManagerStatus.Cancelled)
-                scope.launch {
-                    connectLoopJob.join()
-                    connectLoopJob = scope.launch(Dispatchers.Unconfined) { connectLoop() }
-                }.join()
-            }
-        }
-    }
-
     private suspend fun connectLoop() {
         val mojangBackoff = ExponentialBackoff(4.seconds, 1.minutes, 2.0)
         val connectBackoff = ExponentialBackoff(2.seconds, 1.minutes, 2.0)
@@ -325,6 +307,7 @@ abstract class ConnectionManagerKt : CMConnection {
                 val delay = unexpectedCloseBackoff.increment()
                 if (delay.isPositive()) {
                     LOGGER.info("Waiting {} before re-connecting", delay)
+                    updateStatus(ConnectionManagerStatus.Error.GeneralFailure)
                     delay(delay.inWholeMilliseconds)
                 }
             } else {

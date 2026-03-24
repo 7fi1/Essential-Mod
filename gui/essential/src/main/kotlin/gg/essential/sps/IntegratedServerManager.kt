@@ -14,9 +14,11 @@ package gg.essential.sps
 import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
+import gg.essential.sps.IntegratedServerManager.SuspendingMutableState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import java.nio.file.Path
+import java.time.Instant
 import java.util.*
 
 // Note: This object is for use from the logical client side and will internally communicate with the server.
@@ -55,6 +57,11 @@ interface IntegratedServerManager {
      */
     val statusResponseJson: State<String?>
 
+    /**
+     * When the world was last played
+     */
+    val lastPlayed: Instant
+
     fun setOpenToLanSource(source: State<Boolean>)
     fun setWhitelistSource(source: State<Set<UUID>>)
     fun setOpsSource(source: State<Set<UUID>>)
@@ -62,6 +69,7 @@ interface IntegratedServerManager {
     fun setDifficultySource(source: MutableState<Difficulty>)
     fun setDifficultyLockedSource(source: MutableState<Boolean>)
     fun setDefaultGameModeSource(source: MutableState<GameMode>)
+    fun setGameRulesSource(source: SuspendingMutableState<Map<String, String>>)
     fun setCheatsEnabledSource(source: State<Boolean>)
 
     data class ServerResourcePack(val url: String, val checksum: String)
@@ -82,4 +90,18 @@ interface IntegratedServerManager {
         ;
         companion object
     }
+
+    interface SuspendingMutableState<T> : State<T> {
+        suspend fun set(mapper: (T) -> T)
+
+        suspend fun set(value: T) = set { value }
+    }
+
 }
+
+fun <T, S : State<T>> S.withSuspendingSetter(setter: suspend S.(update: (value: T) -> T) -> Unit): SuspendingMutableState<T> =
+    object : SuspendingMutableState<T>, State<T> by this {
+        override suspend fun set(mapper: (T) -> T) {
+            setter(mapper)
+        }
+    }

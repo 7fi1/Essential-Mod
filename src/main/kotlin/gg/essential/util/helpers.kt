@@ -486,7 +486,13 @@ val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -
                         when (urlParts.getOrNull(2)) {
                             null -> {
                                 GuiUtil.openScreen {
-                                    GuiOptions(UMinecraft.getMinecraft().currentScreen!!, UMinecraft.getSettings())
+                                    GuiOptions(
+                                        UMinecraft.getMinecraft().currentScreen!!,
+                                        UMinecraft.getSettings(),
+                                        //#if MC >= 26.1
+                                        //$$ UMinecraft.getWorld() != null,
+                                        //#endif
+                                    )
                                 }
                             }
                             "keybinds" -> {

@@ -11,6 +11,7 @@
  */
 import essential.*
 import gg.essential.gradle.util.*
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 
 plugins {
     id("kotlin")
@@ -31,7 +32,7 @@ loom.noRunConfigs() // can't run just the API, only the implementation
 configureDokkaForEssentialApi()
 
 // We need to use the compatibility mode on old versions because we used to use the old Kotlin defaults for those
-tasks.compileKotlin.setJvmDefault(if (platform.mcVersion >= 11400) "all" else "all-compatibility")
+kotlin.compilerOptions.jvmDefault.set(if (platform.mcVersion >= 11400) JvmDefaultMode.NO_COMPATIBILITY else JvmDefaultMode.ENABLE)
 
 repositories {
     mavenLocal()

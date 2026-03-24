@@ -18,8 +18,6 @@ import gg.essential.mod.Model
 import gg.essential.mod.cosmetics.CosmeticAssets
 import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.mod.cosmetics.CosmeticTier
-import gg.essential.mod.cosmetics.CosmeticType
-import gg.essential.mod.cosmetics.SkinLayer
 import gg.essential.mod.cosmetics.database.LOCAL_PATH
 import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.mod.cosmetics.settings.CosmeticPropertyType
@@ -35,7 +33,7 @@ import kotlinx.serialization.UseSerializers
 
 data class CosmeticBase(
     val id: String,
-    val type: CosmeticType,
+    val slot: CosmeticSlot,
     val tier: CosmeticTier,
     val displayNames: Map<String, String>,
     val files: Map<String, EssentialAsset>,
@@ -43,14 +41,11 @@ data class CosmeticBase(
 )
 
 data class CosmeticStoreInfo(
-    val storePackageId: Int,
-    val prices: Map<String, Double>,
+    val price: Int?,
     val tags: Set<String>,
-    val createdAt: Instant,
     val availableAfter: Instant?,
     val availableUntil: Instant?,
     val showTimerAfter: Instant?,
-    val skinLayers: Map<SkinLayer, Boolean>,
     val categories: Map<String, Int>,
     val defaultSortWeight: Int,
 )
@@ -62,8 +57,8 @@ data class Cosmetic(
 ) {
     val id: String
         get() = base.id
-    val type: CosmeticType
-        get() = base.type
+    val slot: CosmeticSlot
+        get() = base.slot
     val tier: CosmeticTier
         get() = base.tier
     val displayNames: Map<String, String>
@@ -72,22 +67,16 @@ data class Cosmetic(
         get() = base.files
     val allProperties: List<CosmeticProperty>
         get() = base.allProperties
-    val storePackageId: Int
-        get() = storeInfo.storePackageId
-    val prices: Map<String, Double>
-        get() = storeInfo.prices
+    val price: Int?
+        get() = storeInfo.price
     val tags: Set<String>
         get() = storeInfo.tags
-    val createdAt: Instant
-        get() = storeInfo.createdAt
     val availableAfter: Instant?
         get() = storeInfo.availableAfter
     val availableUntil: Instant?
         get() = storeInfo.availableUntil
     val showTimerAfter: Instant?
         get() = storeInfo.showTimerAfter
-    val skinLayers: Map<SkinLayer, Boolean>
-        get() = storeInfo.skinLayers
     val categories: Map<String, Int>
         get() = storeInfo.categories
     val defaultSortWeight: Int
@@ -129,14 +118,10 @@ data class Cosmetic(
     val isLegacy: Boolean
         get() = "LEGACY" in tags
 
-    val priceCoinsNullable = prices["coins"]?.toInt()
-
-    val priceCoins = priceCoinsNullable ?: 0
-
-    val isPurchasable = priceCoinsNullable != null && !requiresUnlockAction()
+    val isPurchasable = price != null && !requiresUnlockAction()
 
     // Rename to isFree when removing flag
-    val isCosmeticFree = priceCoinsNullable == 0
+    val isCosmeticFree = price == 0
 
     val defaultSide: Side?
         get() = property<CosmeticProperty.DefaultSide>()?.data?.side
@@ -159,10 +144,6 @@ data class Cosmetic(
 
     fun getDisplayName(locale: String): String? {
         return displayNames[locale]
-    }
-
-    fun getPrice(currency: String): Double? {
-        return prices[currency]
     }
 
     /**

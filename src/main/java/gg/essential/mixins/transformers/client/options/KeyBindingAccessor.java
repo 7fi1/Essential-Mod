@@ -14,6 +14,7 @@ package gg.essential.mixins.transformers.client.options;
 import net.minecraft.client.settings.KeyBinding;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
 //#if MC>=11202
 import java.util.Map;
@@ -39,4 +40,7 @@ public interface KeyBindingAccessor {
     //#endif
         throw new AssertionError();
     }
+
+    @Invoker
+    void invokeUnpressKey();
 }

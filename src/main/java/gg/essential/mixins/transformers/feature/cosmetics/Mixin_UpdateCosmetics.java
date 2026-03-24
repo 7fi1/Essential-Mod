@@ -47,7 +47,9 @@ public abstract class Mixin_UpdateCosmetics {
     @Shadow
     private WorldClient world;
 
-    //#if MC>=12109
+    //#if MC >= 26.1
+    //$$ @Inject(method = "extractLevel", at = @At(value = "CONSTANT", args = "stringValue=entities"))
+    //#elseif MC>=12109
     //$$ @Inject(method = "render", at = @At(value = "CONSTANT", args = "stringValue=entities"))
     //#elseif MC>=12102
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "CONSTANT", args = "stringValue=entities"))
@@ -77,7 +79,9 @@ public abstract class Mixin_UpdateCosmetics {
         }
     }
 
-    //#if MC>=12109
+    //#if MC >= 26.1
+    //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;renderTranslucentFeatures()V", shift = At.Shift.AFTER))
+    //#elseif MC>=12109
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/command/RenderDispatcher;render()V", shift = At.Shift.AFTER))
     //#elseif MC>=12102
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "CONSTANT", args = "stringValue=blockentities"))

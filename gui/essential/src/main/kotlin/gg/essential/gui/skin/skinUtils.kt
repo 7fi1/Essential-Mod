@@ -13,8 +13,7 @@ package gg.essential.gui.skin
 
 import com.sparkuniverse.toolbox.chat.model.Channel
 import gg.essential.api.gui.Slot
-import gg.essential.connectionmanager.common.packet.Packet
-import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket
+import gg.essential.connectionmanager.common.packet.skin.ClientSkinSharePacket
 import gg.essential.elementa.components.UIContainer
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.layoutdsl.*
@@ -23,19 +22,16 @@ import gg.essential.gui.modals.select.friendsAndGroups
 import gg.essential.gui.modals.select.selectModal
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.content.SkinPreviewToastComponent
+import gg.essential.gui.notification.error
 import gg.essential.gui.overlay.ModalManager
-import gg.essential.gui.sendNotificationWithIcon
 import gg.essential.gui.wardrobe.Item
 import gg.essential.mod.Skin
 import gg.essential.model.util.Color
-import gg.essential.universal.ChatColor
 import gg.essential.util.*
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.bitmap.Bitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.launch
 import java.util.*
-import java.util.concurrent.CompletableFuture
 
 fun createSkinShareModal(
     modalManager: ModalManager,
@@ -58,49 +54,13 @@ fun createSkinShareModal(
         requiresSelection = true
         requiresButtonPress = false
     }.onPrimaryAction { selectedChannels ->
-        shareLinkToChannels(skin, selectedChannels)
+        platform.cmConnection.connectionScope.launch {
+            if (!platform.cmConnection.call(ClientSkinSharePacket(selectedChannels.map { it.id }.toSet(), skin.id)).awaitResponseActionPacket()) {
+                Notifications.error("Failed to share skin", "")
+            }
+        }
         onComplete()
     }
-}
-
-private fun shareLinkToChannels(skin: Item.SkinItem, channels: Set<Channel>) {
-    val chatManager = platform.createSocialStates().messages
-    val messageFutures = channels.associateWith { channel ->
-        val messageFuture = CompletableFuture<Boolean>()
-        chatManager.sendMessage(channel.id, getEssentialLink(skin)) { response: Optional<Packet> ->
-            messageFuture.complete(response.isPresent && response.get() is ServerChatChannelMessagePacket)
-        }
-        messageFuture
-    }
-
-    CompletableFuture.allOf(*messageFutures.values.toTypedArray<CompletableFuture<*>>()).whenCompleteAsync(
-        { ignored: Void?, throwable: Throwable? ->
-            var anySucceeded = false
-            for ((key, value) in messageFutures) {
-                if (value.join()) {
-                    anySucceeded = true
-                } else {
-                    sendNotificationWithIcon(EssentialPalette.CANCEL_10X, "Error: Failed to share to " + key.name)
-                }
-            }
-            if (anySucceeded) {
-                showSkinSentToast(skin)
-            } else {
-                sendNotificationWithIcon(EssentialPalette.CANCEL_10X, "Error: All the messages failed to send.")
-            }
-        },
-        Dispatchers.Client.asExecutor()
-    )
-}
-
-private fun showSkinSentToast(skin: Item.SkinItem) {
-    Notifications.push("", "${ChatColor.WHITE + skin.name + ChatColor.RESET} has been shared.") {
-        withCustomComponent(Slot.SMALL_PREVIEW, SkinPreviewToastComponent(skin.skin))
-    }
-}
-
-private fun getEssentialLink(skin: Item.SkinItem): String {
-    return "https://essential.gg/skin/${skin.skin.model.variant}/${skin.skin.hash}"
 }
 
 fun showSkinReceivedToast(skin: Skin, uuid: UUID, username: String, channel: Channel) {

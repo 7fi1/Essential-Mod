@@ -25,6 +25,7 @@ import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.common.shadow.EssentialUIWrappedText
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.universal.ChatColor
+import gg.essential.gui.elementa.state.v2.State as StateV2
 
 fun LayoutScope.text(
     text: String,
@@ -61,15 +62,17 @@ fun LayoutScope.text(
     centeringContainsShadow = centeringContainsShadow,
     showTooltipForTruncatedText = showTooltipForTruncatedText,
     centerTruncatedText = centerTruncatedText,
-).bindText(text).constrain {
-    if (truncateIfTooSmall) {
-        width = width.coerceAtMost(100.percent)
+).apply {
+    bindText(text).constrain {
+        if (truncateIfTooSmall) {
+            width = width.coerceAtMost(100.percent)
+        }
+        textScale = scale.pixels()
     }
-    textScale = scale.pixels()
 }(modifier)
 
 fun LayoutScope.text(
-    text: gg.essential.gui.elementa.state.v2.State<String>,
+    text: StateV2<String>,
     modifier: Modifier = Modifier,
     scale: Float = 1f,
     shadow: Boolean = true,
@@ -121,6 +124,15 @@ fun LayoutScope.wrappedText(
 private val init = run {
     Inspector.registerComponentFactory(null)
 }
+
+fun LayoutScope.wrappedText(
+    text: StateV2<String>,
+    modifier: Modifier = Modifier,
+    centered: Boolean = false,
+    shadow: State<Boolean> = BasicState(true),
+    trimText: Boolean = false,
+    lineSpacing: Float = 12f,
+) = wrappedText(text.toV1(stateScope), modifier, centered, shadow, trimText, lineSpacing)
 
 fun Modifier.bold() = this then BasicTextPrefixModifier(ChatColor.BOLD.toString())
 

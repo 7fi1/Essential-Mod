@@ -216,7 +216,6 @@ interface ReferenceHolder {
  */
 
 /** A [State] with a value that can be changed via [set] */
-@JvmDefaultWithoutCompatibility
 interface MutableState<T> : State<T> {
   /**
    * Update the value of this State object.

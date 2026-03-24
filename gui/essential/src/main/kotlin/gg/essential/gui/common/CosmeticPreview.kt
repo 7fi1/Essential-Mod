@@ -37,12 +37,12 @@ class CosmeticPreview(val cosmetic: Cosmetic, val settings: State<List<CosmeticS
     private val emoteScheduler: EmoteScheduler?
 
     init {
-        val profile = if (cosmetic.type.slot == CosmeticSlot.EMOTE) {
+        val slot = cosmetic.slot
+        val profile = if (slot == CosmeticSlot.EMOTE) {
             null // A null profile will copy the player's profile so it will adapt to skin changes
         } else {
             Pair(Skin("f91f0820500c414d308c5678594631b917e51e06a31fedaacac5dad1a44a49d8", Model.STEVE), null)
         }
-        val slot = cosmetic.type.slot
         emoteScheduler = if (slot == CosmeticSlot.EMOTE) EmoteScheduler(this, stateOf(cosmetic), settings) else null
         emulatedUI3DPlayer = platform.newUIPlayer(
             camera = stateOf(PerspectiveCamera.forCosmeticSlot(slot)),

@@ -25,13 +25,19 @@ import gg.essential.universal.UResolution
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
-import net.minecraft.client.render.ProjectionMatrix2
 import net.minecraft.client.texture.GlTexture
 import java.io.Closeable
 import java.lang.ref.PhantomReference
 import java.lang.ref.ReferenceQueue
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.Projection
+//$$ import net.minecraft.client.renderer.ProjectionMatrixBuffer
+//#else
+import net.minecraft.client.render.ProjectionMatrix2
+//#endif
 
 class Mc12106ScissorHandler {
 
@@ -85,11 +91,14 @@ class Mc12106ScissorHandler {
         RenderSystem.outputColorTextureOverride = resources.textureView
         RenderSystem.outputDepthTextureOverride = resources.depthTextureView
 
+        //#if MC >= 26.1
+        //$$ resources.projection.setupOrtho(1000f, 11000f, (width * scale).toFloat(), (height * scale).toFloat(), true)
+        //$$ val projectionMatrixBuffer = resources.projectionMatrix.getBuffer(resources.projection)
+        //#else
+        val projectionMatrixBuffer = resources.projectionMatrix.set((width * scale).toFloat(), (height * scale).toFloat())
+        //#endif
         orgProjectionMatrix = Pair(RenderSystem.getProjectionMatrixBuffer(), RenderSystem.getProjectionType())
-        RenderSystem.setProjectionMatrix(
-            resources.projectionMatrix.set((width * scale).toFloat(), (height * scale).toFloat()),
-            ProjectionType.ORTHOGRAPHIC,
-        )
+        RenderSystem.setProjectionMatrix(projectionMatrixBuffer, ProjectionType.ORTHOGRAPHIC)
 
         matrixStack.push()
         val x = scissorState.x * scale
@@ -139,7 +148,7 @@ class Mc12106ScissorHandler {
 
         var texture = gpuDevice.createTexture(
             { "Scissored texture" },
-            GpuTexture.USAGE_RENDER_ATTACHMENT or GpuTexture.USAGE_TEXTURE_BINDING,
+            GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_COPY_SRC or GpuTexture.USAGE_RENDER_ATTACHMENT or GpuTexture.USAGE_TEXTURE_BINDING,
             TextureFormat.RGBA8,
             width,
             height,
@@ -152,7 +161,7 @@ class Mc12106ScissorHandler {
         }
         var depthTexture = gpuDevice.createTexture(
             { "Scissored depth texture" },
-            GpuTexture.USAGE_RENDER_ATTACHMENT,
+            GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_COPY_SRC or GpuTexture.USAGE_RENDER_ATTACHMENT,
             TextureFormat.DEPTH32,
             width,
             height,
@@ -163,7 +172,12 @@ class Mc12106ScissorHandler {
         var textureView = gpuDevice.createTextureView(texture)
         var depthTextureView = gpuDevice.createTextureView(depthTexture)
 
+        //#if MC >= 26.1
+        //$$ val projection = Projection()
+        //$$ val projectionMatrix = ProjectionMatrixBuffer("scissored gui")
+        //#else
         val projectionMatrix = ProjectionMatrix2("scissored gui", 1000f, 11000f, true)
+        //#endif
 
         init {
             toBeCleanedUp.add(this)

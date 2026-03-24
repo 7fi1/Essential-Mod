@@ -33,8 +33,8 @@ class ModelParser(
         translucent = geometry.description.textureTranslucent
 
         val extraInflate = when {
-            cosmetic.type.id == "PLAYER" -> 0f
-            else -> ((EXTRA_INFLATE_GROUPS.find { it.value.contains(cosmetic.type.slot) }?.index ?: 0) * 0.01f) + 0.01f
+            cosmetic.id == "PLAYER" -> 0f
+            else -> ((EXTRA_INFLATE_GROUPS.find { it.value.contains(cosmetic.slot) }?.index ?: 0) * 0.01f) + 0.01f
         }
 
         val bones = mutableListOf<Bone>()

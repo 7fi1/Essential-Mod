@@ -13,17 +13,14 @@ package gg.essential.gui.wardrobe.configuration
 
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.IconButton
 import gg.essential.gui.common.compactFullEssentialToggle
 import gg.essential.gui.common.modal.DangerConfirmationEssentialModal
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.elementa.state.v2.*
-import gg.essential.gui.image.EssentialAssetImageFactory
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.wardrobe.WardrobeState
-import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.chooseIcon
 import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.labeledIntInputRow
 import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.labeledManagedNullableISODateInputRow
 import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.labeledRow
@@ -74,13 +71,6 @@ class CosmeticCategoryConfiguration(
         labeledManagedNullableISODateInputRow("Available After:", mutableStateOf(category.availableAfter)).state.onSetValue(stateScope) { category.update(category.copy(availableAfter = it)) }
         labeledManagedNullableISODateInputRow("Available Until:", mutableStateOf(category.availableUntil)).state.onSetValue(stateScope) { category.update(category.copy(availableUntil = it)) }
 
-        labeledRow("Icon:") {
-            row(Arrangement.spacedBy(10f)) {
-                icon(EssentialAssetImageFactory(category.icon))
-                iconPreviewAndUpdate(category)
-            }
-        }
-
         val isEmoteCategoryState = mutableStateOf(category.isEmoteCategory())
         isEmoteCategoryState.onSetValue(stateScope) { category.update(category.copy(tags = if (it) category.tags + CosmeticCategory.EMOTE_CATEGORY_TAG else category.tags - CosmeticCategory.EMOTE_CATEGORY_TAG)) }
         labeledRow("Is Emote Category: ") {
@@ -114,22 +104,6 @@ class CosmeticCategoryConfiguration(
             }
         }
         labeledStringInputRow("Add tag:", mutableStateOf("")).state.onSetValue(stateScope) { category.update(category.copy(tags = category.tags + it)) }
-    }
-
-    private fun LayoutScope.iconPreviewAndUpdate(category: CosmeticCategory) {
-        IconButton(EssentialPalette.REDO_9X)().apply {
-            bindHoverEssentialTooltip(stateOf("Change Icon").toV1(stateScope))
-            onLeftClick {
-                chooseIcon().thenAcceptOnMainThread {
-                    if (it != null) {
-                        cosmeticsDataWithChanges.updateCategory(
-                            category.id,
-                            category.copy(icon = it)
-                        )
-                    }
-                }
-            }
-        }
     }
 
     @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")

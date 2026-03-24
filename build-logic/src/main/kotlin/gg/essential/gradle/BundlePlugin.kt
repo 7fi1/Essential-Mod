@@ -24,7 +24,9 @@ import essential.modrinth
 import net.fabricmc.loom.task.RemapJarTask
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.attributes.Usage
+import org.gradle.api.file.ArchiveOperations
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.kotlin.dsl.support.serviceOf
 import org.gradle.language.jvm.tasks.ProcessResources
 
 data class Configurations(
@@ -70,20 +72,31 @@ private fun Project.createConfigurations(platform: Platform): Configurations {
 
 private fun Project.createBundleJarTask(platform: Platform, configurations: Configurations) = with(configurations) {
     val jar by tasks.existing(Jar::class)
-    val remapJar by tasks.existing(RemapJarTask::class) {
-        archiveClassifier.set("mapped")
-        destinationDirectory.set(buildDir.resolve("devlibs"))
+    val remappedJarTask = if (platform.isUnobfuscated) {
+        jar.configure {
+            archiveClassifier.set("raw")
+            destinationDirectory.set(buildDir.resolve("devlibs"))
+        }
+        jar
+    } else {
+        val remapJar by tasks.existing(RemapJarTask::class) {
+            archiveClassifier.set("mapped")
+            destinationDirectory.set(buildDir.resolve("devlibs"))
+        }
+        remapJar
     }
+
+    val archiveOps = serviceOf<ArchiveOperations>()
 
     tasks.register<Jar>("bundleJar") {
         archiveClassifier.set("bundle")
         destinationDirectory.set(buildDir.resolve("devlibs"))
 
         manifest = jar.get().manifest
-        from(remapJar.flatMap { it.archiveFile }.map { zipTree(it) })
+        from(remappedJarTask.flatMap { it.archiveFile }.map { archiveOps.zipTree(it) })
 
         dependsOn(bundle)
-        from({ bundle.map { if (it.isDirectory) it else zipTree(it) } }) {
+        from({ bundle.map { if (it.isDirectory) it else archiveOps.zipTree(it) } }) {
             exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
             exclude("META-INF/services/javax.annotation.processing.Processor")
             exclude("META-INF/maven/**")

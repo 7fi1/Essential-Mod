@@ -24,4 +24,5 @@ public interface MixinGameRulesValueAccessor {
 
     @Accessor
     GameRules.ValueType getType();
+
 }

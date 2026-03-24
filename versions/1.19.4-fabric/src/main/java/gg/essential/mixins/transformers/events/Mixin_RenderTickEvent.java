@@ -23,6 +23,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC >= 26.1
+//$$ import org.spongepowered.asm.mixin.Final;
+//$$ import org.spongepowered.asm.mixin.Shadow;
+//#endif
+
 //#if MC>=12100
 //$$ import gg.essential.mixins.transformers.client.renderer.DynamicRenderTickCounterAccessor;
 //$$ import net.minecraft.client.render.RenderTickCounter;
@@ -36,7 +41,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public class Mixin_RenderTickEvent {
 
+    //#if MC >= 26.1
+    //$$ @Shadow private @Final net.minecraft.client.Minecraft minecraft;
+    //$$ @Shadow private @Final net.minecraft.client.renderer.state.GameRenderState gameRenderState;
+    //#endif
+
+    //#if MC >= 26.1
+    //$$ @Inject(method = "extract", at = @At("HEAD"))
+    //#else
     @Inject(method = "render", at = @At("HEAD"))
+    //#endif
     //#if MC>=12100
     //$$ private void renderTickPre(RenderTickCounter tickDelta, boolean tick, CallbackInfo callbackInfo) {
     //#else
@@ -45,6 +59,12 @@ public class Mixin_RenderTickEvent {
         fireTickEvent(true, null, tickDelta);
     }
 
+    //#if MC >= 26.1
+    //$$ @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V"))
+    //$$ private void renderTickPost(DeltaTracker tickDelta, boolean tick, CallbackInfo callbackInfo) {
+    //$$     GuiGraphicsExtractor graphics = new GuiGraphicsExtractor(this.minecraft, this.gameRenderState.guiRenderState, 0, 0);
+    //$$     UDrawContext drawContext = new UDrawContext(graphics, new UMatrixStack());
+    //#else
     @Inject(method = "render", at = @At(value = "CONSTANT", args = "stringValue=toasts"))
     //#if MC>=12100
     //$$ private void renderTickPost(RenderTickCounter tickDelta, boolean tick, CallbackInfo callbackInfo, @Local DrawContext vDrawContext) {
@@ -55,6 +75,7 @@ public class Mixin_RenderTickEvent {
     //#else
     private void renderTickPost(float tickDelta, long startTime, boolean tick, CallbackInfo callbackInfo) {
         UDrawContext drawContext = new UDrawContext(new UMatrixStack());
+    //#endif
     //#endif
         fireTickEvent(false, drawContext, tickDelta);
     }

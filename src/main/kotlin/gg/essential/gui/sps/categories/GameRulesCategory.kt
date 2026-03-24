@@ -50,7 +50,9 @@ class GameRulesCategory : WorldSettingsCategory(
 
     // The integrated server should always be running if this UI is opened
     private val gameRules = Minecraft.getMinecraft().integratedServer!!
-        //#if MC>=12111
+        //#if MC >= 26.1
+        //$$ .gameRules
+        //#elseif MC>=12111
         //$$ .saveProperties.gameRules
         //#elseif MC>=11600
         //$$ .gameRules

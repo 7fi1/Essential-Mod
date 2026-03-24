@@ -124,10 +124,6 @@ public class Cosmetic implements DisplayNameHolder, PriceHolder, SkinLayersHolde
         return this.displayNames;
     }
 
-    public int getStorePackageId() {
-        return this.storePackageId;
-    }
-
     @Override
     public @NotNull Map<@NotNull String, @NotNull Double> getPrices() {
         if (this.prices == null) {
@@ -179,10 +175,6 @@ public class Cosmetic implements DisplayNameHolder, PriceHolder, SkinLayersHolde
 
     public @Nullable Integer getDefaultSortWeight() {
         return this.defaultSortWeight;
-    }
-
-    public @Nullable Integer getPriceCoins() {
-        return priceCoins;
     }
 
     public @Nullable CosmeticTier getTier() {

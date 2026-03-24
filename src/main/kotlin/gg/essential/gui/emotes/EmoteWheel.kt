@@ -470,10 +470,13 @@ class EmoteWheel : WindowScreen(
                 } else if (!emote.cosmetic.emoteInterruptionTriggers.movement) { // Movement doesn't cancel this emote and it loops
 
                     UKeyboard.getKeyName(UMinecraft.getSettings().keyBindSneak)?.let { keybind ->
-                        //#if MC>=11202
-                        player?.sendStatusMessage(textLiteral("Press $keybind to Stop Emote"), true)
+                        val text = textLiteral("Press $keybind to Stop Emote")
+                        //#if MC >= 26.1
+                        //$$ UMinecraft.getMinecraft().gui.setOverlayMessage(text, true)
+                        //#elseif MC>=11202
+                        player?.sendStatusMessage(text, true)
                         //#else
-                        //$$ UMinecraft.getMinecraft().ingameGUI.setRecordPlaying(textLiteral("Press $keybind to Stop Emote"), false)
+                        //$$ UMinecraft.getMinecraft().ingameGUI.setRecordPlaying(text, false)
                         //#endif
                     }
                 }

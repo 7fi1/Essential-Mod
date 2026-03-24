@@ -34,7 +34,6 @@ public class ServerWardrobeSettingsPacketHandler extends PacketHandler<ServerWar
         settings.populateOutfitsLimit(packet.getOutfitsLimit());
         settings.populateSkinsLimit(packet.getSkinsLimit());
         settings.populateGiftingCoinSpendRequirement(packet.getGiftingCoinSpendRequirement());
-        settings.populateYouNeedMinimumAmount(packet.getYouNeedMinimumAmount());
     }
 
 }

@@ -15,7 +15,6 @@ import gg.essential.cosmetics.boxmask.ModelClipperImpl
 import gg.essential.cosmetics.skinmask.SkinMask
 import gg.essential.mod.Model
 import gg.essential.mod.cosmetics.CosmeticSlot
-import gg.essential.mod.cosmetics.SkinLayer
 import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.mod.cosmetics.settings.CosmeticSetting
 import gg.essential.mod.cosmetics.settings.side
@@ -66,23 +65,6 @@ class CosmeticsState(
      */
     val armor: ArmorSlots,
 ) {
-
-    /**
-     * All outer skin layers which are logically covered by a cosmetic and should therefore be skipped by the vanilla
-     * player renderer.
-     */
-    val coveredLayers: Set<SkinLayer> = cosmetics.values
-        .flatMap { cosmetic ->
-            fun <T> MutableSet<T>.putAll(map: Map<T, Boolean>?) = map?.forEach { (key, visible) ->
-                if (visible) remove(key) else add(key)
-            }
-
-            val result = mutableSetOf<SkinLayer>()
-            result.putAll(cosmetic.cosmetic.type.skinLayers)
-            result.putAll(cosmetic.cosmetic.skinLayers)
-            result
-        }.toSet()
-
     /**
      * For each cosmetic, contains a set of body parts on which it should not be rendered because another equipped
      * cosmetic has explicitly disabled it to avoid conflict (e.g. hats tend to disable the head part of full body
@@ -249,9 +231,9 @@ class CosmeticsState(
      */
     val renderGeometries: Map<CosmeticId, RenderGeometry> = bedrockModels.values.associate { model ->
         val cosmetic = model.cosmetic
-        val slot = cosmetic.type.slot
+        val slot = cosmetic.slot
         val renderExclusions = bedrockModels.filter { (otherCosmetic, _) ->
-            val otherSlot = otherCosmetic.type.slot
+            val otherSlot = otherCosmetic.slot
             exclusionsAffectSlots[otherSlot]?.contains(slot) ?: false
         }.flatMap { getSidedRenderExclusions(it.value) }
         val modelClipper = ModelClipperImpl()
@@ -264,7 +246,7 @@ class CosmeticsState(
      * This contains the final merged and offset mask to be applied directly to the skin.
      */
     val skinMask: SkinMask = bedrockModels.mapNotNull { (cosmetic, model) ->
-        val settings = cosmetics[cosmetic.type.slot]?.settings ?: emptyList()
+        val settings = cosmetics[cosmetic.slot]?.settings ?: emptyList()
         val side = settings.side
             ?: cosmetic.defaultSide
             ?: Side.getDefaultSideOrNull(model.sideOptions)
@@ -350,7 +332,7 @@ class CosmeticsState(
 
     fun copyWithout(slot: CosmeticSlot): CosmeticsState {
         val cosmetics = cosmetics.filterKeys { it != slot }
-        val bedrockModels = bedrockModels.filterKeys { it.type.slot != slot }
+        val bedrockModels = bedrockModels.filterKeys { it.slot != slot }
         return CosmeticsState(skinType, cosmetics, bedrockModels, armor)
     }
 

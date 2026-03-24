@@ -10,7 +10,7 @@
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
 import gg.essential.gradle.util.*
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 
 plugins {
     kotlin("jvm")
@@ -43,7 +43,7 @@ kotlin {
 }
 
 kotlin.jvmToolchain(8)
-tasks.withType(KotlinCompile::class) { setJvmDefault("all") }
+kotlin.compilerOptions.jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY)
 
 // Using src dirs matching what kotlin-multiplatform would do because we ideally want to be using that,
 // but have moved away from it for the time being because it was too unreliable.

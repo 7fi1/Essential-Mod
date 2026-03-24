@@ -423,6 +423,10 @@ abstract class AbstractTextInput(
     }
 
     private fun showOptionMenu(posX: Float, posY: Float) {
+        // Close the existing menu if currently open
+        if (contextMenuOpen) {
+            (Window.ofOrNull(this)?.focusedComponent as? ContextOptionMenu)?.close()
+        }
         contextMenuOpen = true
         val options = mutableListOf<ContextOptionMenu.Item>()
         if (hasSelection()) {

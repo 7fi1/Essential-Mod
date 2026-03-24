@@ -22,28 +22,22 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 object PlayerModel {
-    private val cosmeticType =
-        CosmeticType("PLAYER", CosmeticSlot.FULL_BODY, emptyMap(), emptyMap())
-
     private val cosmetic =
         Cosmetic(
             CosmeticBase(
                 "PLAYER",
-                cosmeticType,
+                CosmeticSlot.FULL_BODY,
                 CosmeticTier.COMMON,
                 emptyMap(),
                 emptyMap(),
                 emptyList(),
             ),
             CosmeticStoreInfo(
-                -1,
-                emptyMap(),
+                null,
                 emptySet(),
                 now(),
                 null,
                 null,
-                null,
-                emptyMap(),
                 emptyMap(),
                 0,
             ),

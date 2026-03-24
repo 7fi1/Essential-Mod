@@ -28,6 +28,8 @@ import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.layoutdsl.*
+import gg.essential.gui.notification.Notifications
+import gg.essential.gui.notification.error
 import gg.essential.gui.screenshot.constraints.AspectPreservingFillConstraint
 import gg.essential.gui.screenshot.copyScreenshotToClipboard
 import gg.essential.gui.screenshot.saveImageAsScreenshot
@@ -57,15 +59,16 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.isRegularFile
 
 class ImageEmbedImpl(
-    url: URL,
+    val mediaId: String,
     wrapper: MessageWrapper,
-) : ImageEmbed(url, wrapper) {
+) : ImageEmbed(wrapper) {
 
     private val coroutineScope = CoroutineScope(Dispatchers.Client)
 
     private val loadingState = BasicState(false)
     private var loadedImage: BufferedImage? = null
     private var loadingJob: Job? = null
+    override var url: URL? = null
 
     private val aspectRatio = BasicState(16 / 9f)
     private val highlightedState = BasicState(false)
@@ -97,14 +100,14 @@ class ImageEmbedImpl(
     private fun prepareAndLoad() {
         loadingState.set(true)
 
-        val localPaths = MessageUtils.SCREENSHOT_URL_REGEX.find(url.toString())
-            ?.let { platform.screenshotManager.getUploadedLocalPathsCache(it.groupValues[1]) }
-            ?: emptyList()
+        val localPaths = platform.screenshotManager.getUploadedLocalPathsCache(mediaId)
 
         loadingJob?.cancel()
         loadingJob = coroutineScope.launch {
+            url = platform.cmConnection.getGatewayService("media").baseUrl().resolve(mediaId)?.url()
+                ?: throw IllegalStateException("url is null")
             val bufferedImage = withContext(Dispatchers.IO) {
-                localPaths.firstNotNullOfOrNull { fetchLocalImage(it) } ?: fetchRemoteImage()
+                localPaths.firstNotNullOfOrNull { fetchLocalImage(it) } ?: fetchRemoteImage(url!!)
             }
             val uiImage = bufferedImage?.let { loadUIImage(it) }
             loadImage(bufferedImage, uiImage)
@@ -142,7 +145,7 @@ class ImageEmbedImpl(
         highlightedState.set(false)
     }
 
-    private suspend fun download(): BufferedImage? {
+    private suspend fun download(url: URL): BufferedImage? {
         val original = httpGetToBytes(url.toString())
 
         try {
@@ -188,9 +191,9 @@ class ImageEmbedImpl(
     /**
      * Attempts to download remote image and returns BufferedImage if successful
      */
-    private suspend fun fetchRemoteImage(): BufferedImage? {
+    private suspend fun fetchRemoteImage(url: URL): BufferedImage? {
         return try {
-            download()
+            download(url)
         } catch (e: IOException) {
             LOGGER.debug("Error downloading image", e)
             null
@@ -275,7 +278,12 @@ class ImageEmbedImpl(
                 } + "Open Original"
             })
         }.onLeftClick {
-            OpenLinkModal.openUrl(url.toURI())
+            if (url != null) {
+                OpenLinkModal.openUrl(url!!.toURI())
+            } else {
+                Notifications.error("Failed to open link", "")
+                LOGGER.error("Failed to open link as url is null")
+            }
         } childOf this
 
         init {

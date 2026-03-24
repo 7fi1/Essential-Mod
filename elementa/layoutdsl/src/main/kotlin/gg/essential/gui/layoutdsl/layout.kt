@@ -50,7 +50,6 @@ class LayoutScope(
             callsInPlace(block, InvocationKind.EXACTLY_ONCE)
         }
 
-        component.getChildModifier().applyToComponent(childComponent)
         modifier.applyToComponent(childComponent)
 
         val childScope = LayoutScope(childComponent, this, childComponent)
@@ -58,8 +57,10 @@ class LayoutScope(
 
         childScope.block()
 
-        val index = childScope.findNextIndexIn(component) ?: 0
-        component.insertChildAt(childComponent, index)
+        if (isMounted()) {
+            val index = childScope.findNextIndexIn(component) ?: 0
+            component.insertChildAt(childComponent, index)
+        }
     }
 
     operator fun LayoutDslComponent.invoke(modifier: Modifier = Modifier) = layout(modifier)
@@ -133,21 +134,22 @@ class LayoutScope(
 
                 forEachScope.childrenScopes.add(index, newScope)
                 newScope.block(element)
-                if (!forEachScope.isVirtualScopeMounted()) {
-                    newScope.unmount()
-                }
             }
         }
 
         fun remove(index: Int, element: T) {
             val removedScope = forEachScope.childrenScopes.removeAt(index)
-            removedScope.unmount()
+            if (forEachScope.isVirtualScopeMounted()) {
+                removedScope.unmount()
+            }
             getCacheEntry(element)?.add(removedScope)
         }
 
         fun clear(elements: List<T>) {
             forEachScope.childrenScopes.forEachIndexed { index, layoutScope ->
-                layoutScope.unmount()
+                if (forEachScope.isVirtualScopeMounted()) {
+                    layoutScope.unmount()
+                }
                 getCacheEntry(elements[index])?.add(layoutScope)
             }
             forEachScope.childrenScopes.clear()
@@ -199,6 +201,8 @@ class LayoutScope(
 
         return true
     }
+
+    private fun isMounted() = if (isVirtual()) isVirtualScopeMounted() else true
 
     /** Removes from [component] all components that where added within this scope. */
     private fun unmount() {
@@ -298,7 +302,7 @@ fun UIComponent.layoutAsBox(modifier: Modifier = Modifier, block: LayoutScope.()
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
-    addChildModifier(Modifier.alignBoth(Alignment.Center))
+    setDefaultChildAlignment()
     layout(modifier, block)
     return this
 }
@@ -314,7 +318,7 @@ fun UIComponent.layoutAsRow(modifier: Modifier, horizontalArrangement: Arrangeme
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
-    addChildModifier(Modifier.alignVertical(verticalAlignment))
+    setDefaultChildAlignment(y = verticalAlignment)
     layout(modifier, block)
     horizontalArrangement.initialize(this, Axis.HORIZONTAL)
     return this
@@ -331,7 +335,7 @@ fun UIComponent.layoutAsColumn(modifier: Modifier, verticalArrangement: Arrangem
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
-    addChildModifier(Modifier.alignHorizontal(horizontalAlignment))
+    setDefaultChildAlignment(x = horizontalAlignment)
     layout(modifier, block)
     verticalArrangement.initialize(this, Axis.VERTICAL)
     return this

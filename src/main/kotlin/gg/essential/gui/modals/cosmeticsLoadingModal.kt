@@ -12,43 +12,30 @@
 package gg.essential.gui.modals
 
 import gg.essential.Essential
-import gg.essential.elementa.dsl.childOf
-import gg.essential.gui.common.Spacer
-import gg.essential.gui.common.modal.EssentialModal
-import gg.essential.gui.common.modal.configure
+import gg.essential.gui.common.modal.ConnectingModal
 import gg.essential.gui.elementa.state.v2.awaitValue
+import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.overlay.ModalFlow
-import gg.essential.gui.overlay.ModalManager
 import gg.essential.network.connectionmanager.cosmetics.CosmeticsManager
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Displays when the user attempts to open the Wardrobe, but cosmetics are not fully loaded yet.
- * This modal constructs a new instance of either [CosmeticStudio] or [Wardrobe] when complete.
- */
-class CosmeticsLoadingModal(modalManager: ModalManager, continuation: ModalFlow.ModalContinuation<Boolean>) : EssentialModal(modalManager) {
-
-    init {
-        configure {
-            titleText = "Loading cosmetics"
-            contentText = "Cosmetics are currently loading. This may take a moment..."
-        }
-
-        // `customContent` has a padding of 4f on its y position
-        Spacer(height = 17f - 4f) childOf customContent
-
+suspend fun ModalFlow.cosmeticsLoadingModal(): Boolean {
+    return awaitModal { continuation ->
         val cosmeticsLoaded = Essential.getInstance().connectionManager.cosmeticsManager.cosmeticsLoaded
+        val hasCompleted = mutableStateOf<Boolean?>(null)
         modalManager.coroutineScope.launch {
             val completed = withTimeoutOrNull(CosmeticsManager.LOAD_TIMEOUT_SECONDS.seconds) {
                 cosmeticsLoaded.awaitValue(true)
             }
-            replaceWith(continuation.resumeImmediately(completed == true))
+            hasCompleted.set(completed == true)
         }
+        ConnectingModal(
+            modalManager,
+            "Loading Wardrobe...",
+            isConnecting = { hasCompleted() == null },
+            continuation = continuation
+        )
     }
-}
-
-suspend fun ModalFlow.cosmeticsLoadingModal(): Boolean {
-    return awaitModal { CosmeticsLoadingModal(modalManager, it) }
 }

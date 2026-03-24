@@ -46,10 +46,18 @@ public abstract class Mixin_GuiDrawScreenEvent_Priority_Pre {
     @Shadow @Final private Minecraft mc;
 
     @Inject(
+        //#if MC >= 26.1
+        //$$ method = "extractGui",
+        //#else
         method = "updateCameraAndRender",
+        //#endif
         //#if MC>=11600
         //$$ at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;currentScreen:Lnet/minecraft/client/gui/screen/Screen;", ordinal = 0),
+        //#if MC >= 26.1
+        //$$ slice = @Slice(from = @At(value = "CONSTANT", args = "stringValue=Extracting overlay render state"))
+        //#else
         //$$ slice = @Slice(from = @At(value = "CONSTANT", args = "stringValue=Rendering overlay"))
+        //#endif
         //#else
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;clear(I)V", shift = At.Shift.AFTER)
         //#endif

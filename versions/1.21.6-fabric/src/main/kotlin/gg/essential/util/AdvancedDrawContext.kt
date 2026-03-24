@@ -20,9 +20,15 @@ import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gl.RenderPipelines
 import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.render.ProjectionMatrix2
 import net.minecraft.client.texture.AbstractTexture
 import net.minecraft.util.Identifier
+
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.Projection
+//$$ import net.minecraft.client.renderer.ProjectionMatrixBuffer
+//#else
+import net.minecraft.client.render.ProjectionMatrix2
+//#endif
 
 // Note: Copied from UniversalCraft, changes here should probably be applied over there as well.
 // Changes from UC:
@@ -42,7 +48,12 @@ import net.minecraft.util.Identifier
  * simply re-allocate them.
  */
 internal object AdvancedDrawContext : AutoCloseable {
+    //#if MC >= 26.1
+    //$$ private val projection = Projection()
+    //$$ private var allocatedProjectionMatrix: ProjectionMatrixBuffer? = null
+    //#else
     private var allocatedProjectionMatrix: ProjectionMatrix2? = null
+    //#endif
 
     val textureAllocator = TemporaryTextureAllocator {
         allocatedProjectionMatrix?.close()
@@ -70,15 +81,22 @@ internal object AdvancedDrawContext : AutoCloseable {
 
         var projectionMatrix = allocatedProjectionMatrix
         if (projectionMatrix == null) {
+            //#if MC >= 26.1
+            //$$ projectionMatrix = ProjectionMatrixBuffer("pre-rendered screen")
+            //#else
             projectionMatrix = ProjectionMatrix2("pre-rendered screen", 1000f, 21000f, true)
+            //#endif
             allocatedProjectionMatrix = projectionMatrix
         }
+        //#if MC >= 26.1
+        //$$ projection.setupOrtho(1000f, 21000f, width.toFloat() / scaleFactor, height.toFloat() / scaleFactor, true)
+        //$$ val projectionMatrixBuffer = projectionMatrix.getBuffer(projection)
+        //#else
+        val projectionMatrixBuffer = projectionMatrix.set(width.toFloat() / scaleFactor, height.toFloat() / scaleFactor)
+        //#endif
         val orgProjectionMatrixBuffer = RenderSystem.getProjectionMatrixBuffer()
         val orgProjectionType = RenderSystem.getProjectionType()
-        RenderSystem.setProjectionMatrix(
-            projectionMatrix.set(width.toFloat() / scaleFactor, height.toFloat() / scaleFactor),
-            ProjectionType.ORTHOGRAPHIC,
-        )
+        RenderSystem.setProjectionMatrix(projectionMatrixBuffer, ProjectionType.ORTHOGRAPHIC)
 
         val orgOutputColorTextureOverride = RenderSystem.outputColorTextureOverride
         val orgOutputDepthTextureOverride = RenderSystem.outputDepthTextureOverride

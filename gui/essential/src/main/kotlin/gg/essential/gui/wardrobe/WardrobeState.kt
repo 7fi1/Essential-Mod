@@ -296,7 +296,7 @@ class WardrobeState(
 
     /** Currently selected emote */
     val selectedEmote: State<Item.CosmeticOrEmote?> = memo {
-        (selectedItem() as? Item.CosmeticOrEmote)?.takeIf { it.cosmetic.type.slot == CosmeticSlot.EMOTE && it.id !in unlockedCosmetics() }
+        (selectedItem() as? Item.CosmeticOrEmote)?.takeIf { it.cosmetic.slot == CosmeticSlot.EMOTE && it.id !in unlockedCosmetics() }
     }.apply {
         onChange(component) {
             if (it != null) {

@@ -519,7 +519,9 @@ open class UI3DPlayer(
         val p = player ?: return
 
         val renderManager = Minecraft.getMinecraft().renderManager
-        //#if MC>=11400
+        //#if MC >= 26.1
+        //$$ // CameraRenderState set up later below
+        //#elseif MC>=11400
         //#if MC>=12109
         //$$ val camera = object : Camera() {
         //#else
@@ -605,23 +607,28 @@ open class UI3DPlayer(
             //$$ val stack = applyCamera(dispatcher)
             //$$
             //#if MC>=12109
-            //$$ state.light = Light.MAX_VALUE.value.toInt()
+            //$$ state.light = MAX_LIGHT.value.toInt()
             //$$ state.shadowPieces.clear()
             //$$ val entityRenderPass = MinecraftClient.getInstance().gameRenderer.entityRenderDispatcher
             //$$ val cameraState = CameraRenderState().also { cameraState ->
+            //#if MC>=12111
+            //$$     cameraState.initialized = true
+            //$$     cameraState.orientation = with(this@UI3DPlayer.camera.rotation) { Quaternionf(x, y, z, w) }
+            //#else
             //$$     // See GameRenderer.updateCameraState
             //$$     cameraState.initialized = camera.isReady
             //$$     cameraState.pos = camera.pos
             //$$     cameraState.blockPos = camera.blockPos
             //$$     cameraState.entityPos = camera.focusedEntity.getLerpedPos(camera.lastTickProgress)
             //$$     cameraState.orientation = Quaternionf(camera.rotation)
+            //#endif
             //$$ }
             //$$ renderManager.render(state, cameraState, 0.0, 0.0, 0.0, stack.toMC(), entityRenderPass.queue)
             //$$ entityRenderPass.render()
             //#else
             //$$ val vertexConsumers = MinecraftClient.getInstance().bufferBuilders.entityVertexConsumers
             //$$ dispatcher.setRenderShadows(false)
-            //$$ dispatcher.render(state, 0.0, 0.0, 0.0, stack.toMC(), vertexConsumers, Light.MAX_VALUE.value.toInt())
+            //$$ dispatcher.render(state, 0.0, 0.0, 0.0, stack.toMC(), vertexConsumers, MAX_LIGHT.value.toInt())
             //$$ dispatcher.setRenderShadows(true)
             //$$ vertexConsumers.draw()
             //#endif
@@ -761,7 +768,7 @@ open class UI3DPlayer(
     private fun doDrawFallbackPlayer() {
         //#if MC>=11400
         //$$ val immediate = Minecraft.getInstance().renderTypeBuffers.bufferSource
-        //$$ val vertexConsumerProvider = MinecraftRenderBackend.VertexConsumerProvider(immediate, Light.MAX_VALUE.value.toInt())
+        //$$ val vertexConsumerProvider = MinecraftRenderBackend.VertexConsumerProvider(immediate, MAX_LIGHT.value.toInt())
         //#else
         val vertexConsumerProvider = MinecraftRenderBackend.VertexConsumerProvider()
         UGraphics.enableDepth()
@@ -826,7 +833,7 @@ open class UI3DPlayer(
             false,
             false,
             player.takeUnless { errored }?.uniqueID, // try to only render this player's particles
-            Light.MAX_VALUE,
+            MAX_LIGHT,
         )
 
         //#if MC>=12104
@@ -837,7 +844,7 @@ open class UI3DPlayer(
     }
 
     // Older versions of MC do not always have a proper lightmap texture bound.
-    // To always have one bound, we simply bind an all-white (we don't really care about any value other than `Light.MAX_VALUE`) texture ourselves.
+    // To always have one bound, we simply bind an all-white (we don't really care about any value other than `MAX_LIGHT`) texture ourselves.
     private fun bindWhiteLightMapTexture() {
         //#if MC>=12111
         //$$ // RenderLayer now always binds the lightmap texture of its configured RenderSetup
@@ -1159,6 +1166,21 @@ open class UI3DPlayer(
         // This accounts for both the extra space needed for rotation, as well as
         // the extra space taken up by the arms due to their angle
         private const val PADDING_FACTOR = 0.05f
+
+        //#if MC >= 26.1
+        //$$ // Uses MC's uiLightmap which is only 1x1, so regular MAX_VALUE would result in undefined behavior during
+        //$$ // texelFetch (usually resulting in a color of 0, rendering the entity fully translucent)
+        //$$ private val MAX_LIGHT: Light
+        //$$     get() {
+        //$$         // Note: This currently depends on when exactly we render. Once we've migrated more to MC's "new"
+        //$$         //       rendering system, it will however always be the ui lightmap. We're currently just
+        //$$         //       rendering in somewhat random places.
+        //$$         val isUiLightmap = Minecraft.getInstance().gameRenderer.let { it.lightmap() != it.levelLightmap() }
+        //$$         return if (isUiLightmap) Light(0u) else Light.MAX_VALUE
+        //$$     }
+        //#else
+        private val MAX_LIGHT = Light.MAX_VALUE
+        //#endif
 
         @JvmField
         var current: UI3DPlayer? = null

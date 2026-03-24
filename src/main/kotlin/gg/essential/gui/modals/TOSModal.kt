@@ -188,7 +188,7 @@ suspend fun ModalFlow.tosModal(): Boolean {
             when {
                 connectionManager.outdated -> showUpdateModal()
                 status is ConnectionManagerStatus.Error.AuthenticationFailure -> return accountNotValidModal()
-                status != ConnectionManagerStatus.Success -> return notAuthenticatedModal()
+                status != ConnectionManagerStatus.Success -> connectionManagerErrorModal()
             }
         }
     }

@@ -32,7 +32,11 @@ import static gg.essential.universal.utils.TextUtilsKt.toFormattedString;
 
 @Mixin(LabelCommandRenderer.class)
 public class Mixin_NameplateIcon_Render<T extends Entity> {
+    //#if MC >= 26.1
+    //$$ private static final String DRAW_TEXT = "Lnet/minecraft/client/gui/Font;drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V";
+    //#else
     private static final String DRAW_TEXT = "Lnet/minecraft/client/font/TextRenderer;draw(Lnet/minecraft/text/Text;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/client/font/TextRenderer$TextLayerType;II)V";
+    //#endif
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = DRAW_TEXT, ordinal = 0))
     private void renderEssentialIndicatorSeeThrough(

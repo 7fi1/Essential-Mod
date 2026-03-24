@@ -12,6 +12,7 @@
 package gg.essential.gui.friends.message
 
 import com.sparkuniverse.toolbox.chat.model.Channel
+import com.sparkuniverse.toolbox.chat.model.MessageContent.Plain
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.ScrollComponent
 import gg.essential.elementa.components.UIContainer
@@ -137,11 +138,12 @@ class MessageInput(
         effect(this) {
             val message = editingMessage()
             if (message != null) {
+                require(message.content is Plain)
                 grabFocus()
                 if (stashedMessage == null) {
                     stashedMessage = input.getText()
                 }
-                input.setText(message.contents)
+                input.setText(message.content.unfilteredText)
             } else {
                 stashedMessage?.let { text -> input.setText(text) }
                 stashedMessage = null

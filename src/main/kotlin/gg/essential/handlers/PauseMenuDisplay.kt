@@ -53,6 +53,7 @@ import gg.essential.gui.common.modal.configure
 import gg.essential.gui.common.or
 import gg.essential.gui.elementa.VanillaButtonConstraint.Companion.constrainTo
 import gg.essential.gui.elementa.VanillaButtonGroupConstraint.Companion.constrainTo
+import gg.essential.gui.elementa.state.v2.await
 import gg.essential.gui.elementa.state.v2.combinators.not
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toV2
@@ -80,6 +81,7 @@ import gg.essential.gui.modal.sps.FirewallBlockingModal
 import gg.essential.gui.modals.EssentialAutoInstalledModal
 import gg.essential.gui.modals.FeaturesEnabledModal
 import gg.essential.gui.modals.UpdateNotificationModal
+import gg.essential.gui.modals.connectionManagerErrorModal
 import gg.essential.gui.modals.ensurePrerequisites
 import gg.essential.gui.modals.updateAvailableModal
 import gg.essential.gui.notification.Notifications
@@ -100,14 +102,20 @@ import gg.essential.util.findButtonByLabel
 import gg.essential.gui.util.pollingState
 import gg.essential.network.connectionmanager.features.Feature
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager
+import gg.essential.network.connectionmanager.ConnectionManagerStatus
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
 import gg.essential.network.connectionmanager.suspension.suspensionModal
 import gg.essential.sps.SpsAddress
 import gg.essential.universal.USound
 import gg.essential.util.FirewallUtil
+import gg.essential.util.Client
 import gg.essential.util.MinecraftUtils
 import gg.essential.util.isMainMenu
 import gg.essential.vigilance.utils.onLeftClick
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiIngameMenu
@@ -133,6 +141,8 @@ class PauseMenuDisplay {
     private var layer: Layer? = null
     private var initContent = false
     private var initModals = false
+
+    private var statusCheckJob: CoroutineScope? = null
 
     private fun initContent(screen: GuiScreen) {
         initContent = true
@@ -328,6 +338,32 @@ class PauseMenuDisplay {
         ) {
             GuiUtil.queueModal(FeaturesEnabledModal(GuiUtil))
         }
+
+        if (statusCheckJob == null) {
+            statusCheckJob = CoroutineScope(Dispatchers.Client).also { scope ->
+                scope.launch {
+                    val status = Essential.getInstance().connectionManager.connectionStatus.await { it != null }
+                    when (status) {
+                        is ConnectionManagerStatus.Error.GeneralFailure -> {
+                            Notifications.error(
+                                "Essential Network Error",
+                                "Unable to establish connection with the Essential Network",
+                            ) {
+                                withCustomComponent(Slot.ACTION, toastButton("Help") {
+                                    GuiUtil.launchModalFlow { connectionManagerErrorModal(stateOf(status)) }
+                                })
+                            }
+                        }
+
+                        is ConnectionManagerStatus.Error -> {
+                            GuiUtil.launchModalFlow { connectionManagerErrorModal(stateOf(status)) }
+                        }
+
+                        else -> {}
+                    }
+                }
+            }
+        }
     }
 
     @Subscribe
@@ -350,6 +386,10 @@ class PauseMenuDisplay {
     fun drawScreen(event: GuiDrawScreenEvent) {
         val screen = event.screen
         if (screen !is GuiIngameMenu && !screen.isMainMenu) {
+            // If the user navigates away from the main menu, we don't want to show them any error modals
+            // or toasts until they launch the game next.
+            // To prevent any pending statuses from appearing, we should cancel the coroutine scope.
+            statusCheckJob?.cancel()
             return
         }
 

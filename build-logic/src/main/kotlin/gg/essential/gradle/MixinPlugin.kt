@@ -29,7 +29,7 @@ open class MixinPlugin : Plugin<Project> {
 
 private fun Project.configureMixin(platform: Platform) {
     // For versions which use mojmap at runtime, there is no need for refmap files and therefore the mixin AP
-    val usesMojmapAtRuntime = platform.isNeoForge || (platform.isForge && platform.mcVersion >= 12006)
+    val usesMojmapAtRuntime = platform.isNeoForge || (platform.isForge && platform.mcVersion >= 12006) || platform.isUnobfuscated
     if (usesMojmapAtRuntime) {
         tasks.named<ProcessResources>("processResources") {
             filesMatching("mixins.*.json") {

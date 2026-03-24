@@ -14,19 +14,27 @@ package gg.essential.handlers.account
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import gg.essential.Essential
+import gg.essential.minecraftauth.exception.AuthenticationException
 import gg.essential.config.LoadsResources
 import gg.essential.gui.account.MicrosoftUserAuthentication
 import gg.essential.gui.account.factory.MicrosoftAccountSessionFactory
+import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.menu.AccountManager
+import gg.essential.gui.modals.connectionManagerErrorModal
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
+import gg.essential.network.connectionmanager.ConnectionManagerStatus
 import gg.essential.minecraftauth.microsoft.MicrosoftAuthenticationService
 import gg.essential.universal.UDesktop
+import gg.essential.util.Client
+import gg.essential.util.GuiUtil
 import gg.essential.util.Multithreading
+import kotlinx.coroutines.Dispatchers
 import java.lang.ref.WeakReference
 import java.net.InetSocketAddress
 import java.net.URI
 import java.util.regex.Pattern
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * This utility object handles the webserver for serving Essential web pages
@@ -180,7 +188,15 @@ object WebAccountManager {
                 }
             } catch (e: Exception) {
                 mostRecentAccountManager.get()?.let {
-                    Notifications.error("Account Error", "Something went wrong\nduring login.")
+                    if (e is AuthenticationException) {
+                        Dispatchers.Client.dispatch(EmptyCoroutineContext) {
+                            GuiUtil.launchModalFlow {
+                                connectionManagerErrorModal(stateOf(ConnectionManagerStatus.Error.AuthenticationFailure(e)))
+                            }
+                        }
+                    } else {
+                        Notifications.error("Account Error", "Something went wrong\nduring login.")
+                    }
                 }
                 e.printStackTrace()
 

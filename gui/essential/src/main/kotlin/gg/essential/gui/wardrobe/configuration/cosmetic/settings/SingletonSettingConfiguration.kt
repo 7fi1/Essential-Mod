@@ -42,7 +42,13 @@ abstract class SingletonSettingConfiguration<P : CosmeticSetting>(
         box(Modifier.fillWidth().then(modifier)) {
             bind(cosmeticAndSetting) { (cosmetic, setting) ->
                 if (cosmetic != null) {
-                    val model = modelLoader.getModel(cosmetic, cosmetic.defaultVariantName, AssetLoader.Priority.Blocking).join()
+                    val modelFuture = modelLoader.getModel(cosmetic, cosmetic.defaultVariantName, AssetLoader.Priority.Blocking)
+                    val model = try {
+                        modelFuture.join()
+                    } catch (_: Exception) { // already logged by ModelLoader
+                        text("Setting unavailable. Failed to load cosmetic model file!")
+                        return@bind
+                    }
                     val sidesAvaliable = model.sideOptions
 
                     if (setting != null) {

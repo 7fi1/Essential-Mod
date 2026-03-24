@@ -66,7 +66,4 @@ public class ServerWardrobeSettingsPacket extends Packet {
         return currentFeaturedPageConfig;
     }
 
-    public int getYouNeedMinimumAmount() {
-        return youNeedMinimumAmount != null ? youNeedMinimumAmount : 100;
-    }
 }

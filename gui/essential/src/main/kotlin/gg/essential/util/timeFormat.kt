@@ -17,6 +17,7 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAccessor
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -80,3 +81,13 @@ fun ObservedDuration.toShortString(weeks: Boolean = true, expiredText: String = 
 
     return ceilUnits.toString() + ceilEntry.second + " " + floorUnits.toString() + floorEntry.second
 }
+
+private val millisTime = arrayOf(
+    ChronoUnit.YEARS,
+    ChronoUnit.MONTHS,
+    ChronoUnit.WEEKS,
+    ChronoUnit.DAYS,
+    ChronoUnit.HOURS,
+    ChronoUnit.MINUTES,
+)
+

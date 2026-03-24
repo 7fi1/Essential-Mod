@@ -17,11 +17,11 @@ import com.sparkuniverse.toolbox.util.DateTime;
 import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
 import gg.essential.connectionmanager.common.packet.Packet;
-import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket;
 import gg.essential.connectionmanager.common.packet.media.ClientMediaCreatePacket;
 import gg.essential.connectionmanager.common.packet.media.ClientMediaDeleteRequestPacket;
 import gg.essential.connectionmanager.common.packet.media.ClientMediaGetUploadUrlPacket;
 import gg.essential.connectionmanager.common.packet.media.ClientMediaRequestPacket;
+import gg.essential.connectionmanager.common.packet.media.ClientMediaSharePacket;
 import gg.essential.connectionmanager.common.packet.media.ClientMediaUpdatePacket;
 import gg.essential.connectionmanager.common.packet.media.ServerMediaPopulatePacket;
 import gg.essential.connectionmanager.common.packet.media.ServerMediaUploadUrlPacket;
@@ -61,11 +61,11 @@ import gg.essential.media.model.MediaMetadata;
 import gg.essential.media.model.MediaVariant;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.NetworkedManager;
-import gg.essential.network.connectionmanager.chat.ChatManager;
 import gg.essential.network.connectionmanager.features.Feature;
 import gg.essential.network.connectionmanager.handler.screenshot.ServerScreenshotListPacketHandler;
 import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UDesktop;
+import gg.essential.universal.wrappers.UPlayer;
 import gg.essential.util.EssentialSounds;
 import gg.essential.util.ExtensionsKt;
 import gg.essential.util.GuiUtil;
@@ -106,6 +106,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static gg.essential.gui.elementa.state.v2.ListKt.clear;
 import static gg.essential.gui.elementa.state.v2.ListKt.mutableListStateOf;
@@ -317,48 +318,22 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
     }
 
     public void shareLinkToChannels(List<Channel> channels, Media media, Consumer<ScreenshotUploadToast.ToastProgress> progressConsumer) {
-        final MediaVariant embed = media.getVariants().get("embed");
-        if (embed == null) {
-            progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Error: Media link not supplied", false));
-            return;
-        }
-
-        Map<Channel, CompletableFuture<Boolean>> messageFutures = new HashMap<>();
-
-        ChatManager chatManager = Essential.getInstance().getConnectionManager().getChatManager();
-        for (Channel channel : channels) {
-            CompletableFuture<Boolean> messageFuture = new CompletableFuture<>();
-            messageFutures.put(channel, messageFuture);
-            chatManager.sendMessage(
-                    channel.getId(),
-                    embed.getUrl(),
-                    response -> {
-                        messageFuture.complete(response.isPresent() && response.get() instanceof ServerChatChannelMessagePacket);
-                    }
-            );
-        }
-
-        CompletableFuture.allOf(messageFutures.values().toArray(new CompletableFuture[0])).whenCompleteAsync(
-                (ignored, throwable) -> {
-                    boolean anySucceeded = false;
-
-                    for (Map.Entry<Channel, CompletableFuture<Boolean>> entry : messageFutures.entrySet()) {
-                        // I used join, so we don't need to catch exceptions from future.get(), as we know all of them completed anyway
-                        if (entry.getValue().join()) {
-                            anySucceeded = true;
+        connectionManager.send(new ClientMediaSharePacket(
+                channels.stream().map(Channel::getId).collect(Collectors.toSet()),
+                Sets.newHashSet(media.getId())),
+                response -> {
+                    Packet packet = response.orElse(null);
+                    if (packet instanceof ResponseActionPacket) {
+                        ResponseActionPacket responseActionPacket = (ResponseActionPacket) packet;
+                        if (responseActionPacket.isSuccessful()) {
+                            progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Picture shared", true, channels));
                         } else {
-                            ScreenshotUploadToast.create().accept(new ScreenshotUploadToast.ToastProgress.Complete("Error: Failed to share to " + entry.getKey().getName(), false));
+                            progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Error: Failed to share pictures", false));
                         }
-                    }
-
-                    if (anySucceeded) {
-                        progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Picture shared", true, channels));
-                        connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_SHARED_TO_CHANNEL"));
                     } else {
-                        progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Error: All the messages failed to send.", false));
+                        progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Error: Failed to share pictures", false));
                     }
-                },
-                ExtensionsKt.getExecutor(Minecraft.getMinecraft())
+                }
         );
     }
 
@@ -857,7 +832,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
 
     private void screenshotMessageCallback(ITextComponent component) {
         if (EssentialConfig.INSTANCE.getEnableVanillaScreenshotMessage()) {
-            Minecraft.getMinecraft().ingameGUI.getChatGUI().printChatMessage(component);
+            UPlayer.sendClientSideMessage(component);
         }
     }
 

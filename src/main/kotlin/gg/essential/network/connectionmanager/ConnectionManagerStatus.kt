@@ -13,7 +13,6 @@ package gg.essential.network.connectionmanager
 
 sealed interface ConnectionManagerStatus {
     data object Success : ConnectionManagerStatus
-    data object Cancelled : ConnectionManagerStatus
     data object Outdated : ConnectionManagerStatus
     data object TOSNotAccepted : ConnectionManagerStatus
     data object EssentialDisabled : ConnectionManagerStatus

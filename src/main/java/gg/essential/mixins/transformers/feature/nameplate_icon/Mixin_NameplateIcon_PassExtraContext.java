@@ -13,6 +13,7 @@ package gg.essential.mixins.transformers.feature.nameplate_icon;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import gg.essential.handlers.OnlineIndicator;
+import gg.essential.mixins.impl.client.model.PlayerEntityRenderStateExt;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.RenderPlayer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,15 +21,28 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.entity.EntityRenderer;
+//$$ import net.minecraft.client.renderer.entity.state.EntityRenderState;
+//#endif
+
 //#if MC>=12109
 //$$ import gg.essential.mixins.impl.client.model.PlayerEntityRenderStateExt;
 //$$ import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 //#endif
 
+//#if MC >= 26.1
+//$$ @Mixin(EntityRenderer.class)
+//#else
 @Mixin(RenderPlayer.class)
+//#endif
 public class Mixin_NameplateIcon_PassExtraContext {
     //#if MC>=12109
+    //#if MC >= 26.1
+    //$$ private static final String METHOD = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
+    //#else
     //$$ private static final String METHOD = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V";
+    //#endif
     //$$ private static final String TARGET = "Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;submitLabel(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/util/math/Vec3d;ILnet/minecraft/text/Text;ZIDLnet/minecraft/client/render/state/CameraRenderState;)V";
     //#elseif MC>=12102
     //$$ private static final String METHOD = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V";
@@ -57,13 +71,19 @@ public class Mixin_NameplateIcon_PassExtraContext {
     )
     private void passContext(
         CallbackInfo ci
-        //#if MC>=12109
+        //#if MC >= 26.1
+        //$$ , @Local(argsOnly = true) EntityRenderState state
+        //#elseif MC>=12109
         //$$ , @Local(argsOnly = true) PlayerEntityRenderState state
         //#endif
         //#if MC==11202
         , @Local(argsOnly = true) AbstractClientPlayer entity
         //#endif
     ) {
+        //#if MC >= 26.1
+        //$$ if (!(state instanceof PlayerEntityRenderStateExt)) return;
+        //#endif
+
         OnlineIndicator.currentlyDrawingPlayerEntityName.set(true);
         //#if MC>=12109
         //$$ OnlineIndicator.currentCosmeticsRenderState = ((PlayerEntityRenderStateExt) state).essential$getCosmetics();

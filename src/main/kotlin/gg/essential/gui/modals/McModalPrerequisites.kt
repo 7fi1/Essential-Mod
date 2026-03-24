@@ -13,17 +13,20 @@ package gg.essential.gui.modals
 
 import gg.essential.Essential
 import gg.essential.gui.overlay.ModalFlow
-import gg.essential.data.OnboardingData
+import gg.essential.gui.common.modal.ConnectingModal
+import gg.essential.gui.modals.McModalPrerequisites.connectionStatus
+import gg.essential.network.connectionmanager.ConnectionManagerStatus
 import gg.essential.network.connectionmanager.features.Feature
 import gg.essential.network.connectionmanager.suspension.suspensionModal
 import gg.essential.universal.UMinecraft
-import gg.essential.util.AutoUpdate
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 
 object McModalPrerequisites : ModalPrerequisites() {
 
+    private val connectionStatus = Essential.getInstance().connectionManager.connectionStatus
+
     override suspend fun ModalFlow.doTermsOfServiceModal(): PrerequisiteResult {
-        return if (!OnboardingData.hasAcceptedTos()) {
+        return if (connectionStatus.getUntracked() is ConnectionManagerStatus.TOSNotAccepted) {
             tosModal().toResult()
         } else {
             PrerequisiteResult.PASS
@@ -31,7 +34,7 @@ object McModalPrerequisites : ModalPrerequisites() {
     }
 
     override suspend fun ModalFlow.doRequiredUpdateModal(): PrerequisiteResult {
-        return if (AutoUpdate.requiresUpdate()) {
+        return if (connectionStatus.getUntracked() is ConnectionManagerStatus.Outdated) {
             updateRequiredModal()
             PrerequisiteResult.FAILURE
         } else {
@@ -39,10 +42,18 @@ object McModalPrerequisites : ModalPrerequisites() {
         }
     }
 
-    override suspend fun ModalFlow.doAuthenticationModal(): PrerequisiteResult {
+    override suspend fun ModalFlow.doSuspensionAndRuleManagerLoadedCheck(): PrerequisiteResult {
         val connectionManager = Essential.getInstance().connectionManager
-        return if (!connectionManager.isAuthenticated || ((!connectionManager.suspensionManager.isLoaded.getUntracked() || !connectionManager.rulesManager.isLoaded.getUntracked()))) {
-            notAuthenticatedModal().toResult()
+        return if (!connectionManager.suspensionManager.isLoaded.getUntracked() || !connectionManager.rulesManager.isLoaded.getUntracked()) {
+            awaitModal { continuation ->
+                ConnectingModal(
+                    modalManager,
+                    title = "Connecting to Essential...",
+                    isConnecting = { (connectionStatus() == ConnectionManagerStatus.Success && (!connectionManager.suspensionManager.isLoaded() || !connectionManager.rulesManager.isLoaded())) || connectionStatus() == null },
+                    continuation = continuation
+                )
+            }
+            PrerequisiteResult.SUCCESS
         } else {
             PrerequisiteResult.PASS
         }
@@ -52,6 +63,30 @@ object McModalPrerequisites : ModalPrerequisites() {
         if (!Essential.getInstance().connectionManager.cosmeticsManager.cosmeticsLoaded.getUntracked()) {
             cosmeticsLoadingModal()
             return PrerequisiteResult.SUCCESS
+        }
+        return PrerequisiteResult.PASS
+    }
+
+    override suspend fun ModalFlow.doConnectionStatusErrorModal(): PrerequisiteResult {
+        // Checks all connection errors including authentication errors
+        if (connectionStatus.getUntracked() is ConnectionManagerStatus.Error) {
+            connectionManagerErrorModal()
+            return PrerequisiteResult.SUCCESS
+        }
+        return PrerequisiteResult.PASS
+    }
+
+    override suspend fun ModalFlow.doConnectingModal(): PrerequisiteResult {
+        if (connectionStatus.getUntracked() == null) {
+            val connectionManager = Essential.getInstance().connectionManager
+            return awaitModal { continuation ->
+                ConnectingModal(
+                    modalManager,
+                    title = "Connecting to Essential...",
+                    isConnecting = { (connectionStatus() == ConnectionManagerStatus.Success && (!connectionManager.suspensionManager.isLoaded() || !connectionManager.rulesManager.isLoaded())) || connectionStatus() == null },
+                    continuation = continuation
+                )
+            }.toResult()
         }
         return PrerequisiteResult.PASS
     }

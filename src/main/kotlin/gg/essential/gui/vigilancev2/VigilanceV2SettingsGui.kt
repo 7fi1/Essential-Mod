@@ -12,6 +12,7 @@
 package gg.essential.gui.vigilancev2
 
 import gg.essential.Essential
+import gg.essential.api.gui.Slot
 import gg.essential.data.VersionData
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
@@ -28,6 +29,7 @@ import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.modals.communityRulesModal
 import gg.essential.gui.modals.updateAvailableModal
+import gg.essential.gui.notification.Notifications
 import gg.essential.gui.vigilancev2.components.vigilanceCategoryTextColor
 import gg.essential.gui.vigilancev2.palette.VigilancePalette
 import gg.essential.network.connectionmanager.telemetry.FeatureSessionTelemetry
@@ -37,6 +39,7 @@ import gg.essential.universal.USound
 import gg.essential.util.AutoUpdate
 import gg.essential.util.GuiUtil
 import gg.essential.util.GuiUtil.launchModalFlow
+import gg.essential.util.onLeftClick
 import gg.essential.util.openInBrowser
 import gg.essential.vigilance.data.PropertyData
 import java.awt.Color
@@ -222,8 +225,15 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
 
         wrappedText(
             versionText.joinToString("\n"),
-            Modifier.color(EssentialPalette.TEXT_DISABLED).shadow(EssentialPalette.COMPONENT_BACKGROUND),
-        )
+            Modifier.color(EssentialPalette.TEXT_DISABLED).shadow(EssentialPalette.COMPONENT_BACKGROUND)
+                .hoverScope().hoverColor(EssentialPalette.TEXT_MID_GRAY),
+        ).onLeftClick {
+            USound.playButtonPress()
+            UDesktop.setClipboardString(versionText.joinToString(separator = "\n"))
+            Notifications.push("Version information copied to clipboard", "") {
+                withCustomComponent(Slot.ICON, EssentialPalette.COPY_10X7.create())
+            }
+        }
     }
 
     private fun LayoutScope.sidebarLink(text: String, uri: URI) {

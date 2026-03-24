@@ -12,9 +12,7 @@
 package gg.essential.gui
 
 import gg.essential.api.gui.Slot
-import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.dsl.*
-import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.notification.Notifications
 
@@ -32,34 +30,5 @@ fun sendCheckmarkNotification(
 ) {
     Notifications.push(message, "", action = action) {
         withCustomComponent(Slot.ICON, EssentialPalette.CHECKMARK_7X5.create())
-    }
-}
-
-@Deprecated("No longer needed, use the notification builder with a custom ICON slot.",
-    ReplaceWith(
-        "Notifications.push(message, \"\", action = action) {" +
-            "\n    withCustomComponent(Slot.ICON, icon.create())" +
-            "\n}",
-        "gg.essential.api.gui.Slot",
-        "gg.essential.gui.EssentialPalette",
-        "gg.essential.gui.notification.Notifications"
-    )
-)
-fun sendNotificationWithIcon(
-    icon: ImageFactory,
-    message: String,
-    iconModifier: Modifier = Modifier,
-    action: () -> Unit = {}
-) {
-    val notification by UIContainer()
-
-    notification.layoutAsBox(Modifier.height(9f).childBasedWidth()) {
-        box(Modifier.childBasedWidth(1f)) {
-            icon(icon, Modifier.shadow(EssentialPalette.TEXT_SHADOW_LIGHT) then iconModifier)
-        }
-    }
-
-    Notifications.push(message, "", action = action) {
-        withCustomComponent(Slot.PREVIEW, notification)
     }
 }

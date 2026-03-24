@@ -24,13 +24,16 @@ import gg.essential.elementa.state.State
 import gg.essential.elementa.state.pixels
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.ReadOnlyState
-import gg.essential.gui.common.and
+import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.gui.elementa.state.v2.toV2
 import gg.essential.universal.ChatColor
 import gg.essential.universal.UMatrixStack
 import gg.essential.util.bindEssentialTooltip
-import gg.essential.gui.util.hoveredState
+import gg.essential.gui.util.hoveredStateV2
 import java.awt.Color
 import kotlin.math.max
+
+import gg.essential.gui.elementa.state.v2.State as StateV2
 
 /**
  * An extension of Elementa's [UIText] where the shadow is not considered in width or height bounds
@@ -45,11 +48,12 @@ class EssentialUIText @JvmOverloads constructor(
     val centerTruncatedText: Boolean = false,
 ) : UIText(text, shadow, shadowColor) {
 
-    private val truncatedState = BasicState(false)
+    private val mutableTruncatedState = mutableStateOf(false)
     private val fullText = BasicState(text)
     private val actualTextWidth = BasicState(constraints.getWidth())
 
     val textWidth = ReadOnlyState(actualTextWidth)
+    val truncatedState: StateV2<Boolean> = mutableTruncatedState
 
     init {
         // UIText overrides [getWidth] and multiplies the value of the width constraint
@@ -65,7 +69,7 @@ class EssentialUIText @JvmOverloads constructor(
         }
         setFontProvider(fontProvider)
         if (truncateIfTooSmall && showTooltipForTruncatedText) {
-            bindEssentialTooltip(hoveredState() and truncatedState, fullText)
+            bindEssentialTooltip({ hoveredStateV2()() && mutableTruncatedState() }, fullText.toV2())
         }
         setColor(EssentialPalette.TEXT_HIGHLIGHT)
     }
@@ -134,9 +138,9 @@ class EssentialUIText @JvmOverloads constructor(
             renderedTruncated = false
         }
 
-        if (truncatedState.get() != renderedTruncated) {
+        if (mutableTruncatedState.getUntracked() != renderedTruncated) {
             Window.enqueueRenderOperation {
-                truncatedState.set(renderedTruncated)
+                mutableTruncatedState.set(renderedTruncated)
             }
         }
     }

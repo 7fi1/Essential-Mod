@@ -24,6 +24,7 @@ interface MinecraftUtils {
      */
     //#if MC<12105
     @Deprecated("Use `UChat.chat` instead.")
+    @Suppress("DEPRECATION")
     fun sendMessage(message: gg.essential.universal.wrappers.message.UTextComponent)
     //#endif
 
@@ -43,7 +44,7 @@ interface MinecraftUtils {
      * Queues a message to be displayed to the player in chat, client-side only.
      *
      * NOTE: This message is prefixed with `[Essential]`, and as such, should only be used to display Essential
-     * information. If you simply want to send a normal message, use the function here that takes a [UTextComponent].
+     * information. If you simply want to send a normal message, use [gg.essential.universal.UChat.chat] instead.
      */
     fun sendMessage(message: String)
 

@@ -12,8 +12,7 @@
 package gg.essential.gui.friends.message.screenshot
 
 import com.sparkuniverse.toolbox.chat.model.Channel
-import gg.essential.connectionmanager.common.packet.Packet
-import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket
+import gg.essential.connectionmanager.common.packet.media.ClientMediaSharePacket
 import gg.essential.elementa.components.Window
 import gg.essential.gui.elementa.state.v2.MutableListState
 import gg.essential.gui.elementa.state.v2.State
@@ -29,8 +28,8 @@ import gg.essential.gui.screenshot.RemoteScreenshot
 import gg.essential.gui.screenshot.ScreenshotId
 import gg.essential.gui.screenshot.ScreenshotUploadToast.ToastProgress
 import gg.essential.media.model.Media
-import gg.essential.media.model.MediaVariant
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -85,7 +84,7 @@ class ScreenshotAttachmentManager(
 
         CompletableFuture.allOf(*uploadTasks.values.toTypedArray<CompletableFuture<Media>>())
             .whenCompleteAsync({ _, _ ->
-                val embeds = mutableListOf<MediaVariant>()
+                val mediaIds = mutableSetOf<String>()
                 for ((id, task) in uploadTasks) {
 
                     val media = try {
@@ -100,26 +99,16 @@ class ScreenshotAttachmentManager(
                     }
 
                     progresses[id] = ToastProgress.Complete("Screenshot was uploaded.", true)
-                    val embed = media.variants["embed"]
-                    if (embed == null) {
-                        LOGGER.error("Unable to share screenshot ${media.id} to channel as it's missing its embed.")
-                        continue
-                    }
-                    embeds.add(embed)
+                    mediaIds.add(media.id)
                 }
 
-                if (embeds.isEmpty()) {
+                if (mediaIds.isEmpty()) {
                     return@whenCompleteAsync
                 }
 
-                val message = embeds.joinToString("\n") { it.url }
-
-                socialStates.messages.sendMessage(
-                    channel.id,
-                    message
-                ) { response: Optional<Packet> ->
-                    if (!response.isPresent || response.get() !is ServerChatChannelMessagePacket) {
-                        LOGGER.error("Failed to send message of ${embeds.size} screenshot(s) to channel.")
+                platform.cmConnection.connectionScope.launch {
+                    if (!platform.cmConnection.call(ClientMediaSharePacket(setOf(channel.id), mediaIds)).awaitResponseActionPacket()) {
+                        LOGGER.error("Failed to share media (${mediaIds.joinToString()}) to channel.")
                     }
                 }
             }, Window::enqueueRenderOperation)

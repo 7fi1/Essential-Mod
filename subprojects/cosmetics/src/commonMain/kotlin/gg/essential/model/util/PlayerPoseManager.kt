@@ -60,7 +60,7 @@ class PlayerPoseManager(
     fun update(wearablesManager: WearablesManager) =
         update(
             wearablesManager.models.values
-                .find { it.cosmetic.type.slot == CosmeticSlot.EMOTE }
+                .find { it.cosmetic.slot == CosmeticSlot.EMOTE }
                 ?.takeUnless { it.animationState.active.isEmpty() }
         )
 
@@ -147,7 +147,7 @@ class PlayerPoseManager(
 
         // Apply pose animations from all other cosmetics (if any)
         for ((cosmetic, model) in wearablesManager?.models ?: emptyMap()) {
-            if (cosmetic.type.slot == CosmeticSlot.EMOTE) {
+            if (cosmetic.slot == CosmeticSlot.EMOTE) {
                 continue // already handled separately before the loop
             }
             transformedPose = model.computePose(transformedPose)

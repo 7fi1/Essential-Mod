@@ -107,12 +107,6 @@ class InfraCosmeticsData private constructor(
         } else {
             state.types.add(type)
         }
-
-        for ((index, cosmetic) in state.cosmetics.get().withIndex()) {
-            if (cosmetic.type.id == type.id && cosmetic.type != type) {
-                state.cosmetics.set(index, cosmetic.copy(base = cosmetic.base.copy(type = type)))
-            }
-        }
     }
 
     fun addCosmetic(infraCosmetic: InfraCosmetic) {

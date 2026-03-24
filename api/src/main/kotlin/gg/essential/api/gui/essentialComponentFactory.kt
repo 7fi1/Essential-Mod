@@ -79,10 +79,12 @@ class EmulatedPlayerBuilder {
      * [GameProfile] of player to be emulated.
      */
     var profile: GameProfile?
-        get() = wrappedProfileState?.get()?.profile ?: profileState.get()
+        get() = wrappedProfileState?.get()?.profile ?: @Suppress("DEPRECATION") profileState.get()
         set(value) {
             wrappedProfileState?.set(value?.wrapped())
 
+            @Suppress("DEPRECATION")
+            val profileState = profileState
             // `set` won't do anything if `oldValue == value`, and therefore `get` will continue returning `oldValue`.
             // To avoid this, we must set `profileState` to a different value before setting the new value.
             if (profileState.get() == value && profileState.get()?.wrapped() != profile?.wrapped()) {

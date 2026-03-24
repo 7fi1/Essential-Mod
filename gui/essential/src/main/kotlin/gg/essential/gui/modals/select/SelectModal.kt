@@ -126,8 +126,7 @@ class SelectModal<T>(
             width = 100.percent
             height = ChildBasedMaxSizeConstraint()
         }.apply {
-            addChildModifier(Modifier.alignHorizontal(Alignment.Center))
-            layout { extraContent?.let { it() } }
+            layoutAsBox { extraContent?.let { it() } }
         }
         customContent.insertChildBefore(extraContentContainer, bottomSpacer)
 

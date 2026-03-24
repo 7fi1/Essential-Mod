@@ -14,15 +14,6 @@ import gg.essential.gradle.util.*
 import net.fabricmc.loom.task.RemapJarTask
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
-// FIXME remove once EGT is updated
-buildscript {
-    configurations.classpath {
-        resolutionStrategy {
-            force("com.github.replaymod:remap:d6af8ab8e")
-        }
-    }
-}
-
 plugins {
     id("base")
     id("essential.utils")

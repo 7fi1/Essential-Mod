@@ -13,7 +13,7 @@ package gg.essential.network.connectionmanager.cosmetics
 
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.cosmetics.CosmeticId
-import gg.essential.cosmetics.CosmeticTypeId
+import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.mod.cosmetics.CosmeticTier
 import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.mod.cosmetics.settings.CosmeticPropertyType
@@ -185,11 +185,7 @@ fun CosmeticsDataWithChanges.setCosmeticSingletonPropertyEnabled(
 
 fun CosmeticsDataWithChanges.setCosmeticPriceCoins(cosmeticId: CosmeticId, price: Int?) {
     updateCosmetic(cosmeticId) {
-        if (price == null) {
-            copy(storeInfo = storeInfo.copy(prices = prices - "coins"))
-        } else {
-            copy(storeInfo = storeInfo.copy(prices = prices + ("coins" to price.toDouble())))
-        }
+        copy(storeInfo = storeInfo.copy(price = price))
     }
 }
 
@@ -200,11 +196,11 @@ fun CosmeticsDataWithChanges.setCosmeticTier(cosmeticId: CosmeticId, tier: Cosme
 }
 
 /**
- * Sets the type of the cosmetic with id [cosmeticId] to [type]
+ * Sets the slot of the cosmetic with id [cosmeticId] to [slot]
  */
-fun CosmeticsDataWithChanges.setCosmeticType(cosmeticId: CosmeticId, type: CosmeticTypeId) {
+fun CosmeticsDataWithChanges.setCosmeticSlot(cosmeticId: CosmeticId, slot: CosmeticSlot) {
     updateCosmetic(cosmeticId) {
-        copy(base = base.copy(type = getType(type)!!))
+        copy(base = base.copy(slot = slot))
     }
 }
 

@@ -29,7 +29,9 @@ import java.util.concurrent.TimeoutException;
 
 @Mixin(IntegratedServer.class)
 public abstract class MixinIntegratedServer extends MinecraftServer {
-    //#if MC>=11900
+    //#if MC >= 26.1
+    //$$ public MixinIntegratedServer() { super(null, null, null, null, null, null, null, null, null, false); }
+    //#elseif MC>=11900
     //$$ public MixinIntegratedServer() { super(null, null, null, null, null, null, null, null); }
     //#elseif MC>=11802
     //$$ public MixinIntegratedServer() { super(null, null, null, null, null, null, null, null, null, null); }

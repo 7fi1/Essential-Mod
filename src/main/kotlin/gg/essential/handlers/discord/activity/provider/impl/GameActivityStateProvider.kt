@@ -51,7 +51,7 @@ class GameActivityStateProvider : ActivityStateProvider {
 
             is ServerType.SPS.Host -> ActivityState.SPSHost
 
-            null -> null
+            else -> null
         }
     }
 }

@@ -15,9 +15,7 @@ import dev.folomeev.kotgl.matrix.matrices.Mat4;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.EssentialModelRenderer;
 import gg.essential.gui.emotes.EmoteWheel;
-import gg.essential.mixins.impl.client.entity.AbstractClientPlayerExt;
 import gg.essential.mixins.impl.client.renderer.entity.PlayerEntityRendererExt;
-import gg.essential.mod.cosmetics.SkinLayer;
 import gg.essential.model.EnumPart;
 import gg.essential.model.backend.RenderBackend;
 import gg.essential.model.backend.minecraft.MinecraftRenderBackend;
@@ -36,7 +34,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.EnumSet;
-import java.util.Set;
 
 //#if MC>=12109
 //$$ import net.minecraft.client.render.command.OrderedRenderCommandQueue;
@@ -115,37 +112,6 @@ public abstract class MixinRenderPlayer
     public Iterable<?> essential$getFeatures() {
         return this.layerRenderers;
     }
-
-    //#if MC>=12102
-    //#if MC>=12109
-    //$$ @Inject(method = "updateRenderState(Lnet/minecraft/entity/PlayerLikeEntity;Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;F)V", at = @At("RETURN"))
-    //$$ private void disableOuterLayerWhereCoveredByCosmetic(PlayerLikeEntity player, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
-    //$$     if (!(player instanceof AbstractClientPlayerExt)) return;
-    //#else
-    //$$ @Inject(method = "updateRenderState(Lnet/minecraft/client/network/AbstractClientPlayerEntity;Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;F)V", at = @At("RETURN"))
-    //$$ private void disableOuterLayerWhereCoveredByCosmetic(AbstractClientPlayerEntity player, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
-    //#endif
-    //$$     Set<SkinLayer> coveredLayers = ((AbstractClientPlayerExt) player).getCosmeticsState().getCoveredLayers();
-    //$$     state.hatVisible &= !coveredLayers.contains(SkinLayer.HAT);
-    //$$     state.jacketVisible &= !coveredLayers.contains(SkinLayer.JACKET);
-    //$$     state.leftSleeveVisible &= !coveredLayers.contains(SkinLayer.LEFT_SLEEVE);
-    //$$     state.rightSleeveVisible &= !coveredLayers.contains(SkinLayer.RIGHT_SLEEVE);
-    //$$     state.leftPantsLegVisible &= !coveredLayers.contains(SkinLayer.LEFT_PANTS_LEG);
-    //$$     state.rightPantsLegVisible &= !coveredLayers.contains(SkinLayer.RIGHT_PANTS_LEG);
-    //$$ }
-    //#else
-    @Inject(method = "setModelVisibilities", at = @At("RETURN"))
-    private void disableOuterLayerWhereCoveredByCosmetic(AbstractClientPlayer player, CallbackInfo ci) {
-        Set<SkinLayer> coveredLayers = ((AbstractClientPlayerExt) player).getCosmeticsState().getCoveredLayers();
-        ModelPlayer model = getMainModel();
-        model.bipedHeadwear.showModel &= !coveredLayers.contains(SkinLayer.HAT);
-        model.bipedBodyWear.showModel &= !coveredLayers.contains(SkinLayer.JACKET);
-        model.bipedLeftArmwear.showModel &= !coveredLayers.contains(SkinLayer.LEFT_SLEEVE);
-        model.bipedRightArmwear.showModel &= !coveredLayers.contains(SkinLayer.RIGHT_SLEEVE);
-        model.bipedLeftLegwear.showModel &= !coveredLayers.contains(SkinLayer.LEFT_PANTS_LEG);
-        model.bipedRightLegwear.showModel &= !coveredLayers.contains(SkinLayer.RIGHT_PANTS_LEG);
-    }
-    //#endif
 
     //#if FORGE && MC<11700
     @Redirect(

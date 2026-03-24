@@ -42,6 +42,8 @@ import java.io.File;
 public class Mixin_PreventExtraPlayerLoadEvent {
     //#if NEOFORGE && MC>=12005
     //$$ // Event is now fired from inside `Optional.map`
+    //#elseif MC >= 1.21.9
+    //$$ // Forge now also fires its event from a more appropriate place (PrepareSpawnTask.Ready.spawn)
     //#else
     @SuppressWarnings({"unused"})
     @WrapWithCondition(

@@ -95,8 +95,7 @@ class CoinsPurchaseModal private constructor( // private constructor to ensure c
             val bundleState = memo {
                 val missingCoins = coinsNeededState()
                 if (originalBundle.isExchangeBundle && missingCoins > 0) {
-                    val minimumBundleSize = state.settings.youNeedMinimumAmount()
-                    originalBundle.getBundleForNumberOfCoins(max(minimumBundleSize, missingCoins))
+                    originalBundle.getBundleForNumberOfCoins(max(100, missingCoins))
                 } else originalBundle
             }
             bind(bundleState) { bundle ->
@@ -190,8 +189,6 @@ class CoinsPurchaseModal private constructor( // private constructor to ensure c
                         }
                     }
                     row(Modifier.fillHeight(), Arrangement.spacedBy(5f)) {
-                        val minimumAmount = state.settings.youNeedMinimumAmount.getUntracked()
-
                         text("Essential Coins", Modifier.alignVertical(Alignment.Center(true)).shadow(EssentialPalette.BLACK))
                         infoIcon("Unlock cosmetics and emotes with Essential Coins", position = EssentialTooltip.Position.ABOVE)
                     }

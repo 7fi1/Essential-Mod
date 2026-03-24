@@ -14,6 +14,7 @@ package gg.essential.gui.friends.message.v2
 import com.sparkuniverse.toolbox.chat.enums.ChannelType
 import com.sparkuniverse.toolbox.chat.model.Channel
 import com.sparkuniverse.toolbox.chat.model.CreatedInfo
+import com.sparkuniverse.toolbox.chat.model.MessageContent
 import com.sparkuniverse.toolbox.util.DateTime
 import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
@@ -89,8 +90,8 @@ data class MessageRef(
         val DELETED = ClientMessage(
             -1,
             deletedMessageFakeChannel,
-            UUID(0,0),
-            "Message deleted",
+            UUID(0, 0),
+            MessageContent.Plain("Message deleted", null),
             SendState.Confirmed,
             null,
             null,

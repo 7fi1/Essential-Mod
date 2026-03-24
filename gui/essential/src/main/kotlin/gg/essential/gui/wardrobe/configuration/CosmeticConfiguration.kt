@@ -32,6 +32,7 @@ import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.labeledStringI
 import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.navButton
 import gg.essential.gui.wardrobe.configuration.cosmetic.*
 import gg.essential.gui.wardrobe.configuration.cosmetic.properties.*
+import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.mod.cosmetics.settings.CosmeticPropertyType
 import gg.essential.network.connectionmanager.cosmetics.*
 import gg.essential.network.cosmetics.Cosmetic
@@ -48,7 +49,7 @@ class CosmeticConfiguration(
     private val managingSetting = mutableStateOf<CosmeticPropertyType?>(null)
 
     init {
-        state.currentlyEditingCosmeticTypeId.onSetValue(referenceHolder) {
+        state.currentlyEditingCosmeticId.onSetValue(referenceHolder) {
             currentView.set(View.HOME)
             // Otherwise, clicking settings will bring you into the setting you were previously managing
             // and singleton settings that do not yet exist will not be created
@@ -117,14 +118,14 @@ class CosmeticConfiguration(
 
     private fun LayoutScope.generalView(cosmetic: Cosmetic) {
         labeledListInputRow(
-            "Type:",
-            cosmetic.type,
-            cosmeticsDataWithChanges.types.map { types -> types.sortedBy { it.displayNames["en_us"] } }.toListState().mapEach { EssentialDropDown.Option(it.id, it) }) {
-            cosmeticsDataWithChanges.setCosmeticType(cosmetic.id, it.id)
+            "Slot:",
+            cosmetic.slot,
+            listStateOf(*CosmeticSlot.values().toTypedArray()).mapEach { EssentialDropDown.Option(it.id, it) }) {
+            cosmeticsDataWithChanges.setCosmeticSlot(cosmetic.id, it)
         }
         labeledEnumInputRow("Tier:", cosmetic.tier) { cosmeticsDataWithChanges.setCosmeticTier(cosmetic.id, it) }
         labeledStringInputRow("Display Name:", mutableStateOf(cosmetic.displayName)).state.onSetValue(stateScope) { cosmeticsDataWithChanges.setCosmeticDisplayName(cosmetic.id, it) }
-        labeledNullableIntInputRow("Price:", mutableStateOf(cosmetic.priceCoinsNullable)).state.onSetValue(stateScope) { cosmeticsDataWithChanges.setCosmeticPriceCoins(cosmetic.id, it) }
+        labeledNullableIntInputRow("Price:", mutableStateOf(cosmetic.price)).state.onSetValue(stateScope) { cosmeticsDataWithChanges.setCosmeticPriceCoins(cosmetic.id, it) }
         text("Tags:", Modifier.alignHorizontal(Alignment.Start))
         if (cosmetic.tags.isEmpty()) {
             text("No tags...", Modifier.alignHorizontal(Alignment.Start))

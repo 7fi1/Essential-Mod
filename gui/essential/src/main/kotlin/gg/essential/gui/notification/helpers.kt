@@ -57,8 +57,13 @@ fun sendSpsInviteNotification(uuid: UUID) =
     }
 
 fun sendSpsInviteNotification(uuid: UUID, name: String) {
+    sendSpsInviteNotificationOld(uuid, name)
+}
+
+private fun sendSpsInviteNotificationOld(uuid: UUID, name: String) {
     Notifications.pushPersistentToast(name, "Sent you an invite\nto their world.", {}, {}) {
         withCustomComponent(Slot.ICON, CachedAvatarImage.create(uuid))
+        uniqueId = SPSNotificationId(uuid)
 
         val button = toastButton(
             "Join",
@@ -77,3 +82,5 @@ fun sendOutgoingSpsInviteNotification(name: String) {
         iconAndMarkdownBody(EssentialPalette.ENVELOPE_9X7.create(), "${name.colored(EssentialPalette.TEXT_HIGHLIGHT)} invited")
     }
 }
+
+data class SPSNotificationId(val uuid: UUID)

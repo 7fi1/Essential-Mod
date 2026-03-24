@@ -27,7 +27,6 @@ import kotlin.reflect.KProperty
 
 object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
-
     var showEssentialIndicatorOnTabState = property("General.Online Status.Show Essential Indicator on Tab", true)
     var showEssentialIndicatorOnTab by showEssentialIndicatorOnTabState
 

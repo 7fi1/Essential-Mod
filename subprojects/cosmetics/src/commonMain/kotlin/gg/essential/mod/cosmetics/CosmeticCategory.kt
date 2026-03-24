@@ -13,7 +13,6 @@
 
 package gg.essential.mod.cosmetics
 
-import gg.essential.mod.EssentialAsset
 import gg.essential.model.util.Instant
 import gg.essential.model.util.InstantAsMillisSerializer
 import kotlinx.serialization.Serializable
@@ -22,7 +21,6 @@ import kotlinx.serialization.UseSerializers
 @Serializable
 data class CosmeticCategory(
     val id: String,
-    val icon: EssentialAsset,
     val displayNames: Map<String, String>,
     val compactNames: Map<String, String>,
     val descriptions: Map<String, String>,

@@ -14,7 +14,7 @@ package gg.essential.api.utils
 import org.apache.commons.io.IOUtils
 import java.io.*
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 import java.nio.charset.Charset
 
 /**
@@ -82,7 +82,7 @@ object WebUtil {
     @JvmStatic
     @Throws(IOException::class)
     private fun setup(url: String, userAgent: String): InputStream {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = URI(url).parseServerAuthority().toURL().openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
         connection.useCaches = true
         connection.addRequestProperty("User-Agent", userAgent)

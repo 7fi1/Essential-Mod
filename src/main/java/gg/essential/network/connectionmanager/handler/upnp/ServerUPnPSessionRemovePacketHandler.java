@@ -12,6 +12,8 @@
 package gg.essential.network.connectionmanager.handler.upnp;
 
 import gg.essential.connectionmanager.common.packet.upnp.ServerUPnPSessionRemovePacket;
+import gg.essential.gui.notification.Notifications;
+import gg.essential.gui.notification.SPSNotificationId;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.handler.PacketHandler;
 import gg.essential.network.connectionmanager.sps.SPSManager;
@@ -29,6 +31,7 @@ public class ServerUPnPSessionRemovePacketHandler extends PacketHandler<ServerUP
 
         for (UUID hostUUID : packet.getHostUUIDs()) {
             spsManager.removeRemoteSession(hostUUID);
+            Notifications.INSTANCE.removeNotificationById(new SPSNotificationId(hostUUID));
         }
     }
 

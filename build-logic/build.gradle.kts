@@ -34,11 +34,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:binary-compatibility-validator:0.18.1")
     runtimeOnly("org.jetbrains.kotlin:kotlin-metadata-jvm:2.2.0") // for binary-compatibility-validator
     implementation("com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.7")
-    implementation("org.ow2.asm:asm-commons:9.3")
+    implementation("org.ow2.asm:asm-commons:9.9.1")
     implementation ("com.google.guava:guava:30.1.1-jre")
 
-    implementation("gg.essential:essential-gradle-toolkit:0.7.0-alpha.2")
-    // FIXME remove the forced remap version in `root.gradle.kts` once EGT updates its remap
+    implementation("gg.essential:essential-gradle-toolkit:0.7.0-alpha.4")
 }
 
 gradlePlugin {

@@ -19,12 +19,10 @@ class WardrobeSettings {
     private val _outfitsLimit: MutableState<Int?> = mutableStateOf(null)
     private val _skinsLimit: MutableState<Int?> = mutableStateOf(null)
     private val _giftingCoinSpendRequirement: MutableState<Int?> = mutableStateOf(null)
-    private val _youNeedMinimumAmount: MutableState<Int?> = mutableStateOf(null)
 
     val outfitsLimit = _outfitsLimit.letState { it ?: 0 }
     val skinsLimit = _skinsLimit.letState { it ?: 0 }
     val giftingCoinSpendRequirement = _giftingCoinSpendRequirement.letState { it ?: 0 }
-    val youNeedMinimumAmount = _youNeedMinimumAmount.letState { it ?: 0 }
 
     fun populateOutfitsLimit(limit: Int) =
         _outfitsLimit.set(limit)
@@ -35,14 +33,10 @@ class WardrobeSettings {
     fun populateGiftingCoinSpendRequirement(requirement: Int) =
         _giftingCoinSpendRequirement.set(requirement)
 
-    fun populateYouNeedMinimumAmount(amount: Int) =
-        _youNeedMinimumAmount.set(amount)
-
     fun isSettingsLoaded(): Boolean {
         return _outfitsLimit.getUntracked() != null &&
                 _skinsLimit.getUntracked() != null &&
-                _giftingCoinSpendRequirement.getUntracked() != null &&
-                _youNeedMinimumAmount.getUntracked() != null
+                _giftingCoinSpendRequirement.getUntracked() != null
     }
 
 }

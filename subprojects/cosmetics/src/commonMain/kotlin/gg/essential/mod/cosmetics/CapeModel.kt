@@ -78,26 +78,22 @@ object CapeModel {
 
     val capeModelFile: ModelFile = Json.decodeFromString(capeModelJson)
 
-    private val type = CosmeticType("CAPE", CosmeticSlot.CAPE, emptyMap(), emptyMap())
     private val cosmetic =
         Cosmetic(
             CosmeticBase (
                 "CAPE",
-                type,
+                CosmeticSlot.CAPE,
                 CosmeticTier.COMMON,
                 emptyMap(),
                 emptyMap(),
                 emptyList(),
             ),
             CosmeticStoreInfo(
-                -1,
-                emptyMap(),
+                null,
                 emptySet(),
                 now(),
                 null,
                 null,
-                null,
-                emptyMap(),
                 emptyMap(),
                 0,
             ),

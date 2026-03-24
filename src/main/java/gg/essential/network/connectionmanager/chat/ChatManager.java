@@ -17,6 +17,7 @@ import com.google.common.collect.Sets;
 import com.sparkuniverse.toolbox.chat.enums.ChannelType;
 import com.sparkuniverse.toolbox.chat.model.Channel;
 import com.sparkuniverse.toolbox.chat.model.Message;
+import com.sparkuniverse.toolbox.chat.model.MessageContent;
 import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
 import gg.essential.connectionmanager.common.packet.Packet;
@@ -380,6 +381,9 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         @NotNull final String messageContent,
         @Nullable final Consumer<Boolean> callback
     ) {
+        Message original = Objects.requireNonNull(getMessageById(channelId, messageId));
+        assert original.getContent().getType() == MessageContent.MessageContentType.PLAIN;
+
         sendMessageQueue.enqueue(new ClientChatChannelMessageUpdatePacket(channelId, messageId, messageContent), maybePacket -> {
             Packet packet = maybePacket.orElse(null);
             if (packet instanceof ResponseActionPacket && ((ResponseActionPacket) packet).isSuccessful()) {
@@ -389,7 +393,7 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
                         message.getId(),
                         message.getChannelId(),
                         message.getSender(),
-                        messageContent,
+                        new MessageContent.Plain(messageContent, null),
                         message.isRead(),
                         message.getReplyTargetId(),
                         message.getLastEditTime(),
@@ -719,12 +723,11 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
                 message.getId(),
                 message.getChannelId(),
                 message.getSender(),
-                message.getContents(),
+                message.getContent(),
                 read,
                 message.getReplyTargetId(),
                 message.getLastEditTime(),
-                message.getCreatedAt(),
-                message.getUnfilteredContents()
+                message.getCreatedAt()
         );
         upsertMessageToChannel(messageCopy.getChannelId(), messageCopy, false);
 

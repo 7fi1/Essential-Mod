@@ -64,7 +64,7 @@ sealed interface Item {
 
         // Helper method to allow calling from bundle price calculation without wrapping it into a state
         fun getPricingInfoInternal(sales: List<Sale>): PricingInfo? {
-            val basePrice: Int = cosmetic.priceCoinsNullable ?: return null
+            val basePrice: Int = cosmetic.price ?: return null
             if (basePrice == 0) return PricingInfo(0, 0, 0, 0)
 
             val saleDiscountPercent: Int? = sales.filter { cosmetic in it }.maxByOrNull { it.discountPercent }?.discountPercent

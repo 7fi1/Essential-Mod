@@ -16,7 +16,6 @@ import gg.essential.connectionmanager.common.packet.Packet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 public class ClientModsAnnouncePacket extends Packet {
@@ -24,10 +23,6 @@ public class ClientModsAnnouncePacket extends Packet {
     @NotNull
     @SerializedName("b")
     private final String minecraftVersion;
-
-    @NotNull
-    @SerializedName("a")
-    private final String[] modChecksums;
 
     @NotNull
     @SerializedName("c")
@@ -40,12 +35,12 @@ public class ClientModsAnnouncePacket extends Packet {
     private final @Nullable String modpackId;
 
     public ClientModsAnnouncePacket(
-            @NotNull final String minecraftVersion, @NotNull final String[] modChecksums,
-            @NotNull final Platform platform, @NotNull final String platformVersion,
+            final @NotNull String minecraftVersion,
+            final @NotNull Platform platform,
+            final @NotNull String platformVersion,
             final @Nullable String modpackId
     ) {
         this.minecraftVersion = minecraftVersion;
-        this.modChecksums = modChecksums;
         this.platform = platform;
         this.platformVersion = platformVersion;
         this.modpackId = modpackId;
@@ -54,11 +49,6 @@ public class ClientModsAnnouncePacket extends Packet {
     @NotNull
     public String getMinecraftVersion() {
         return this.minecraftVersion;
-    }
-
-    @NotNull
-    public String[] getModChecksums() {
-        return this.modChecksums;
     }
 
     @NotNull
@@ -87,7 +77,6 @@ public class ClientModsAnnouncePacket extends Packet {
 
         final ClientModsAnnouncePacket that = (ClientModsAnnouncePacket) o;
         return this.minecraftVersion.equals(that.minecraftVersion)
-                && Arrays.equals(this.modChecksums, that.modChecksums)
                 && this.platform == that.platform
                 && this.platformVersion.equals(that.platformVersion)
                 && Objects.equals(this.modpackId, that.modpackId);
@@ -95,16 +84,13 @@ public class ClientModsAnnouncePacket extends Packet {
 
     @Override
     public int hashCode() {
-        int result = Objects.hash(this.minecraftVersion, this.platform, this.platformVersion);
-        result = 31 * result + Arrays.hashCode(this.modChecksums);
-        return result;
+        return Objects.hash(this.minecraftVersion, this.platform, this.platformVersion) * 31;
     }
 
     @Override
     public String toString() {
         return "ModsAnnouncePacket{" +
                 "minecraftVersion=" + this.minecraftVersion +
-                ", modChecksums=" + Arrays.toString(this.modChecksums) +
                 ", platform=" + this.platform +
                 ", platformVersion='" + this.platformVersion + '\'' +
                 ", modpackId='" + this.modpackId + '\'' +

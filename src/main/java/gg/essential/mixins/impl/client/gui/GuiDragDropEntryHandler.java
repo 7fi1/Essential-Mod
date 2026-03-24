@@ -348,7 +348,9 @@ public class
         //#else
         //$$ draggedEntryState.entry.render(context, 0, y, x, width, height, event.getMouseX(), event.getMouseY(), true, event.getPartialTicks());
         //#endif
-        //#if MC>=12111
+        //#if MC >= 26.1
+        //$$ context.extractDeferredElements(event.getMouseX(), event.getMouseY(), event.getPartialTicks());
+        //#elseif MC>=12111
         //$$ context.drawDeferredElements();
         //#endif
         //$$ renderGuiRenderStateToRenderTarget(matrixStack, guiRenderState);

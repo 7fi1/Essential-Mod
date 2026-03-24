@@ -29,9 +29,11 @@ public class Message {
     @NotNull
     private final UUID sender;
 
-    @SerializedName("d")
+    // d: String contents (replaced with `MessageContent` "content" in protocol 10)
+
+    @SerializedName("content")
     @NotNull
-    private final String contents;
+    public MessageContent content;
 
     @Deprecated
     @SerializedName("e")
@@ -48,14 +50,13 @@ public class Message {
     @SerializedName("created_at")
     public final long createdAt;
 
-    @SerializedName("unfiltered_contents")
-    @Nullable String unfilteredContents;
+    // unfiltered_contents: String (replaced with `MessageContent` "content" in protocol 10)
 
     public Message(
             final long id,
             final long channelId,
             final @NotNull UUID sender,
-            final @NotNull String contents,
+            final @NotNull MessageContent content,
             final boolean read,
             final @Nullable Long replyTargetId,
             final @Nullable Long lastEditTime,
@@ -64,33 +65,11 @@ public class Message {
         this.id = id;
         this.channelId = channelId;
         this.sender = sender;
-        this.contents = contents;
+        this.content = content;
         this.read = read;
         this.replyTargetId = replyTargetId;
         this.lastEditTime = lastEditTime;
         this.createdAt = createdAt;
-    }
-
-    public Message(
-            final long id,
-            final long channelId,
-            final @NotNull UUID sender,
-            final @NotNull String contents,
-            final boolean read,
-            final @Nullable Long replyTargetId,
-            final @Nullable Long lastEditTime,
-            final long createdAt,
-            final @Nullable String unfilteredContents
-    ) {
-        this.id = id;
-        this.channelId = channelId;
-        this.sender = sender;
-        this.contents = contents;
-        this.read = read;
-        this.replyTargetId = replyTargetId;
-        this.lastEditTime = lastEditTime;
-        this.createdAt = createdAt;
-        this.unfilteredContents = unfilteredContents;
     }
 
     public long getId() {
@@ -107,8 +86,8 @@ public class Message {
     }
 
     @NotNull
-    public String getContents() {
-        return this.contents;
+    public MessageContent getContent() {
+        return this.content;
     }
 
     @Deprecated
@@ -128,18 +107,6 @@ public class Message {
 
     public long getCreatedAt() {
         return this.createdAt;
-    }
-
-    public @Nullable String getUnfilteredContents() {
-        return unfilteredContents;
-    }
-
-    public String getContents(boolean filtered) {
-        if (!filtered && this.unfilteredContents != null) {
-            return this.unfilteredContents;
-        } else {
-            return this.contents;
-        }
     }
 
     @Override

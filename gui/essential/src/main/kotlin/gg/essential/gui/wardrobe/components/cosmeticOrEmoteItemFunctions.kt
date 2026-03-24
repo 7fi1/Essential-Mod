@@ -54,7 +54,7 @@ fun handleCosmeticOrEmoteLeftClick(item: Item.CosmeticOrEmote, category: Wardrob
     val outfitManager = wardrobeState.outfitManager
     val selectedOutfitId = outfitManager.selectedOutfitId.getUntracked() ?: return
     val cosmeticsManager = wardrobeState.cosmeticsManager
-    val slot = item.cosmetic.type.slot
+    val slot = item.cosmetic.slot
     val isOwned = cosmeticsManager.unlockedCosmetics.get().contains(cosmetic.id)
 
     wardrobeState.itemIdToCategoryMap[item.id] = category
@@ -274,7 +274,7 @@ private fun getBundleRightClickOptions(item: Item.Bundle, wardrobeState: Wardrob
 private fun getRightClickOptions(item: Item.CosmeticOrEmote, wardrobeState: WardrobeState): State<List<() -> ContextOptionMenu.Item>> {
     val notOwned = wardrobeState.unlockedCosmetics.map { item.cosmetic.id !in it }
     val isPurchasable = item.isPurchasable
-    val hasCost = item.cosmetic.priceCoins > 0
+    val hasCost = (item.cosmetic.price ?: 0) > 0
     val hasPurchaseOrClaimOption = notOwned.map { it && isPurchasable }
     val hasGiftOption = hasCost && isPurchasable
     return stateBy {

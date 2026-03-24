@@ -67,7 +67,6 @@ import gg.essential.network.connectionmanager.suspension.SuspensionManager;
 import gg.essential.network.connectionmanager.telemetry.TelemetryManager;
 import gg.essential.sps.McIntegratedServerManager;
 import gg.essential.util.ModLoaderUtil;
-import gg.essential.util.Multithreading;
 import gg.essential.util.USession;
 import gg.essential.util.lwjgl3.Lwjgl3Loader;
 import kotlin.Unit;
@@ -147,7 +146,6 @@ public class ConnectionManager extends ConnectionManagerKt {
     private /* final */ SuspensionManager suspensionManager;
     private /* final */ RulesManager rulesManager;
 
-    private boolean modsSent = false;
     private int previouslyConnectedProtocol = 1;
 
     public ConnectionManager(
@@ -454,13 +452,7 @@ public class ConnectionManager extends ConnectionManagerKt {
             manager.onConnected();
         }
 
-        // Do not want to block the current thread for this (reads mod files to create checksums)
-        if (ModLoaderUtil.areModsLoaded.getUntracked() && !modsSent) {
-            Multithreading.runAsync(() -> {
-                send(ModLoaderUtil.createModsAnnouncePacket());
-            });
-            modsSent = true;
-        }
+        send(ModLoaderUtil.createModsAnnouncePacket());
     }
 
     protected void onClose() {
@@ -469,7 +461,6 @@ public class ConnectionManager extends ConnectionManagerKt {
             this.connection = null;
             this.getMutableConnectionUriState().set((ignored) -> null);
         }
-        this.modsSent = false;
 
         JobKt.cancelChildren(getConnectionScope().getCoroutineContext(), CancellationException("Connection closed.", null));
 
@@ -548,12 +539,6 @@ public class ConnectionManager extends ConnectionManagerKt {
     @Subscribe
     public void onPostInit(PostInitializationEvent event) {
         ModLoaderUtil.setModsLoaded();
-        if (!modsSent && isAuthenticated()) {
-            Multithreading.runAsync(() -> {
-                send(ModLoaderUtil.createModsAnnouncePacket());
-            });
-            modsSent = true;
-        }
     }
 
     public ServerDiscoveryManager getServerDiscoveryManager() {

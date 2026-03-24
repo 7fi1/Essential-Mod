@@ -12,6 +12,7 @@
 package gg.essential.network.connectionmanager;
 
 import com.google.common.collect.Maps;
+import com.sparkuniverse.toolbox.chat.model.MessageContent;
 import com.sparkuniverse.toolbox.relationships.enums.FriendRequestPrivacySetting;
 import com.sparkuniverse.toolbox.relationships.enums.RelationshipState;
 import com.sparkuniverse.toolbox.relationships.enums.RelationshipType;
@@ -64,6 +65,7 @@ public class ConnectionCodec {
         .registerTypeAdapter(RelationshipState.class, new RelationshipStateAdapter())
         .registerTypeAdapter(FriendRequestPrivacySetting.class, new FriendRequestPrivacySettingTypeAdapter())
         .registerTypeAdapter(DateTime.class, new DateTimeTypeAdapter())
+        .registerTypeAdapter(MessageContent.class, new MessageContent.Serializer())
         .create();
 
     {

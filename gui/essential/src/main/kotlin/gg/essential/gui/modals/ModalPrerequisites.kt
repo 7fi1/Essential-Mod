@@ -25,9 +25,13 @@ abstract class ModalPrerequisites {
 
     abstract suspend fun ModalFlow.doRequiredUpdateModal(): PrerequisiteResult
 
-    abstract suspend fun ModalFlow.doAuthenticationModal(): PrerequisiteResult
+    abstract suspend fun ModalFlow.doSuspensionAndRuleManagerLoadedCheck(): PrerequisiteResult
 
     abstract suspend fun ModalFlow.doCosmeticsModal(): PrerequisiteResult
+
+    abstract suspend fun ModalFlow.doConnectionStatusErrorModal(): PrerequisiteResult
+
+    abstract suspend fun ModalFlow.doConnectingModal(): PrerequisiteResult
 
     abstract suspend fun ModalFlow.doCommunityRulesModal(): PrerequisiteResult
 
@@ -52,9 +56,11 @@ suspend fun ModalFlow.ensurePrerequisites(
 
         prerequisites.add(suspend { doPermanentSuspensionModal() })
 
+        prerequisites.add(suspend { doConnectingModal() })
+        prerequisites.add(suspend { doConnectionStatusErrorModal() })
         prerequisites.add(suspend { doTermsOfServiceModal() })
         prerequisites.add(suspend { doRequiredUpdateModal() })
-        prerequisites.add(suspend { doAuthenticationModal() })
+        prerequisites.add(suspend { doSuspensionAndRuleManagerLoadedCheck() })
 
         if (features.isNotEmpty()) {
             prerequisites.add(suspend { doFeatureDisabledModal(features) })

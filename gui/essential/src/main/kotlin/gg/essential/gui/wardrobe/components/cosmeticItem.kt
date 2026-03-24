@@ -116,7 +116,7 @@ fun LayoutScope.cosmeticItem(item: Item, category: WardrobeCategory, state: Ward
 
     when (item) {
         is Item.CosmeticOrEmote -> {
-            val slot = item.cosmetic.type.slot
+            val slot = item.cosmetic.slot
 
             selected = memo {
                 val selectedEmote = state.selectedEmote()
@@ -297,7 +297,7 @@ fun LayoutScope.cosmeticItem(item: Item, category: WardrobeCategory, state: Ward
         handleItemRightClick(item, category, state, it)
     }.apply {
         onLeftClick {
-            if (item is Item.CosmeticOrEmote && item.cosmetic.type.slot == CosmeticSlot.EMOTE && owned.getUntracked()) {
+            if (item is Item.CosmeticOrEmote && item.cosmetic.slot == CosmeticSlot.EMOTE && owned.getUntracked()) {
                 state.draggingEmote.set(WardrobeState.DraggedEmote(
                     item.id,
                     clickOffset = Pair(EmoteWheelPage.SLOT_SIZE / 2, EmoteWheelPage.SLOT_SIZE / 2),

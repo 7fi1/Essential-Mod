@@ -139,10 +139,23 @@ class TintVanillaButtonsEffect {
         val areaToBeTinted = AreaToBeTinted(x1, y1, x2, y2)
         if (areaToBeTinted.invalid) return
 
+        flushMC(context)
         beforeDraw(context.matrixStack, areaToBeTinted)
+
         // Draw the content that needs to be tinted
         draw(context)
+
+        flushMC(context)
         afterDraw(context.matrixStack, areaToBeTinted, color)
+    }
+
+    private fun flushMC(context: UDrawContext) {
+        // flush the vanilla vertex buffer
+        //#if MC >= 1.20
+        //$$ context.mc.draw()
+        //#elseif MC >= 1.16
+        //$$ net.minecraft.client.Minecraft.getInstance().getRenderTypeBuffers().getBufferSource().finish()
+        //#endif
     }
 
     private class Resources(effect: TintVanillaButtonsEffect) : PhantomReference<TintVanillaButtonsEffect>(effect, referenceQueue), Closeable {

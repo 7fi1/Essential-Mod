@@ -226,9 +226,10 @@ abstract class ParagraphLine(
  * An embed that displays an image located at [url]
  */
 abstract class ImageEmbed(
-    val url: URL,
     wrapper: MessageWrapper,
 ) : MessageLine(wrapper) {
+
+    abstract var url: URL?
 
     abstract fun copyImageToClipboard()
 

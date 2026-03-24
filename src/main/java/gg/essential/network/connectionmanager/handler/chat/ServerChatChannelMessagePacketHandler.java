@@ -14,24 +14,22 @@ package gg.essential.network.connectionmanager.handler.chat;
 import com.sparkuniverse.toolbox.chat.enums.ChannelType;
 import com.sparkuniverse.toolbox.chat.model.Channel;
 import com.sparkuniverse.toolbox.chat.model.Message;
+import com.sparkuniverse.toolbox.chat.model.MessageContent;
 import gg.essential.api.gui.Slot;
 import gg.essential.config.EssentialConfig;
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket;
 import gg.essential.gui.friends.SocialMenu;
 import gg.essential.gui.notification.Notifications;
-import gg.essential.mod.Model;
 import gg.essential.mod.Skin;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.chat.ChatManager;
 import gg.essential.network.connectionmanager.handler.PacketHandler;
 import gg.essential.universal.USound;
 import gg.essential.util.CachedAvatarImage;
-import gg.essential.util.ExtensionsKt;
 import gg.essential.util.GuiUtil;
 import gg.essential.util.UUIDUtil;
 import kotlin.Unit;
 import net.minecraft.client.Minecraft;
-import okhttp3.HttpUrl;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -44,7 +42,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static gg.essential.gui.skin.SkinUtilsKt.showSkinReceivedToast;
-import static gg.essential.util.ChannelExtensionsKt.getOtherUser;
+import static gg.essential.network.cosmetics.ConversionsKt.toMod;
 import static gg.essential.util.ExtensionsKt.getExecutor;
 
 public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerChatChannelMessagePacket> {
@@ -93,26 +91,20 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
                     !EssentialConfig.INSTANCE.getEssentialFull()
             ) continue;
 
-            HttpUrl url = HttpUrl.parse(message.getContents());
-            if (url != null && url.host().equals("essential.gg")) {
-                List<String> pathSegments = url.pathSegments();
-                if (pathSegments.size() > 2 && pathSegments.get(0).equals("skin")) {
-                    Skin skin = new Skin(pathSegments.get(2), Model.byVariantOrDefault(pathSegments.get(1)));
-                    UUID uuid = message.getSender();
-                    UUIDUtil.getName(uuid).thenAcceptAsync(name -> showSkinReceivedToast(skin, uuid, name, channel), getExecutor(Minecraft.getMinecraft()));
-                    continue;
-                } else if (pathSegments.size() > 1 && pathSegments.get(0).equals("gift")) {
-                    // Don't show toasts for gift embeds; they're handled in GiftedCosmeticNoticeListener
-                    continue;
-                }
-            }
-
             boolean notification = !(GuiUtil.INSTANCE.openedScreen() instanceof SocialMenu);
 
-            if (notification) {
-                final UUID uuid = channel.getType() == ChannelType.DIRECT_MESSAGE ? getOtherUser(channel) : message.getSender();
-                UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message), getExecutor(Minecraft.getMinecraft()));
+            UUID uuid = message.getSender();
+            if (message.getContent() instanceof MessageContent.Skin) {
+                MessageContent.Skin messageContentSkin = (MessageContent.Skin) message.getContent();
+                Skin skin = new Skin(messageContentSkin.getHash(), toMod(messageContentSkin.getModel()));
+                UUIDUtil.getName(uuid).thenAcceptAsync(name -> showSkinReceivedToast(skin, uuid, name, channel), getExecutor(Minecraft.getMinecraft()));
+            } else if (notification && message.getContent() instanceof MessageContent.Plain) {
+                UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message.getSender(), ((MessageContent.Plain) message.getContent()).getText(EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst())), getExecutor(Minecraft.getMinecraft()));
+            } else if (notification && message.getContent() instanceof MessageContent.Media) {
+                UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message.getSender(), "Sent you a picture"), getExecutor(Minecraft.getMinecraft()));
             }
+            // Gift embeds are handled in GiftedCosmeticNoticeListener
+            // TODO: EM-3088 Add comments for SpsInvite and ServerInvite which will be handled outside of this class
         }
     }
 
@@ -122,11 +114,13 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
     static class NotificationHandler implements Consumer<String> {
 
         private final Channel channel;
-        private final Message message;
+        private final UUID sender;
+        private final String text;
 
-        NotificationHandler(Channel channel, Message message) {
+        NotificationHandler(Channel channel, UUID sender, String text) {
             this.channel = channel;
-            this.message = message;
+            this.sender = sender;
+            this.text = text;
         }
 
         @Override
@@ -139,13 +133,10 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
                 if (EssentialConfig.INSTANCE.getMessageSound() && !EssentialConfig.INSTANCE.getStreamerMode()) {
                     USound.INSTANCE.playExpSound();
                 }
-
-                String messageContents;
-                messageContents = message.getContents(EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst());
                
                 Notifications.INSTANCE.push(
                         notificationTitle,
-                        messageContents,
+                        text,
                         4f,
                         () -> {
                             GuiUtil.openScreen(SocialMenu.class, () -> new SocialMenu(channel.getId()));
@@ -156,7 +147,7 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
                             notificationBuilder.setTrimTitle(true);
                             notificationBuilder.setTrimMessage(true);
 
-                            notificationBuilder.withCustomComponent(Slot.ICON, CachedAvatarImage.create(message.getSender()));
+                            notificationBuilder.withCustomComponent(Slot.ICON, CachedAvatarImage.create(sender));
 
                             return Unit.INSTANCE;
                         }

@@ -22,7 +22,6 @@ import gg.essential.mixins.impl.client.entity.AbstractClientPlayerExt;
 import gg.essential.mixins.impl.client.renderer.entity.ArmorRenderingUtil;
 import gg.essential.mod.Model;
 import gg.essential.mod.cosmetics.CosmeticSlot;
-import gg.essential.mod.cosmetics.CosmeticType;
 import gg.essential.model.*;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.cosmetics.AssetLoader;
@@ -115,8 +114,7 @@ public class PlayerWearableManager {
             Cosmetic cosmetic = equippedCosmetic.getCosmetic();
             String variant = equippedCosmetic.getVariant();
 
-            CosmeticType cosmeticType = cosmetic.getType();
-            if (cosmeticType.getSlot() == CosmeticSlot.CAPE) {
+            if (cosmetic.getSlot() == CosmeticSlot.CAPE) {
                 cape = cosmetic.getId();
 
                 if (CAPE_DISABLED_COSMETIC_ID.equals(cape)) {

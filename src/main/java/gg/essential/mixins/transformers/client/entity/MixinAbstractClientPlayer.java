@@ -189,9 +189,8 @@ public abstract class MixinAbstractClientPlayer implements AbstractClientPlayerE
 
             this.wearablesManager = new WearablesManager(MinecraftRenderBackend.INSTANCE, molangQuery, animationTargets, (cosmetic, event) -> {
                 if (sendsAnimationPackets) {
-                    CosmeticSlot slot = cosmetic.getType().getSlot();
                     Essential.getInstance().getConnectionManager()
-                        .send(new ClientCosmeticAnimationTriggerPacket(toInfra(slot), event));
+                        .send(new ClientCosmeticAnimationTriggerPacket(toInfra(cosmetic.getSlot()), event));
                 }
                 return Unit.INSTANCE;
             });
@@ -229,8 +228,9 @@ public abstract class MixinAbstractClientPlayer implements AbstractClientPlayerE
     //$$     var texture = asset != null ? asset.texturePath() : null;
     //$$     CallbackInfoReturnable<Identifier> ci = new CallbackInfoReturnable<>("", true, texture);
     //$$     overrideCapeIfSelectedInEssential(ci);
-    //$$     if (ci.getReturnValue() != texture) {
-    //$$         var newAsset = new AssetInfo.SkinAssetInfo(ci.getReturnValue(), null);
+    //$$     var newTexture = ci.getReturnValue();
+    //$$     if (newTexture != texture) {
+    //$$         var newAsset = newTexture != null ? new AssetInfo.SkinAssetInfo(newTexture, null) : null;
     //$$         skinTextures = new SkinTextures(skinTextures.body(), newAsset, skinTextures.elytra(), skinTextures.model(), skinTextures.secure());
     //$$     }
     //#else

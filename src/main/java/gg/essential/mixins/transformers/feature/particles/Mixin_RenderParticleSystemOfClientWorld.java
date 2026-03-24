@@ -47,8 +47,10 @@ import static gg.essential.util.HelpersKt.getPerspective;
 
 //#if MC>=11600
 //$$ import com.mojang.blaze3d.matrix.MatrixStack;
+//#if MC < 1.21.9
 //$$ import net.minecraft.client.renderer.IRenderTypeBuffer;
 //$$ import net.minecraft.client.renderer.LightTexture;
+//#endif
 //$$ import net.minecraft.client.world.ClientWorld;
 //#else
 import net.minecraft.client.particle.Particle;

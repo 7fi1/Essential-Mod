@@ -159,10 +159,7 @@ abstract class EssentialModal2(
         // Width = 190 (Main) + 16 * 2 (Padding)
         column(Modifier.width(222f).then(modifier), Arrangement.spacedBy(17f)) {
             if_(hasTitle) {
-                box(Modifier.fillWidth(padding = 16f)) {
-                    titleContainer = containerDontUseThisUnlessYouReallyHaveTo
-                    layoutTitle()
-                }
+                titleContainer = layoutTitleContainer()
             }
             if_(hasBody) {
                 box(Modifier.fillWidth().childBasedMaxHeight()) {
@@ -191,8 +188,21 @@ abstract class EssentialModal2(
         hasButtons.set(buttonsContainer.children.isNotEmpty())
     }
 
-    /** Mainly intended for the [title] of your modal. */
+    /** Mainly intended for the [title] of your modal, without having to worry about most implementation details. */
     open fun LayoutScope.layoutTitle() {}
+
+    /**
+     * Default implementation for the layout of the title of your modal. Can be overriden, to allow custom modal
+     * superclasses to have common title elements while still allowing [layoutTitle] to be used for just [title] lines.
+     */
+    open fun LayoutScope.layoutTitleContainer(): UIComponent {
+        val titleContainer: UIComponent
+        box(Modifier.fillWidth(padding = 16f)) {
+            titleContainer = containerDontUseThisUnlessYouReallyHaveTo
+            layoutTitle()
+        }
+        return titleContainer
+    }
 
     /** For the actual content of your modal, e.g. the [description] text. */
     open fun LayoutScope.layoutBody() {}
@@ -231,7 +241,7 @@ abstract class EssentialModal2(
     }
 
     /** A [text] with some defaults for a modal title. */
-    fun LayoutScope.title(text: State<String>, modifier: Modifier = Modifier) {
+    open fun LayoutScope.title(text: State<String>, modifier: Modifier = Modifier) {
         text(
             text,
             Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(Color.BLACK).then(modifier),

@@ -12,6 +12,7 @@
 package gg.essential.network
 
 import kotlinx.coroutines.Deferred
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -30,6 +31,8 @@ interface GatewayService {
 
     suspend fun <T> request(httpClient: OkHttpClient, path: String, configure: Request.Builder.() -> Unit = {}, handleResponse: suspend (Response) -> T): T
 
+    suspend fun baseUrl(): HttpUrl
+
     fun withDefaultHttpClient(httpClient: Deferred<OkHttpClient>): GatewayService = object : GatewayService {
         private val base: GatewayService
             get() = this@GatewayService
@@ -38,5 +41,6 @@ interface GatewayService {
             request(httpClient.await(), path, configure, handleResponse)
         override suspend fun <T> request(httpClient: OkHttpClient, path: String, configure: Request.Builder.() -> Unit, handleResponse: suspend (Response) -> T): T =
             base.request(httpClient, path, configure, handleResponse)
+        override suspend fun baseUrl() = base.baseUrl()
     }
 }

@@ -107,10 +107,13 @@ interface GuiEssentialPlatform {
     fun <T> unregisterEventBusListener(cls: Class<T>, listener: (T) -> Unit)
 
     val essentialBaseDir: Path
+    val mcBaseDir: Path
     val config: Config
 
     val mcProtocolVersion: Int
     val mcGameVersion: String
+
+    val localModList: Map<String /* Display name */, String /* Version */>
 
     fun currentServerType(): ServerType?
 

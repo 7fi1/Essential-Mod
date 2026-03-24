@@ -221,7 +221,7 @@ class EmulatedUI3DPlayer(
                         get() = this@EmulatedUI3DPlayer
                 }
 
-                player.updateVisibleModelParts()
+                updateVisibleModelParts(player)
 
                 //#if MC < 11400
                 player.dimension = 0
@@ -269,7 +269,7 @@ class EmulatedUI3DPlayer(
         }
         RenderPlayerBypass.bypass = true;
         withFakeClientFields {
-            it.updateVisibleModelParts()
+            updateVisibleModelParts(it)
             //#if MC>=12109
             //$$ mcClient.entityRenderDispatcher.configure(mcClient.gameRenderer.camera, null)
             //#elseif MC>=11400
@@ -340,7 +340,7 @@ class EmulatedUI3DPlayer(
         //#endif
     }
 
-    private fun EntityPlayer.updateVisibleModelParts() {
+    private fun updateVisibleModelParts(entity: EntityPlayer) {
         val visibleParts = EnumPlayerModelParts.values()
             .filter { profile.get() != null || mcClient.gameSettings.isPlayerModelPartEnabled(it) }
 
@@ -349,7 +349,7 @@ class EmulatedUI3DPlayer(
         //#else
         //$$ val key = 10
         //#endif
-        dataManager.set(key, visibleParts.sumOf { it.partMask }.toByte())
+        entity.dataManager.set(key, visibleParts.sumOf { it.partMask }.toByte())
     }
 
     //#if MC<11700

@@ -37,7 +37,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = EntityRenderer.class, priority = 1500)
 public abstract class Mixin_GuiDrawScreenEvent_Priority {
+    //#if MC >= 26.1
+    //$$ private static final String RENDER = "extractGui";
+    //#else
     private static final String RENDER = "updateCameraAndRender";
+    //#endif
 
     //#if NEOFORGE
     //$$ private static final String FORGE_DRAW_SCREEN = "Lnet/neoforged/neoforge/client/ClientHooks;drawScreen(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/gui/GuiGraphics;IIF)V";

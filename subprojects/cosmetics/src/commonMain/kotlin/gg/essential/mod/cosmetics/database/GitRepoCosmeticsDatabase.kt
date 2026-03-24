@@ -37,7 +37,6 @@ import gg.essential.model.util.Instant
 import gg.essential.model.util.InstantAsIso8601Serializer
 import gg.essential.model.util.base64Decode
 import gg.essential.model.util.instant
-import gg.essential.model.util.now
 import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.network.cosmetics.CosmeticBase
 import gg.essential.network.cosmetics.CosmeticStoreInfo
@@ -169,7 +168,12 @@ class GitRepoCosmeticsDatabase(
             }
         }
 
-        return updateFiles(newPaths.keys)
+        return updateFiles(newPaths.keys
+            // FIXME This is a hack to ensure types are loaded before cosmetics, because backpatching cosmetics
+            //  via [updateTypeInCosmetics] is broken now.
+            //  Modifying type files is still broken, but since we want to get rid of them eventually anyway, I can't
+            //  be bothered to fix [updateTypeInCosmetics] properly.
+            .sortedByDescending { it.str.endsWith(".type-metadata.json") })
     }
 
     suspend fun removeFiles(filesOrFolders: Set<String>): Changes {
@@ -340,8 +344,8 @@ class GitRepoCosmeticsDatabase(
     private fun updateTypeInCosmetics(oldType: CosmeticType?, newType: CosmeticType): List<Cosmetic> {
         return if (oldType != newType) {
             val updatedCosmetics = cosmetics.values.mapNotNull { cosmetic ->
-                if (cosmetic.type.id == newType.id) {
-                    cosmetic.copy(base = cosmetic.base.copy(type = newType))
+                if (types.values.find { it.slot == cosmetic.slot }?.id == newType.id) {
+                    cosmetic.copy(base = cosmetic.base.copy(slot = newType.slot))
                 } else {
                     null
                 }
@@ -450,11 +454,6 @@ class GitRepoCosmeticsDatabase(
             ?.let { json.decodeFromString<CategoryMetadata>(it().decodeToString()) }
 
         val changes = mutableMapOf<Path, ByteArray?>()
-
-        if (category?.icon?.checksum != originalCategory?.icon?.checksum) {
-            val path = folder / Path.of(originalMetadata?.override?.icon ?: "${id.lowercase()}.icon.png")
-            changes[path] = category?.icon?.let { fetchAsset(it) }
-        }
 
         val metadata = if (category != null) {
             CategoryMetadata(
@@ -668,9 +667,9 @@ class GitRepoCosmeticsDatabase(
         val metadataFile = when {
             existingMetadataFile != null -> existingMetadataFile
             cosmetic != null -> {
-                val root = if (cosmetic.type.slot == CosmeticSlot.EMOTE) "emotes" else "cosmetics"
-                val type = cosmetic.type.id.lowercase().removeSuffix("_emote")
-                    .let { if (it == "emote") "basic" else it }
+                val root = if (cosmetic.slot == CosmeticSlot.EMOTE) "emotes" else "cosmetics"
+                val type = types.values.find { it.slot == cosmetic.slot }?.id?.lowercase()?.removeSuffix("_emote")
+                    ?.let { if (it == "emote") "basic" else it } ?: error("Unable to find cosmetic type using slot")
                 Path.of("$root/$type/${id.lowercase()}/${id.lowercase()}.cosmetic-metadata.json")
             }
             else -> return emptyMap()
@@ -752,14 +751,14 @@ class GitRepoCosmeticsDatabase(
                 cosmetic.tier,
                 originalMetadataV3?.organization ?: "",
                 originalMetadataV3?.revenueShare,
-                cosmetic.priceCoinsNullable,
+                cosmetic.price,
                 cosmetic.availableAfter,
                 cosmetic.availableUntil,
                 cosmetic.showTimerAfter,
                 cosmetic.defaultSortWeight.takeUnless { it == 20 },
                 (override ?: CosmeticMetadataOverrides()).copy(
                     id = cosmetic.id.takeUnless { it == fileId.uppercase() },
-                    type = cosmetic.type.id.takeUnless { it == folder.parent.name.uppercase() }
+                    type = types.values.find { it.slot == cosmetic.slot }?.id?.takeUnless { it == folder.parent.name.uppercase() }
                 ),
             )
             if (originalMetadataV3 != newMetadataV3) {
@@ -775,15 +774,13 @@ class GitRepoCosmeticsDatabase(
                 cosmetic.tier,
                 originalMetadataV0?.organization ?: "",
                 originalMetadataV0?.revenueShare,
-                cosmetic.storePackageId,
-                cosmetic.prices,
+                cosmetic.price,
                 cosmetic.availableAfter,
                 cosmetic.availableUntil,
                 cosmetic.showTimerAfter,
                 cosmetic.defaultSortWeight.takeUnless { it == 20 },
                 (override ?: CosmeticMetadataOverrides()).copy(
                     id = cosmetic.id.takeUnless { it == fileId.uppercase() },
-                    type = cosmetic.type.id.takeUnless { it == folder.parent.name.uppercase() }
                 ),
             )
             if (originalMetadataV0 != newMetadataV0) {
@@ -1000,9 +997,7 @@ class GitRepoCosmeticsDatabase(
         val organization: String,
         @SerialName("revenue_share")
         val revenueShare: Double?,
-        @SerialName("store_package_id")
-        val storePackageId: Int,
-        val price: Map<String, Double>,
+        val price: Int?,
         @SerialName("available_after")
         val availableAfter: Instant?,
         @SerialName("available_until")
@@ -1167,13 +1162,8 @@ private suspend fun FileAccess.loadCategory(json: Json, metadataFile: Path, asse
         return assetBuilder(filePath.str, file)
     }
 
-    suspend fun getAssetOrThrow(path: String): EssentialAsset {
-        return getAsset(path) ?: throw NoSuchElementException((folder / path).toString())
-    }
-
     return CosmeticCategory(
         id,
-        getAssetOrThrow(metadata.override.icon ?: "$fileId.icon.png"),
         metadata.displayNames,
         metadata.compactNames,
         metadata.description,
@@ -1242,8 +1232,7 @@ private suspend fun FileAccess.loadCosmetic(json: Json, metadataFile: Path, asse
             metadataV3.tier,
             metadataV3.organization,
             metadataV3.revenueShare,
-            0,
-            if (metadataV3.price != null) mapOf("coins" to metadataV3.price.toDouble()) else mapOf(),
+            metadataV3.price,
             metadataV3.availableAfter,
             metadataV3.availableUntil,
             metadataV3.showTimerAfter,
@@ -1321,21 +1310,18 @@ private suspend fun FileAccess.loadCosmetic(json: Json, metadataFile: Path, asse
     return Cosmetic(
         CosmeticBase(
             override.id ?: fileId.uppercase(), // repo files use lowercase ids, actual ids should be uppercase
-            type,
+            type.slot,
             metadata.tier,
             mapOf("en_us" to fileId, LOCAL_PATH to folder.str) + metadata.displayName,
             assets,
             settings ?: emptyList(),
         ),
         CosmeticStoreInfo(
-            metadata.storePackageId,
             metadata.price,
             metadata.tags,
-            metadata.availableAfter ?: now(),
             metadata.availableAfter,
             metadata.availableUntil,
             metadata.showTimerAfter,
-            emptyMap(),
             metadata.categories,
             metadata.defaultSortWeight ?: 20,
         ),
@@ -1347,21 +1333,18 @@ private fun makeErrorCosmetic(metadataFile: Path, diagnostic: Cosmetic.Diagnosti
     return Cosmetic(
         CosmeticBase(
             folder.str.replace('/', '_').uppercase(),
-            CosmeticType("ERROR", CosmeticSlot.of("ERROR"), mapOf("en_us" to "Error"), emptyMap()),
+            CosmeticSlot.of("ERROR"),
             CosmeticTier.COMMON,
             mapOf("en_us" to folder.str, LOCAL_PATH to folder.str),
             emptyMap(),
             emptyList(),
         ),
         CosmeticStoreInfo(
-            -1,
-            emptyMap(),
+            null,
             setOf("HAS_ERRORS"),
             instant(0),
             instant(0),
-            instant(0),
             null,
-            emptyMap(),
             mapOf("ERROR" to 0),
             0,
         ),

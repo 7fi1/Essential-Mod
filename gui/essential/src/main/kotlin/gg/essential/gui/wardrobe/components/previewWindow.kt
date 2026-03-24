@@ -339,8 +339,13 @@ fun LayoutScope.previewWindow(state: WardrobeState, modifier: Modifier, bottomDi
     val colorOptions = state.editingCosmetic.map { it?.cosmetic?.property<CosmeticProperty.Variants>()?.data?.variants }
     val sides = state.editingCosmetic.map { editing ->
         editing?.let { item ->
-            state.modelLoader.getModel(item.cosmetic, item.cosmetic.defaultVariantName, AssetLoader.Priority.Blocking)
-                .join().sideOptions.takeUnless { it.isEmpty() }
+            val modelFuture = state.modelLoader.getModel(item.cosmetic, item.cosmetic.defaultVariantName, AssetLoader.Priority.Blocking)
+            val model = try {
+                modelFuture.join()
+            } catch (_: Exception) { // already logged by ModelLoader
+                return@let null
+            }
+            model.sideOptions.takeUnless { it.isEmpty() }
         }
     }
 
@@ -514,19 +519,21 @@ private fun LayoutScope.playerPreviewInner(state: WardrobeState, modifier: Modif
             if (UKeyboard.isShiftKeyDown()) {
                 state.outfitManager.updateEquippedCosmetic(
                     state.outfitManager.selectedOutfitId.getUntracked() ?: return@onLeftClick,
-                    hoveredCosmetic.type.slot,
-                    if (hoveredCosmetic.type.slot == CosmeticSlot.CAPE) CAPE_DISABLED_COSMETIC_ID else null,
+                    hoveredCosmetic.slot,
+                    if (hoveredCosmetic.slot == CosmeticSlot.CAPE) CAPE_DISABLED_COSMETIC_ID else null,
                 )
                 return@onLeftClick
             }
 
+            val modelFuture = state.modelLoader.getModel(hoveredCosmetic, hoveredCosmetic.defaultVariantName, AssetLoader.Priority.Blocking)
+            val model = try {
+                modelFuture.join()
+            } catch (_: Exception) { // already logged by ModelLoader
+                null
+            }
             val editable = hoveredCosmetic.property<CosmeticProperty.Variants>() != null
                 || hoveredCosmetic.property<CosmeticProperty.PositionRange>() != null
-                || state.modelLoader.getModel(
-                hoveredCosmetic,
-                hoveredCosmetic.defaultVariantName,
-                AssetLoader.Priority.Blocking,
-            ).join().isContainsSideOption
+                || model?.isContainsSideOption == true
             val item = Item.CosmeticOrEmote(hoveredCosmetic)
 
             if (hoveredCosmetic.id != editingCosmeticId) {

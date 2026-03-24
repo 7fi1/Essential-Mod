@@ -23,21 +23,18 @@ const val CAPE_DISABLED_COSMETIC_ID = "CAPE_DISABLED"
 val CAPE_DISABLED_COSMETIC = Cosmetic(
     CosmeticBase(
         CAPE_DISABLED_COSMETIC_ID,
-        CosmeticType("CAPE", CosmeticSlot.CAPE, emptyMap(), emptyMap()),
+        CosmeticSlot.CAPE,
         CosmeticTier.COMMON,
         emptyMap(),
         mapOf("geometry.steve.json" to EssentialAsset.of("""{"format_version": "1.12.0"}""")),
         emptyList(),
     ),
     CosmeticStoreInfo(
-        -1,
-        emptyMap(),
+        null,
         emptySet(),
         now(),
         null,
         null,
-        null,
-        emptyMap(),
         emptyMap(),
         0,
     ),

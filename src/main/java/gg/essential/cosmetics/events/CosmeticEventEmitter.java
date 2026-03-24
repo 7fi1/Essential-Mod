@@ -61,7 +61,7 @@ public class CosmeticEventEmitter {
         final Map<Cosmetic, ModelInstance> essentialCosmeticModels =
             player.getWearablesManager().getModels();
         for (ModelInstance value : essentialCosmeticModels.values()) {
-            if (slot == value.getCosmetic().getType().getSlot()) {
+            if (slot == value.getCosmetic().getSlot()) {
                 value.getEssentialAnimationSystem().fireTriggerFromAnimation(event, null);
             }
         }

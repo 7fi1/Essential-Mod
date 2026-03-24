@@ -82,7 +82,9 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
         glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, colorWriteFrameBuffer)
         glFramebufferTexture2D(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, glId, 0)
 
-        //#if MC>=12105
+        //#if MC >= 26.1
+        //$$ GlStateManager._colorMask(com.mojang.blaze3d.pipeline.ColorTargetState.WRITE_ALL)
+        //#elseif MC>=12105
         //$$ GlStateManager._colorMask(true, true, true, true)
         //#else
         GlStateManager.colorMask(true, true, true, true)

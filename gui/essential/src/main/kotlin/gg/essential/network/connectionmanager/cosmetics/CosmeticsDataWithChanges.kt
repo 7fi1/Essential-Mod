@@ -43,15 +43,7 @@ class CosmeticsDataWithChanges(
     override val cosmetics: ListState<Cosmetic> = stateBy {
         val originals = inner.cosmetics().associateBy { it.id }
         val updates = updatedCosmetics()
-        val updatedTypes = updatedTypes()
-        (originals + updates).mapNotNull { (_, cosmetic) ->
-            val updatedType = cosmetic?.type?.id?.let { updatedTypes[it] }
-            if (updatedType != null) {
-                cosmetic.copy(base = cosmetic.base.copy(type = updatedType))
-            } else {
-                cosmetic
-            }
-        }
+        (originals + updates).mapNotNull { it.value }
     }.toListState()
 
     override val categories: ListState<CosmeticCategory> = stateBy {

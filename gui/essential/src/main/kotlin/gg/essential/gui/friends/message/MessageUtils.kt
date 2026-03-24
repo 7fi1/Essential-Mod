@@ -95,16 +95,6 @@ object MessageUtils {
 
     val URL_REGEX: Regex = Regex(URL_REGEX_TEXT)
 
-    val URL_NO_EMBED_REGEX: Regex = Regex("<<$URL_REGEX_TEXT>>") // handleMarkdownUrls() adds an extra <> around a link, so that must be compensated for
-
-    val SCREENSHOT_URL_REGEX: Regex = Regex("https://media\\.essential\\.gg/([-A-Za-z0-9]*)")
-
-    val INVITE_URL_REGEX: Regex = Regex("https://essential\\.gg/join/\\S*")
-
-    val SKIN_URL_REGEX: Regex = Regex("https://essential\\.gg/skin/\\S*")
-
-    val GIFT_URL_REGEX: Regex = Regex("https://essential\\.gg/gift/\\S*")
-
     fun String.handleMarkdownUrls(): String {
         var result = this
         result = INLINE_STYLE_LINK_REGEX.replace(result) { it.groups["text"]?.value ?: "" }
