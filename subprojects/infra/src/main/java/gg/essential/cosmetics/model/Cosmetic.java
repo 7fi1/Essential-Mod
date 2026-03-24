@@ -177,6 +177,10 @@ public class Cosmetic implements DisplayNameHolder, PriceHolder, SkinLayersHolde
         return this.defaultSortWeight;
     }
 
+    public @Nullable Integer getPriceCoins() {
+        return priceCoins;
+    }
+
     public @Nullable CosmeticTier getTier() {
         return tier;
     }

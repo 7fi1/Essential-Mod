@@ -130,7 +130,7 @@ fun InfraCosmetic.toMod(type: CosmeticType, settings: List<CosmeticProperty>): C
             settings,
         ),
         CosmeticStoreInfo(
-            prices["coins"]?.toInt(),
+            priceCoins,
             tags,
             availableAfter?.toInstant(),
             availableUntil?.toInstant(),
