@@ -38,33 +38,13 @@ import net.minecraft.client.renderer.GlStateManager
 //#endif
 
 class OwnedGlGpuTexture(
-    width: Int,
-    height: Int,
+    override val width: Int,
+    override val height: Int,
     private val format: GpuTexture.Format,
 ) : GlGpuTexture(format) {
-    override var glId: Int = -1
-        private set
-    override var width: Int = width
-        private set
-    override var height: Int = height
-        private set
+    override val glId: Int
 
     init {
-        init()
-    }
-
-    override fun resize(width: Int, height: Int) {
-        if (this.width == width && this.height == height && this.glId != -1) {
-            return
-        }
-        this.width = width
-        this.height = height
-
-        delete()
-        init()
-    }
-
-    private fun init() {
         // Note: Must allocate via GlStateManager because we must use it to deallocate as well (see [delete])
         //       and GlStateManager does some internal counting on newer versions.
         //#if MC>=11600
@@ -102,15 +82,16 @@ class OwnedGlGpuTexture(
         }
     }
 
-    override fun delete() {
-        if (glId != -1) {
+    private var closed = false
+    override fun close() {
+        if (!closed) {
             // Note: Must use GlStateManager to deallocate as otherwise the caching in its `bindTexture` can break!
             //#if MC>=11600
             //$$ GlStateManager.deleteTexture(glId)
             //#else
             GlStateManager.deleteTexture(glId)
             //#endif
-            glId = -1
+            closed = true
         }
     }
 }

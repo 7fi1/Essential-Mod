@@ -597,6 +597,19 @@ abstract class AbstractTextInput(
         textState.set(getText())
     }
 
+    protected open fun recalculateVisualLinesFor(textualLineIndex: Int) {
+        val textualLine = textualLines[textualLineIndex]
+        val firstVisualIndex = textualLine.visualIndices.first
+        repeat(textualLine.visualIndices.count()) {
+            if (firstVisualIndex < visualLines.size)
+                visualLines.removeAt(firstVisualIndex)
+        }
+        val splitLines = splitTextForWrapping(textualLine.text, getWidth())
+
+        visualLines.addAll(firstVisualIndex, splitLines.map { VisualLine(it, textualLineIndex) })
+        textualLine.visualIndices = firstVisualIndex until firstVisualIndex + splitLines.size
+    }
+
     // TODO: This probably isn't necessary. Remove when feeling not lazy :)
     protected open fun recalculateAllVisualLines() {
         visualLines.clear()

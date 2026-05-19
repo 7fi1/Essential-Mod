@@ -9,20 +9,12 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
-package gg.essential.commands.impl;
+package gg.essential.mixins.transformers.compatibility.fancymenu;
 
-import gg.essential.api.commands.Command;
-import gg.essential.api.commands.DefaultHandler;
-import gg.essential.handlers.PauseMenuDisplay;
-import gg.essential.network.connectionmanager.sps.SPSSessionSource;
+import org.spongepowered.asm.mixin.Mixin;
+import gg.essential.mixins.DummyTarget;
 
-public class CommandInviteFriends extends Command {
-    public CommandInviteFriends() {
-        super("invitefriends");
-    }
-
-    @DefaultHandler
-    public void handle() {
-        PauseMenuDisplay.Companion.showInviteOrHostModal(SPSSessionSource.COMMAND);
-    }
+@Mixin(DummyTarget.class)
+public class Mixin_AbstractElement_CacheRealMousePos {
+    // Content in 1.18+
 }

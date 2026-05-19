@@ -40,7 +40,7 @@ object MojangNameToUuidApi {
         val request = Request.Builder().url(NAME_TO_UUID_API + username).build()
 
         httpClient().newCall(request).executeAwait().use { response ->
-            if (response.code() == 404) return@use null // user doesn't exist
+            if (response.code == 404) return@use null // user doesn't exist
             decodeMojangResponse<Profile>(response)
         }
     }

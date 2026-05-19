@@ -17,7 +17,6 @@ import com.sparkuniverse.toolbox.chat.model.MessageContent.CosmeticGift
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Media
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Plain
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Unknown
-import gg.essential.config.EssentialConfig
 import gg.essential.cosmetics.CosmeticId
 import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.friends.message.MessageUtils.handleMarkdownUrls
@@ -42,7 +41,10 @@ data class ClientMessage(
     val parts: List<Part> = buildList {
         when (content) {
             is Plain -> {
-                add(0, Part.Text(content.getText(EssentialConfig.chatFilterWithSource.getUntracked().first).handleMarkdownUrls()))
+                add(0, Part.Text(
+                    content.unfilteredText.handleMarkdownUrls(),
+                    content.text.handleMarkdownUrls(),
+                ))
             }
 
             is Media -> {
@@ -50,8 +52,6 @@ data class ClientMessage(
                     add(Part.Image(mediaId))
                 }
             }
-
-            // TODO: EM-3088 - Server and SPS invites
 
             is CosmeticGift -> {
                 add(Part.Gift(content.cosmeticId))
@@ -68,7 +68,9 @@ data class ClientMessage(
     }
 
     sealed interface Part {
-        data class Text(val content: String) : Part
+        data class Text(val unfilteredContent: String, val filteredContent: String) : Part {
+            constructor(content: String) : this(content, content)
+        }
         data class Image(val id: String) : Part
         data class Gift(val id: CosmeticId) : Part
         data class Skin(val skin: gg.essential.mod.Skin) : Part

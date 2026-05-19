@@ -16,13 +16,11 @@ import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
 import gg.essential.Essential;
 import gg.essential.event.gui.GuiDrawScreenEvent;
 import gg.essential.universal.UMatrixStack;
+import gg.essential.universal.UScreen;
 import gg.essential.util.UDrawContext;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.EntityRenderer;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -42,8 +40,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(EntityRenderer.class)
 public abstract class Mixin_GuiDrawScreenEvent_Priority_Pre {
-
-    @Shadow @Final private Minecraft mc;
 
     @Inject(
         //#if MC >= 26.1
@@ -84,7 +80,7 @@ public abstract class Mixin_GuiDrawScreenEvent_Priority_Pre {
         @Local(argsOnly = true) float partialTicks
         //#endif
     ) {
-        GuiScreen screen = this.mc.currentScreen;
+        GuiScreen screen = UScreen.getCurrentScreen();
         if (screen == null) return;
 
         GuiDrawScreenEvent.Priority event = new GuiDrawScreenEvent.Priority(

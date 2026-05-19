@@ -39,14 +39,7 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
 
     private lateinit var resources: Resources
 
-    override fun setup() {
-        Resources.drainCleanupQueue()
-        resources = Resources(this)
-    }
-
     override fun beforeDraw(matrixStack: UMatrixStack) {
-        if (!::resources.isInitialized) error("AlphaEffect has not yet been setup or has already been cleaned up! ElementaVersion.V4 or newer is required for proper operation!")
-
         val scale = UResolution.scaleFactor
 
         // Get the coordinates of the component within the bounds of the screen in real pixels
@@ -64,8 +57,10 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
             return
         }
 
-        if (resources.texture.width != width || resources.texture.height != height) {
-            resources.texture.resize(width, height)
+        if (!::resources.isInitialized || resources.width != width || resources.height != height) {
+            if (::resources.isInitialized) resources.close()
+            Resources.drainCleanupQueue()
+            resources = Resources(this, width, height)
         }
         resources.texture.copyFrom(listOf(GpuTexture.CopyOp(
             platform.outputColorTextureOverride ?: platform.mcFrameBufferColorTexture, x, y, 0, 0, width, height
@@ -133,8 +128,8 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
         resources.close()
     }
 
-    private class Resources(effect: AlphaEffect) : PhantomReference<AlphaEffect>(effect, referenceQueue), Closeable {
-        val texture: GpuTexture = platform.newGpuTexture(1, 1, GpuTexture.Format.RGBA8)
+    private class Resources(effect: AlphaEffect, val width: Int, val height: Int) : PhantomReference<AlphaEffect>(effect, referenceQueue), Closeable {
+        val texture = GpuTexture(width, height, GpuTexture.Format.RGBA8)
 
         init {
             toBeCleanedUp.add(this)
@@ -148,7 +143,7 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
 
             toBeCleanedUp.remove(this)
 
-            texture.delete()
+            texture.close()
         }
 
         companion object {

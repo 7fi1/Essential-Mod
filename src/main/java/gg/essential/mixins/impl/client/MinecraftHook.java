@@ -16,13 +16,11 @@ import gg.essential.event.client.ClientTickEvent;
 import gg.essential.event.client.InitializationEvent;
 import gg.essential.event.client.PostInitializationEvent;
 import gg.essential.event.client.PreInitializationEvent;
-import gg.essential.event.gui.GuiOpenEvent;
 import gg.essential.event.network.server.ServerLeaveEvent;
 import gg.essential.handlers.ShutdownHook;
 import gg.essential.mixins.impl.ClassHook;
 import gg.essential.universal.UMinecraft;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.profiler.Profiler;
 
 //#if MC >= 11400
@@ -68,11 +66,5 @@ public class MinecraftHook extends ClassHook<Minecraft> {
 
     public void shutdown() {
         ShutdownHook.INSTANCE.execute();
-    }
-
-    public GuiOpenEvent displayGuiScreen(GuiScreen screen) {
-        GuiOpenEvent guiOpenEvent = new GuiOpenEvent(screen);
-        Essential.EVENT_BUS.post(guiOpenEvent);
-        return guiOpenEvent;
     }
 }

@@ -15,14 +15,13 @@ import gg.essential.elementa.effects.Effect
 import gg.essential.elementa.effects.ScissorEffect
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.model.util.ResourceCleaner
 import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMinecraft
 import gg.essential.universal.UMouse
 import gg.essential.universal.UResolution
-import gg.essential.universal.UResolution.viewportHeight
-import gg.essential.universal.UResolution.viewportWidth
 import gg.essential.universal.render.DrawCallBuilder
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
@@ -30,21 +29,29 @@ import gg.essential.universal.vertex.UBufferBuilder
 import gg.essential.util.GlFrameBuffer
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.GpuTexture
-import org.lwjgl.opengl.GL11
-import java.awt.Color
 import kotlin.math.roundToInt
 
 class CosmeticHoverOutlineEffect(
-    private val backgroundColor: Color,
     private val outlineCosmetic: State<List<Cosmetic>>,
 ) : Effect() {
 
     private var previousScissorEffectState: ScissorEffect.ScissorState? = null
-    private var previousScissorState: Boolean = false
     private var previousFrameBuffer: () -> Unit = {}
 
     private val mutableHoveredCosmetic = mutableStateOf<Cosmetic?>(null)
     val hoveredCosmetic: State<Cosmetic?> = mutableHoveredCosmetic
+
+    private lateinit var resources: Resources
+    private val renderTargetColor: GpuTexture
+        get() = platform.outputColorTextureOverride ?: resources.fallbackFrameBuffer?.texture ?: platform.mcFrameBufferColorTexture
+    private val renderTargetDepth: GpuTexture
+        get() = platform.outputDepthTextureOverride ?: resources.fallbackFrameBuffer?.depthStencil ?: platform.mcFrameBufferDepthTexture!!
+    private val mainTextureCopy: GpuTexture
+        get() = resources.mainTextureCopy
+    private val compositeRenderResult: RenderResult
+        get() = resources.compositeRenderResult
+    private val renderResults: MutableMap<Cosmetic, RenderResult>
+        get() = resources.renderResults
 
     override fun beforeDraw(matrixStack: UMatrixStack) {
         check(active == null) { "Outline effects cannot be nested." }
@@ -52,29 +59,36 @@ class CosmeticHoverOutlineEffect(
 
         previousScissorEffectState = ScissorEffect.currentScissorState
         ScissorEffect.currentScissorState = null // required for Mc12106ScissorHandler to behave correctly
-        previousScissorState = GL11.glGetBoolean(GL11.GL_SCISSOR_TEST)
-        GL11.glDisable(GL11.GL_SCISSOR_TEST)
+        UGraphics.disableScissor()
 
-        if (!mcFrameBufferSupported) {
-            fallbackFrameBuffer.resize(viewportWidth, viewportHeight)
+        val viewportWidth = UResolution.viewportWidth
+        val viewportHeight = UResolution.viewportHeight
+        if (!::resources.isInitialized || resources.viewportWidth != viewportWidth || resources.viewportHeight != viewportHeight) {
+            if (::resources.isInitialized) resources.close()
+            resourceCleaner.runCleanups()
+            resources = Resources(viewportWidth, viewportHeight)
+            resourceCleaner.register(this, resources)
+        }
+
+        resources.fallbackFrameBuffer?.let { fallbackFrameBuffer ->
             previousFrameBuffer = fallbackFrameBuffer.bind()
         }
 
         mainTextureCopy.copyFrom(renderTargetColor)
-        renderTargetColor.clearColor(gg.essential.model.util.Color(backgroundColor.red.toUByte(), backgroundColor.green.toUByte(), backgroundColor.blue.toUByte(), 0u))
-        renderTargetDepth.clearDepth(1f)
+        renderTargetColor.clearColor()
+        renderTargetDepth.clearDepth()
     }
 
     override fun afterDraw(matrixStack: UMatrixStack) {
         compositeRenderResult.color.copyFrom(renderTargetColor)
         compositeRenderResult.depth.copyFrom(renderTargetDepth)
         renderTargetColor.copyFrom(mainTextureCopy)
-        renderTargetDepth.clearDepth(1f)
+        renderTargetDepth.clearDepth()
 
         previousFrameBuffer()
 
-        if (previousScissorState) {
-            GL11.glEnable(GL11.GL_SCISSOR_TEST)
+        previousScissorEffectState?.let { (x, y, width, height) ->
+            UGraphics.enableScissor(x, y, width, height)
         }
         ScissorEffect.currentScissorState = previousScissorEffectState
 
@@ -92,12 +106,10 @@ class CosmeticHoverOutlineEffect(
             }
         }
 
-        cleanup()
+        resources.freeRenderResults()
 
         active = null
     }
-
-    private val renderResults = mutableMapOf<Cosmetic, RenderResult>()
 
     fun beginOutlineRender(cosmetic: Cosmetic) {
         compositeRenderResult.color.copyFrom(renderTargetColor)
@@ -108,13 +120,13 @@ class CosmeticHoverOutlineEffect(
             renderTargetColor.copyFrom(renderResult.color)
             renderTargetDepth.copyFrom(renderResult.depth)
         } else {
-            renderTargetColor.clearColor(gg.essential.model.util.Color(0u))
-            renderTargetDepth.clearDepth(1f)
+            renderTargetColor.clearColor()
+            renderTargetDepth.clearDepth()
         }
     }
 
     fun endOutlineRender(cosmetic: Cosmetic) {
-        val renderResult = renderResults[cosmetic] ?: unusedRenderResults.removeLastOrNull() ?: RenderResult()
+        val renderResult = renderResults[cosmetic] ?: resources.createRenderResult()
         renderResult.color.copyFrom(renderTargetColor)
         renderResult.depth.copyFrom(renderTargetDepth)
         renderResults[cosmetic] = renderResult
@@ -145,14 +157,9 @@ class CosmeticHoverOutlineEffect(
         renderFullScreenQuad(OUTLINE_PIPELINE) {
             texture("CompositeSampler", compositeRenderResult.depth.glId)
             texture("TargetSampler", renderResult.depth.glId)
-            uniform("OneTexel", 1f / viewportWidth, 1f / viewportHeight)
+            uniform("OneTexel", 1f / renderResult.color.width, 1f / renderResult.color.height)
             uniform("OutlineWidth", UMinecraft.guiScale * 2)
         }
-    }
-
-    fun cleanup() {
-        unusedRenderResults.addAll(renderResults.values)
-        renderResults.clear()
     }
 
     private fun renderFullScreenQuad(pipeline: URenderPipeline, configure: DrawCallBuilder.() -> Unit) {
@@ -167,36 +174,58 @@ class CosmeticHoverOutlineEffect(
     private fun ScissorEffect.ScissorState.contains(testX: Double, testY: Double): Boolean {
         val scaleFactor = UResolution.scaleFactor.toInt()
         val tx = (testX * scaleFactor).roundToInt()
-        val ty = viewportHeight - (testY * scaleFactor).roundToInt()
+        val ty = UResolution.viewportHeight - (testY * scaleFactor).roundToInt()
         return x <= tx && tx < x + width && y <= ty && ty < y + height
     }
 
-    private class RenderResult(
-        val color: GpuTexture = GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.RGBA8),
-        val depth: GpuTexture = GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.DEPTH32),
-    )
+    private class RenderResult(viewportWidth: Int, viewportHeight: Int) : AutoCloseable {
+        val color: GpuTexture = GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.RGBA8)
+        val depth: GpuTexture = GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.DEPTH32)
+
+        override fun close() {
+            color.close()
+            depth.close()
+        }
+    }
+
+    private class Resources(val viewportWidth: Int, val viewportHeight: Int) : AutoCloseable {
+        val mainTextureCopy = GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.RGBA8)
+        val compositeRenderResult = RenderResult(viewportWidth, viewportHeight)
+        val renderResults = mutableMapOf<Cosmetic, RenderResult>()
+        val unusedRenderResults = mutableListOf<RenderResult>()
+
+        val fallbackFrameBuffer: GlFrameBuffer? =
+            // MC prior to 1.16 does not use a depth texture with its framebuffer, so we need to use a framebuffer of
+            // our own on those versions
+            if (platform.mcFrameBufferDepthTexture != null) null
+            else GlFrameBuffer(viewportWidth, viewportHeight, depthFormat = GpuTexture.Format.DEPTH32)
+
+        fun createRenderResult() =
+            unusedRenderResults.removeLastOrNull() ?: RenderResult(viewportWidth, viewportHeight)
+
+        fun freeRenderResults() {
+            unusedRenderResults.addAll(renderResults.values)
+            renderResults.clear()
+        }
+
+        override fun close() {
+            mainTextureCopy.close()
+            compositeRenderResult.close()
+            renderResults.forEach { it.value.close() }
+            unusedRenderResults.forEach { it.close() }
+            fallbackFrameBuffer?.close()
+        }
+    }
 
     companion object {
         var active: CosmeticHoverOutlineEffect? = null
             private set
 
-        // MC prior to 1.16 does not use a depth texture with its framebuffer, so we need to use a framebuffer of our
-        // own on those versions
-        private val mcFrameBufferSupported by lazy { platform.mcFrameBufferDepthTexture != null }
-        private val fallbackFrameBuffer by lazy { GlFrameBuffer(viewportWidth, viewportHeight, depthFormat = GpuTexture.Format.DEPTH32) }
-        private val renderTargetColor: GpuTexture
-            get() = platform.outputColorTextureOverride ?: if (mcFrameBufferSupported) platform.mcFrameBufferColorTexture else fallbackFrameBuffer.texture
-        private val renderTargetDepth: GpuTexture
-            get() = platform.outputDepthTextureOverride ?: if (mcFrameBufferSupported) platform.mcFrameBufferDepthTexture!! else fallbackFrameBuffer.depthStencil
-
-        private val mainTextureCopy by lazy { GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.RGBA8) }
-        private val compositeRenderResult by lazy { RenderResult() }
-
-        private val unusedRenderResults = mutableListOf<RenderResult>()
+        private val resourceCleaner = ResourceCleaner<CosmeticHoverOutlineEffect>()
 
         private fun GpuTexture.readHoveredDepth(): Float = readPixelDepth(
             (UMouse.Scaled.x * UResolution.scaleFactor).toInt(),
-            viewportHeight - (UMouse.Scaled.y * UResolution.scaleFactor).toInt(),
+            UResolution.viewportHeight - (UMouse.Scaled.y * UResolution.scaleFactor).toInt(),
         )
 
         private val vertexShaderSource = """
@@ -218,7 +247,7 @@ class CosmeticHoverOutlineEffect(
                 if (color.a == 0.0) {
                     discard;
                 }
-                gl_FragColor = vec4(color.rgb, 1.0);
+                gl_FragColor = color;
                 gl_FragDepth = texture2D(DepthSampler, texCoord).r;
             }
         """.trimIndent()
@@ -230,7 +259,7 @@ class CosmeticHoverOutlineEffect(
             vertexShaderSource,
             compositeFragmentShaderSource,
         ).apply {
-            blendState = BlendState.NORMAL
+            blendState = BlendState.PREMULTIPLIED_ALPHA
             depthTest = URenderPipeline.DepthTest.LessOrEqual
         }.build()
 

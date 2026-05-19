@@ -69,11 +69,7 @@ fun ModelBiped.toPose(): PlayerPose = PlayerPose(
     // FIXME preprocessor bug: for some reason it doesn't remap these
     //#if MC>=11600 && FABRIC || MC>=11700
     //$$ head.toPose(),
-    //#if MC>=11700
     //$$ body.toPose(),
-    //#else
-    //$$ torso.toPose(),
-    //#endif
     //$$ rightArm.toPose(),
     //$$ leftArm.toPose(),
     //$$ rightLeg.toPose(),
@@ -139,16 +135,10 @@ fun PlayerPose.applyTo(model: ModelBiped) {
     //$$ head.applyTo(model.head)
     //#if MC>=12000
     //$$ // Hat is now a proper child of head
-    //#elseif MC>=11700
+    //#else
     //$$ head.applyTo(model.hat)
-    //#else
-    //$$ head.applyTo(model.helmet)
     //#endif
-    //#if MC>=11700
     //$$ body.applyTo(model.body)
-    //#else
-    //$$ body.applyTo(model.torso)
-    //#endif
     //$$ rightArm.applyTo(model.rightArm)
     //$$ leftArm.applyTo(model.leftArm)
     //$$ rightLeg.applyTo(model.rightLeg)

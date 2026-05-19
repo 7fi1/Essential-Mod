@@ -19,11 +19,7 @@ class UnownedGlGpuTexture(
     override val width: Int,
     override val height: Int
 ) : GlGpuTexture(format) {
-    override fun resize(width: Int, height: Int) {
-        throw UnsupportedOperationException()
-    }
-
-    override fun delete() {
+    override fun close() {
         throw UnsupportedOperationException()
     }
 }

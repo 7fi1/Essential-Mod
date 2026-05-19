@@ -207,7 +207,7 @@ class SelectModalBuilder<T>(
     }
 
     fun friends(map: (UUID) -> T, block: SectionLayoutBlock<UUID> = defaultUserRow) {
-        val friendsList = relationshipStates.getObservableFriendList().toStateV2List().mapList { list -> list.filter { !socialStates.isSuspended(it)() } }
+        val friendsList = relationshipStates.friends.mapList { list -> list.filter { !socialStates.isSuspended(it)() } }
         users("Friends", map, friendsList, block)
         if (whenEmpty == null) {
             emptyTextNoFriends()
@@ -364,8 +364,7 @@ class SelectModalBuilder<T>(
     }
 
     fun filterFriendsByActivity(predicate: (PlayerActivity) -> Boolean): ListState<UUID> {
-        val mappedFriends = relationshipStates.getObservableFriendList()
-            .toStateV2List()
+        val mappedFriends = relationshipStates.friends
             .mapEach { uuid ->
                 uuid to statusStates.getActivityState(uuid).map { predicate(it) }
             }

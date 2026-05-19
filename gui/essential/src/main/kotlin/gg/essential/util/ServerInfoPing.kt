@@ -22,14 +22,14 @@ import java.awt.image.BufferedImage
 import java.util.*
 import javax.imageio.ImageIO
 
-class ServerPingInfo(
+data class ServerPingInfo(
     val host: String,
     val port: Int,
     val onlinePlayers: Int,
     val maxPlayers: Int,
     val version: String,
     val description: JsonElement,
-    val iconBytes: ByteArray?,
+    val iconBytes: Bytes?,
 ) {
     /** Name of the world. Assumes description to be formatted like vanilla. `null` if parsing fails. */
     val worldName: String?
@@ -46,7 +46,7 @@ class ServerPingInfo(
 
     val iconImage: BufferedImage? by lazy {
         try {
-            iconBytes?.let { ImageIO.read(it.inputStream()) }
+            iconBytes?.let { ImageIO.read(it.array.inputStream()) }
         } catch (exception: Exception) {
             LOGGER.warn("Failed to decode icon of `$host:$port`", exception)
             null
@@ -80,7 +80,7 @@ class ServerPingInfo(
                         val base64 = iconStr.substring(prefix.length)
                             // older versions have the base64 string split over multiple lines
                             .replace("\n", "")
-                        Base64.getDecoder().decode(base64)
+                        Bytes(Base64.getDecoder().decode(base64))
                     } else {
                         LOGGER.warn("Don't know how to decode icon from `$host:$port`: `$iconStr`")
                         null
@@ -94,3 +94,9 @@ class ServerPingInfo(
         }
     }
 }
+
+class Bytes(val array: ByteArray) {
+    override fun equals(other: Any?): Boolean = array.contentEquals((other as? Bytes)?.array)
+    override fun hashCode(): Int = array.contentHashCode()
+}
+

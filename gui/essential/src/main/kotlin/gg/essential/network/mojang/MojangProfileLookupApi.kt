@@ -22,7 +22,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import java.io.IOException
 import java.util.Base64
@@ -37,14 +37,14 @@ import java.util.UUID
 object MojangProfileLookupApi {
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val UUID_TO_NAME_API = System.getProperty(
+    private val UUID_TO_NAME_API = (System.getProperty(
         "minecraft.api.session.host",
         "https://sessionserver.mojang.com",
-    ) + "/session/minecraft/profile/"
+    ) + "/session/minecraft/profile/").toHttpUrl()
 
     @Throws(RateLimitException::class, IOException::class)
     suspend fun fetch(uuid: UUID, signed: Boolean = false, bypassProxyCache: Boolean = false): Profile? = withContext(Dispatchers.IO) {
-        val url = HttpUrl.parse(UUID_TO_NAME_API)!!.newBuilder().apply {
+        val url = UUID_TO_NAME_API.newBuilder().apply {
             addPathSegment(uuid.toString().replace("-", ""))
             if (signed) addQueryParameter("unsigned", "false")
             if (bypassProxyCache) addQueryParameter("cache_buster", UUID.randomUUID().toString())
@@ -52,7 +52,7 @@ object MojangProfileLookupApi {
         val request = Request.Builder().url(url).build()
 
         httpClient().newCall(request).executeAwait().use { response ->
-            if (response.code() == 204) return@use null // user doesn't exist
+            if (response.code == 204) return@use null // user doesn't exist
             decodeMojangResponse<Profile>(response)
         }
     }

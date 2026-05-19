@@ -43,16 +43,27 @@ interface SocialStates {
 
 interface IRelationshipStates {
 
-    fun isFriend(uuid: UUID): Boolean = uuid in getObservableFriendList()
+    val friends: ListState<UUID>
+    val blocked: ListState<UUID>
+    val outgoingFriendRequests: ListState<FriendRequest>
+    val incomingFriendRequests: ListState<FriendRequest>
 
-    fun isBlocked(uuid: UUID): Boolean = uuid in getObservableBlockedList()
+    data class FriendRequest(val user: UUID, val since: Instant)
 
+    fun isFriend(uuid: UUID): Boolean = uuid in friends.getUntracked()
+
+    fun isBlocked(uuid: UUID): Boolean = uuid in blocked.getUntracked()
+
+    @Deprecated("ObservableList should be replaced with StateV2's `ListState`", ReplaceWith("friends"))
     fun getObservableFriendList(): ObservableList<UUID>
 
+    @Deprecated("ObservableList should be replaced with StateV2's `ListState`", ReplaceWith("blocked"))
     fun getObservableBlockedList(): ObservableList<UUID>
 
+    @Deprecated("ObservableList should be replaced with StateV2's `ListState`", ReplaceWith("incomingFriendRequests"))
     fun getObservableIncomingRequests(): ObservableList<UUID>
 
+    @Deprecated("ObservableList should be replaced with StateV2's `ListState`", ReplaceWith("outgoingFriendRequests"))
     fun getObservableOutgoingRequests(): ObservableList<UUID>
 
     fun addFriend(uuid: UUID, notification: Boolean): CompletableFuture<RelationshipResponse>
@@ -65,6 +76,7 @@ interface IRelationshipStates {
 
     fun cancelOutgoingFriendRequest(uuid: UUID, notification: Boolean)
 
+    @Deprecated("ObservableList should be replaced with StateV2's `ListState`. Use the incoming/outgoingFriendRequests states instead.")
     fun getPendingRequestTime(uuid: UUID): Instant?
 
     fun blockPlayer(uuid: UUID, notification: Boolean): CompletableFuture<RelationshipResponse>
@@ -113,17 +125,6 @@ interface IMessengerStates {
     fun getUnreadChannelState(channelId: Long): StateV2<Boolean>
 
     /**
-     * State that records whether this message is unread or not.
-     * Calling [State.set] will propagate update to CM
-     */
-    @Deprecated("Not used in protocol 9 or later")
-    fun getUnreadMessageState(channelId: Long, messageId: Long): StateV2<Boolean>
-    @Deprecated("Not used in protocol 9 or later")
-    fun getUnreadMessageState(message: ClientMessage): StateV2<Boolean> = getUnreadMessageState(message.channel.id, message.id)
-    @Deprecated("Not used in protocol 9 or later")
-    fun getUnreadMessageState(message: Message): StateV2<Boolean> = getUnreadMessageState(message.channelId, message.id)
-
-    /**
      * State of the last read message in a channel
      */
     fun getLastReadMessageId(channelId: Long): StateV2<Long?>
@@ -168,21 +169,13 @@ interface IMessengerStates {
      */
     fun getMessageListState(channelId: Long): ListState<ClientMessage>
 
-    // Maybe make this one read only from the caller's point of view?
-    fun getObservableMemberList(channelId: Long): ObservableList<UUID>
+    fun getMembers(channelId: Long): ListState<UUID>
 
 
     /**
      * List of channels that the current user can access. New channels and deletions will be reflected
      */
     fun getObservableChannelList(): ObservableList<Channel>
-
-    @Deprecated("Not used in protocol 9 or later")
-    fun setUnreadState(channelId: Long, messageId: Long, unread: Boolean)
-    @Deprecated("Not used in protocol 9 or later")
-    fun setUnreadState(message: ClientMessage, unread: Boolean) = setUnreadState(message.channel.id, message.id, unread)
-    @Deprecated("Not used in protocol 9 or later")
-    fun setUnreadState(message: Message, unread: Boolean) = setUnreadState(message.channelId, message.id, unread)
 
     /**
      * Sets the title of a channel. Will throw an exception if this channel
@@ -257,12 +250,6 @@ interface IMessengerManager {
      * Called when the CM receives a new message in this channel
      */
     fun messageReceived(channel: Channel, message: Message)
-
-    /**
-     * Called when a message is unread or read
-     */
-    @Deprecated("Not used in protocol 9 or later")
-    fun messageReadStateUpdated(message: Message, read: Boolean)
 
     /**
      * Called when some property about this channel was updated (such as title or members)

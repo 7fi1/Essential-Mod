@@ -14,6 +14,7 @@ package gg.essential.handlers
 import gg.essential.gui.notification.Notifications
 import gg.essential.mod.Skin
 import gg.essential.network.mojang.ManagedMojangProfileApi
+import gg.essential.network.mojang.MojangApiException
 import gg.essential.util.Client
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,14 @@ abstract class MojangSkinManager {
 
         return try {
             api.putSkin(queuedSkinChange.skin)?.activeSkin
+        } catch (mae: MojangApiException) {
+            LOGGER.error("An error occurred while updating skin", mae)
+            val (title, msg) = when (mae.response.details?.status) {
+                "BANNED_SKIN" -> "Banned Skin" to "The skin you tried to upload is banned by Mojang"
+                else -> "Skin" to "Failed to upload skin, please try again"
+            }
+            Notifications.push(title, msg)
+            null
         } catch (e: Exception) {
             LOGGER.error("An error occurred while updating skin", e)
             Notifications.push("Skin", "Failed to upload skin, please try again")

@@ -63,9 +63,16 @@ public class CommandMessage extends Command {
             if (packet.isPresent() && packet.get() instanceof ServerChatChannelMessagePacket) {
                 Message messageObj = CollectionsKt.first(Arrays.asList(((ServerChatChannelMessagePacket) packet.get()).getMessages()));
                 switch (messageObj.getContent().getType()) {
-                    case PLAIN:
-                        onConfirm("§dTo " + friend.getIgn() + "§r: " + ((MessageContent.Plain) messageObj.getContent()).getText(EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst()));
+                    case PLAIN: {
+                        String text;
+                        if (EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst()) {
+                            text = ((MessageContent.Plain) messageObj.getContent()).getText();
+                        } else {
+                            text = ((MessageContent.Plain) messageObj.getContent()).getUnfilteredText();
+                        }
+                        onConfirm("§dTo " + friend.getIgn() + "§r: " + text);
                         break;
+                    }
                     case MEDIA:
                         onConfirm("Sent picture to " + friend.getIgn());
                         break;

@@ -13,9 +13,13 @@ package gg.essential.gui.friends.state
 
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.EssentialPalette
+import gg.essential.gui.elementa.state.v2.ListState
+import gg.essential.gui.elementa.state.v2.mapEach
+import gg.essential.gui.friends.state.IRelationshipStates.FriendRequest
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
 import gg.essential.gui.notification.iconAndMarkdownBody
+import gg.essential.gui.util.toStateV2List
 import gg.essential.network.connectionmanager.relationship.FriendRequestState
 import gg.essential.network.connectionmanager.relationship.RelationshipManager
 import gg.essential.network.connectionmanager.relationship.RelationshipResponse
@@ -34,6 +38,14 @@ class RelationshipStateManagerImpl(
     private val observableBlockedList = ObservableList(relationshipManager.blockedByMe.keys.toMutableList())
     private val observableIncomingList = ObservableList(relationshipManager.incomingFriendRequests.keys.toMutableList())
     private val observableOutgoingList = ObservableList(relationshipManager.outgoingFriendRequests.keys.toMutableList())
+
+    override val friends: ListState<UUID> = observableFriendList.toStateV2List()
+    override val blocked: ListState<UUID> = observableBlockedList.toStateV2List()
+    override val outgoingFriendRequests: ListState<FriendRequest> = observableOutgoingList.toStateV2List()
+        .mapEach { FriendRequest(it, getPendingRequestTime(it) ?: Instant.EPOCH) }
+    override val incomingFriendRequests: ListState<FriendRequest> = observableIncomingList.toStateV2List()
+        .mapEach { FriendRequest(it, getPendingRequestTime(it) ?: Instant.EPOCH) }
+
 
     init {
         relationshipManager.registerStateManager(this)

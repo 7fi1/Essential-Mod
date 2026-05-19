@@ -13,6 +13,7 @@ package gg.essential.gui.friends.previews
 
 import com.sparkuniverse.toolbox.chat.model.Channel
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Media
+import gg.essential.config.EssentialConfig
 import gg.essential.cosmetics.CosmeticId
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.constraints.*
@@ -277,7 +278,7 @@ class ChannelPreview(
         )
         return when (val part = message.parts.firstOrNull()) {
             is ClientMessage.Part.Text ->
-                Pair(null, textDescription(part.content))
+                Pair(null, textDescription(part))
             is ClientMessage.Part.Image ->
                 Pair(EssentialPalette.PICTURES_SHORT_9X7, State { pictureDescription(message) })
             is ClientMessage.Part.Skin ->
@@ -291,12 +292,15 @@ class ChannelPreview(
         }
     }
 
-    private fun textDescription(text: String): State<String> {
-        return stateOf(markdownRenderer.render(
-            Parser.builder()
-                .build()
-                .parse(text)
-        ).split("\n")[0]) // stop at new line
+    private fun textDescription(part: ClientMessage.Part.Text): State<String> {
+        return memo {
+            val text = if (EssentialConfig.chatFilterWithSource().first) part.filteredContent else part.unfilteredContent
+            markdownRenderer.render(
+                Parser.builder()
+                    .build()
+                    .parse(text)
+            ).split("\n")[0] // stop at new line
+        }
     }
 
     private fun Observer.pictureDescription(message: ClientMessage): String {

@@ -45,10 +45,6 @@ jobs:
           while read -r alias source; do
             platform_checksums["$alias"]="${platform_checksums["$source"]}"
           done < versions/aliases.txt
-          
-          # 1.16.2 are only published as 1.16.5
-          unset platform_checksums["1.16.2-fabric"]
-          unset platform_checksums["1.16.2-forge"]
 
           version="$(grep "^version=" gradle.properties | cut -d'=' -f2)"
 

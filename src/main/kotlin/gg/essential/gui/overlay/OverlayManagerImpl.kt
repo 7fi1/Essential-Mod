@@ -170,7 +170,7 @@ object OverlayManagerImpl : OverlayManager {
         handleDraw(drawContext, priority..priority)
 
     private fun handleDraw(drawContext: UDrawContext, priority: ClosedRange<LayerPriority>) {
-        val hideGui = mc.gameSettings.hideGUI && mc.currentScreen == null
+        val hideGui = mc.gameSettings.hideGUI && UScreen.currentScreen == null
 
         fun drawLayer(matrixStack: UMatrixStack, layer: Layer) {
             val layerMatrixStack =
@@ -250,12 +250,13 @@ object OverlayManagerImpl : OverlayManager {
             } else if (layer == VanillaScreenLayer) {
                 Events.ignoreMouseReleaseEvent = true
                 try {
+                    val screen = UScreen.currentScreen
                     //#if MC>=12109
-                    //$$ mc.currentScreen?.mouseReleased(Click(UMouse.Scaled.x, UMouse.Scaled.y, MouseInput(button, 0)))
+                    //$$ screen?.mouseReleased(Click(UMouse.Scaled.x, UMouse.Scaled.y, MouseInput(button, 0)))
                     //#elseif MC>=11600
-                    //$$ mc.currentScreen?.mouseReleased(UMouse.Scaled.x, UMouse.Scaled.y, button)
+                    //$$ screen?.mouseReleased(UMouse.Scaled.x, UMouse.Scaled.y, button)
                     //#else
-                    (mc.currentScreen as GuiScreenAccessor?)?.invokeMouseReleased(UMouse.Scaled.x.toInt(), UMouse.Scaled.y.toInt(), button)
+                    (screen as GuiScreenAccessor?)?.invokeMouseReleased(UMouse.Scaled.x.toInt(), UMouse.Scaled.y.toInt(), button)
                     //#endif
                 } finally {
                     Events.ignoreMouseReleaseEvent = false
@@ -322,6 +323,16 @@ object OverlayManagerImpl : OverlayManager {
         GlobalMouseOverride.set(orgX, orgY)
     }
 
+    /**
+     * Runs the given [block] with the real mouse position restored globally, even if it has been modified by [Events].
+     * The block can access the true mouse position as required via [UMouse].
+     */
+    @JvmStatic
+    fun withRealMousePos(block: () -> Unit) = Events.withRealMousePos(block)
+
+    @JvmStatic
+    fun isOverridingMousePos() = Events.isOverridingMousePos()
+
     private object Events {
         var registered = false
 
@@ -339,6 +350,18 @@ object OverlayManagerImpl : OverlayManager {
 
         private var originalMousePos: Pair<Double, Double>? = null
         private var originalMousePosEvent: Pair<Int, Int>? = null
+
+        fun isOverridingMousePos() = originalMousePos != null
+
+        fun withRealMousePos(block: () -> Unit) {
+            originalMousePos?.let { (x, y) ->
+                val inX = UMouse.Raw.x
+                val inY = UMouse.Raw.y
+                GlobalMouseOverride.set(x, y)
+                block()
+                GlobalMouseOverride.set(inX, inY)
+            } ?: block()
+        }
 
         private fun firstDraw(event: GuiDrawScreenEvent) {
             cleanupLayers()

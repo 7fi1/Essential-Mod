@@ -20,17 +20,19 @@ import gg.essential.connectionmanager.common.packet.response.ResponseActionPacke
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.dsl.minus
 import gg.essential.elementa.dsl.provideDelegate
-import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.modal.EssentialModal
 import gg.essential.gui.common.modal.configure
+import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.addAll
 import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList
 import gg.essential.gui.elementa.state.v2.combinators.letState
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.combinators.not
+import gg.essential.gui.elementa.state.v2.filter
 import gg.essential.gui.elementa.state.v2.isNotEmpty
+import gg.essential.gui.elementa.state.v2.mapList
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableListStateOf
 import gg.essential.gui.elementa.state.v2.mutableStateOf
@@ -86,15 +88,15 @@ fun openGiftModal(item: Item.CosmeticOrEmote, state: WardrobeState) {
 
     // Get all friends except those who already own the item to gift
     val socialStates = platform.createSocialStates()
-    val allFriends = socialStates.relationships.getObservableFriendList()
+    val allFriends = socialStates.relationships.friends.mapList { list -> list.filter { !socialStates.isSuspended(it)() } }
     val validFriends = mutableListStateOf<UUID>()
-    val loadingFriends = mutableStateOf(allFriends.isNotEmpty())
+    val loadingFriends = mutableStateOf(allFriends.getUntracked().isNotEmpty())
 
-    platform.cmConnection.send(ClientCosmeticBulkRequestUnlockStatePacket(allFriends.toSet(), item.cosmetic.id)) { maybePacket ->
+    platform.cmConnection.send(ClientCosmeticBulkRequestUnlockStatePacket(allFriends.getUntracked().toSet(), item.cosmetic.id)) { maybePacket ->
         ServerCosmeticBulkRequestUnlockStateResponsePacket::class.java // FIXME workaround for feature-flag-processor eating the packet
         when (val packet = maybePacket.orElse(null)) {
             is ServerCosmeticBulkRequestUnlockStateResponsePacket -> {
-                validFriends.addAll(packet.unlockStates.filter { !it.value }.keys.toList().filter { !socialStates.isSuspended(it).getUntracked() })
+                validFriends.addAll(packet.unlockStates.filter { !it.value }.keys.toList())
             }
             else -> {
                 showErrorToast("Something went wrong, please try again.")
@@ -197,7 +199,7 @@ fun showGiftReceivedToast(cosmetic: Cosmetic, uuid: UUID, username: String) {
 suspend fun ModalFlow.selectFriendsToGiftModal(
     item: Item.CosmeticOrEmote,
     state: WardrobeState,
-    allFriends: ObservableList<UUID>,
+    allFriends: ListState<UUID>,
     validFriends: State<MutableTrackedList<UUID>>,
     loadingFriends: State<Boolean>,
 ): Set<UUID>? {
@@ -210,10 +212,10 @@ suspend fun ModalFlow.selectFriendsToGiftModal(
             titleTextColor = EssentialPalette.TEXT
         }
 
-        emptyText(loadingFriends.map { loading ->
+        emptyText(memo {
             when {
-                allFriends.isEmpty() -> "You haven't added any friends yet. You can add them in the social menu."
-                loading -> "Loading..."
+                allFriends().isEmpty() -> "You haven't added any friends yet. You can add them in the social menu."
+                loadingFriends() -> "Loading..."
                 else -> "Your friends already own this item."
             }
         })

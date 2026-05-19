@@ -500,7 +500,7 @@ private fun LayoutScope.playerPreviewInner(state: WardrobeState, modifier: Modif
             listOfNotNull(state.editingCosmetic()?.cosmetic, hovered().takeIf { !dragging() })
         }
 
-        val cosmeticHoverEffect = CosmeticHoverOutlineEffect(EssentialPalette.GUI_BACKGROUND, outlineCosmetic)
+        val cosmeticHoverEffect = CosmeticHoverOutlineEffect(outlineCosmetic)
         bindEffect(cosmeticHoverEffect, state.selectedBundle.map { it == null })
 
         hoveredSource.set(cosmeticHoverEffect.hoveredCosmetic)

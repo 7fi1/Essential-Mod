@@ -20,7 +20,6 @@ import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.wardrobe.WardrobeState
 import gg.essential.mod.Model
 import gg.essential.mod.cosmetics.CosmeticBundle
-import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.mod.cosmetics.CosmeticTier
 import gg.essential.mod.cosmetics.database.GitRepoCosmeticsDatabase
 import gg.essential.model.util.Instant
@@ -50,32 +49,6 @@ class ConfigurationType<I, T> private constructor(
         private val VALUES = mutableListOf<ConfigurationType<*, *>>()
 
         fun values(): List<ConfigurationType<*, *>> = VALUES
-
-        val TYPES = ConfigurationType(
-            displayPlural = "Types",
-            stateSupplier = { Triple(it.currentlyEditingCosmeticTypeId, it.currentlyEditingCosmeticType, it.rawTypes) },
-            idAndNameMapper = { it.id to (it.displayNames["en_us"] ?: it.id) },
-            updateHandler = { data, id, new -> data.updateType(id, new) },
-            resetHandler = { data, id -> data.resetType(id) },
-            createHandler = { modalManager, cosmeticsDataWithChanges, state ->
-                CancelableInputModal(modalManager, "Type ID").configure {
-                    titleText = "Create New Type"
-                    contentText = "Enter the ID for the new type."
-                }.apply {
-                    onPrimaryActionWithValue { id ->
-                        if (cosmeticsDataWithChanges.getType(id) != null) {
-                            setError("That id already exists!")
-                            return@onPrimaryActionWithValue
-                        }
-                        cosmeticsDataWithChanges.registerType(
-                            id,
-                            "Type name",
-                            CosmeticSlot.HAT,
-                        )
-                    }
-                }
-            }
-        )
 
         val CATEGORIES = ConfigurationType(
             displayPlural = "Categories",

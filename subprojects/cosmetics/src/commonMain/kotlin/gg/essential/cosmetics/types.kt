@@ -14,7 +14,6 @@ package gg.essential.cosmetics
 import gg.essential.mod.cosmetics.database.GitRepoCosmeticsDatabase
 
 typealias CosmeticId = String
-typealias CosmeticTypeId = String
 typealias CosmeticCategoryId = String
 typealias BoneId = String
 typealias CosmeticBundleId = String

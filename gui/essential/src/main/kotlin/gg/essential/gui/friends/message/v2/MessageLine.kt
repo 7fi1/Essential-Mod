@@ -27,6 +27,7 @@ import gg.essential.gui.common.FadeEffect
 import gg.essential.gui.common.or
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.util.hoveredState
@@ -137,7 +138,7 @@ abstract class MessageWrapper(
     val sendingMessageAlpha = 0.7f
 
     protected val dropdownOpen = mutableStateOf(false)
-    protected val actionButtonHovered = mutableStateOf(mutableStateOf(false))
+    protected val actionButtonHovered = mutableStateOf(stateOf(false))
 
     val appearHovered = memo { actionButtonHovered()() || dropdownOpen() }
 
@@ -215,7 +216,7 @@ sealed class MessageBubble(wrapper: MessageWrapper) : MessageLine(wrapper) {
  * Contains text sent by a user
  */
 abstract class ParagraphLine(
-    val messageContent: String,
+    val messageContent: gg.essential.gui.elementa.state.v2.State<String>,
     wrapper: MessageWrapper,
 ) : MessageBubble(wrapper) {
     abstract val selectedText: String

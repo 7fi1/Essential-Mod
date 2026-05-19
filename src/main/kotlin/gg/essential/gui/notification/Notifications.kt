@@ -211,7 +211,7 @@ object NotificationsImpl : Notifications, NotificationsManager {
     ) : NotificationBuilder {
         val components = mutableMapOf<Slot, UIComponent>()
 
-        override var elementaVersion = ElementaVersion.V6
+        override var elementaVersion = ElementaVersion.V10
 
         private val dismissFuture = CompletableFuture<Void?>()
         private val instantDismissFuture = CompletableFuture<Void?>()

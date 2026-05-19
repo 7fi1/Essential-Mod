@@ -331,9 +331,8 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         Essential.getInstance().connectionManager.chatManager.retrieveChannelHistoryUntil(messageRef)
     }
 
-    override fun haveActiveRemoteSpsSession(address: String): Boolean {
-        val spsAddr = SpsAddress.parse(address) ?: return false
-        return Essential.getInstance().connectionManager.spsManager.getRemoteSession(spsAddr.host) != null
+    override fun haveActiveRemoteSpsSession(host: UUID): Boolean {
+        return Essential.getInstance().connectionManager.spsManager.getRemoteSession(host) != null
     }
 
     override val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -> Unit
@@ -544,6 +543,8 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
             null
         }
     }
+
+    override fun isInMainMenu() = UScreen.currentScreen.isMainMenu
 
     // TODO: Eventually move to :gui:essential project
     override val modalPrerequisites

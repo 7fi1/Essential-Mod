@@ -18,12 +18,10 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
 import gg.essential.Essential;
 import gg.essential.event.client.ReAuthEvent;
-import gg.essential.event.gui.GuiOpenedEvent;
 import gg.essential.mixins.ext.server.integrated.IntegratedServerExt;
 import gg.essential.sps.McIntegratedServerManager;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.Session;
-import gg.essential.event.gui.GuiOpenEvent;
 import gg.essential.mixins.impl.client.MinecraftExt;
 import gg.essential.mixins.impl.client.MinecraftHook;
 import net.minecraft.client.Minecraft;
@@ -41,7 +39,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.io.File;
 import java.util.Objects;
 
-import static gg.essential.universal.UMinecraft.isCallingFromMinecraftThread;
 import static gg.essential.util.HelpersKt.toUSession;
 
 //#if MC>=12109
@@ -83,8 +80,6 @@ import org.lwjgl.input.Mouse;
 public abstract class MixinMinecraft implements MinecraftExt {
 
     private final MinecraftHook minecraftHook = new MinecraftHook((Minecraft) (Object) this);
-
-    private GuiOpenEvent guiOpenEvent;
 
     @Shadow @Mutable @Final private Session session;
 
@@ -212,37 +207,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
         minecraftHook.shutdown();
     }
 
-    @Inject(method = "displayGuiScreen", at = @At("HEAD"))
-    private void checkThreadSafety(CallbackInfo ci) {
-        if (!isCallingFromMinecraftThread()) {
-            Essential.logger.error("Detected call to `openScreen` on thread {}. " +
-                "This method is NOT thread safe and MUST NOT be called from any thread except the main client thread! " +
-                "Please report this to the mod responsible as per the following stacktrace:",
-                Thread.currentThread(),
-                new Throwable());
-        }
-    }
-
-    @ModifyVariable(method = "displayGuiScreen", at = @At("HEAD"))
-    public GuiScreen displayGuiScreen(GuiScreen screen) {
-        guiOpenEvent = minecraftHook.displayGuiScreen(screen);
-        return guiOpenEvent.getGui();
-    }
-
-    @Inject(method = "displayGuiScreen", at = @At("HEAD"), cancellable = true)
-    public void displayGuiScreen(GuiScreen screen, CallbackInfo info) {
-        if (guiOpenEvent != null && guiOpenEvent.isCancelled()) info.cancel();
-    }
-
-    @Inject(method = "displayGuiScreen", at = @At("TAIL"))
-    public void essential$fireGuiOpenedEvent(GuiScreen screen, CallbackInfo info) {
-        if (screen == null) {
-            return;
-        }
-
-        Essential.EVENT_BUS.post(new GuiOpenedEvent(screen));
-    }
-
     @Override
     public void setSession(Session session) {
         Session oldSession = this.session;
@@ -342,7 +306,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
     //#elseif MC>=11802
     //$$ private static final String LAUNCH_INTEGRATED_SERVER = "startIntegratedServer(Ljava/lang/String;Ljava/util/function/Function;Ljava/util/function/Function;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V";
     //#elseif MC>=11600
-    //$$ private static final String LAUNCH_INTEGRATED_SERVER = "loadWorld(Ljava/lang/String;Lnet/minecraft/util/registry/DynamicRegistries$Impl;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/Minecraft$WorldSelectionType;)V";
+    //$$ private static final String LAUNCH_INTEGRATED_SERVER = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/DynamicRegistries$Impl;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/Minecraft$WorldSelectionType;)V";
     //#else
     private static final String LAUNCH_INTEGRATED_SERVER = "launchIntegratedServer";
     //#endif

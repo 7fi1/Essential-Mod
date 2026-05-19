@@ -74,15 +74,11 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
             // - if we are prefetching
             // - if essential is not enabled
             final boolean isRead;
-            if (connectionManager.getUsingProtocol() >= 9) {
-                Long lastReadMessageId = channel.getLastReadMessageId();
-                if (lastReadMessageId == null) {
-                    isRead = false;
-                } else {
-                    isRead = channel.getLastReadMessageId() >= message.getId();
-                }
+            Long lastReadMessageId = channel.getLastReadMessageId();
+            if (lastReadMessageId == null) {
+                isRead = false;
             } else {
-                isRead = message.isRead();
+                isRead = channel.getLastReadMessageId() >= message.getId();
             }
             if (isRead ||
                     message.getSender().equals(UUIDUtil.getClientUUID()) ||
@@ -99,12 +95,19 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
                 Skin skin = new Skin(messageContentSkin.getHash(), toMod(messageContentSkin.getModel()));
                 UUIDUtil.getName(uuid).thenAcceptAsync(name -> showSkinReceivedToast(skin, uuid, name, channel), getExecutor(Minecraft.getMinecraft()));
             } else if (notification && message.getContent() instanceof MessageContent.Plain) {
-                UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message.getSender(), ((MessageContent.Plain) message.getContent()).getText(EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst())), getExecutor(Minecraft.getMinecraft()));
+                String text;
+                if (EssentialConfig.INSTANCE.getChatFilterWithSource().getUntracked().getFirst()) {
+                    text = ((MessageContent.Plain) message.getContent()).getText();
+                } else {
+                    text = ((MessageContent.Plain) message.getContent()).getUnfilteredText();
+                }
+                UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message.getSender(), text), getExecutor(Minecraft.getMinecraft()));
             } else if (notification && message.getContent() instanceof MessageContent.Media) {
                 UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message.getSender(), "Sent you a picture"), getExecutor(Minecraft.getMinecraft()));
             }
             // Gift embeds are handled in GiftedCosmeticNoticeListener
-            // TODO: EM-3088 Add comments for SpsInvite and ServerInvite which will be handled outside of this class
+            // ServerInvite notifications are handled in SocialInviteToServerPacketHandler
+            // SpsInvite notifications are handled in ServerUPnPSessionInviteAddPacketHandler
         }
     }
 

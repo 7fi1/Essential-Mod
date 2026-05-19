@@ -16,15 +16,12 @@ import dev.folomeev.kotgl.matrix.vectors.mutables.minus
 import dev.folomeev.kotgl.matrix.vectors.sqrDistance
 import dev.folomeev.kotgl.matrix.vectors.vec3
 import dev.folomeev.kotgl.matrix.vectors.vecZero
-import gg.essential.Essential
 import gg.essential.config.EssentialConfig
 import gg.essential.config.LoadsResources
 import gg.essential.gui.elementa.state.v2.Observer
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.stateOf
-import gg.essential.gui.friends.state.RelationshipStateManagerImpl
-import gg.essential.gui.util.toStateV2List
 import gg.essential.mixins.impl.client.audio.ISoundExt
 import gg.essential.mixins.impl.client.audio.SoundSystemExt
 import gg.essential.model.ModelAnimationState
@@ -33,6 +30,7 @@ import gg.essential.model.PlayerMolangQuery
 import gg.essential.model.SoundEffect
 import gg.essential.model.util.Quaternion
 import gg.essential.model.util.rotateSelfBy
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.identifier
 import gg.essential.util.USession
 import net.minecraft.client.Minecraft
@@ -262,19 +260,15 @@ object EssentialSoundManager {
         return parent?.isRelativeToCamera() ?: false
     }
 
-    // Added as a separate property to avoid it being garbage collected in `friendList`
-    private val relationshipStateImpl by lazy {
-        RelationshipStateManagerImpl(Essential.getInstance().connectionManager.relationshipManager)
-    }
-
-    private val friendList by lazy {
-        relationshipStateImpl.getObservableFriendList().toStateV2List()
-    }
+    // TODO This is currently an explicit property because the IRelationshipStates implementation relies on a
+    //  WeakReference in StateCallbackManager to receive updates.
+    //  Can be inlined once that's no longer the case.
+    private val relationships by lazy { platform.createSocialStates().relationships }
 
     private fun Observer.shouldAllowEmoteSound(uuid: UUID): Boolean =
         when (EssentialConfig.allowEmoteSounds()) {
             EssentialConfig.AllowEmoteSounds.FROM_EVERYONE -> true
-            EssentialConfig.AllowEmoteSounds.FROM_MYSELF_AND_FRIENDS -> uuid == USession.active().uuid || uuid in friendList()
+            EssentialConfig.AllowEmoteSounds.FROM_MYSELF_AND_FRIENDS -> uuid == USession.active().uuid || uuid in relationships.friends()
             EssentialConfig.AllowEmoteSounds.FROM_MYSELF_ONLY -> USession.active().uuid == uuid
             EssentialConfig.AllowEmoteSounds.FROM_NOBODY -> false
         }

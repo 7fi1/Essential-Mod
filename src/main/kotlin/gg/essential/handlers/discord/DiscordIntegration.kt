@@ -91,7 +91,7 @@ object DiscordIntegration {
      * The current activity state
      * When this property is set, the discord client is notified of an activity change
      */
-    var state: ActivityState = ActivityState.GUI.MainMenu
+    var state: ActivityState? = ActivityState.GUI.MainMenu
         set(value) {
             if (field == value) {
                 return
@@ -231,7 +231,7 @@ object DiscordIntegration {
         val activityState = state
         val version = VersionData.getMinecraftVersion()
 
-        val activity = activity("Playing Minecraft $version", activityState.text) {
+        val activity = activity("Playing Minecraft $version", activityState?.text) {
             val session = USession.activeNow()
 
             // Icon is a magic constant referencing an asset uploaded

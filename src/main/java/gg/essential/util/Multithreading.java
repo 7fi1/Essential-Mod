@@ -21,14 +21,18 @@ import static gg.essential.util.ExtensionsKt.getExecutor;
 
 public class Multithreading {
     private static final AtomicInteger counter = new AtomicInteger(0);
+    private static final ThreadFactory threadFactory = runnable -> {
+        Thread thread = new Thread(runnable, "Essential Thread " + counter.incrementAndGet());
+        thread.setDaemon(true);
+        return thread;
+    };
 
-    private static final ScheduledExecutorService RUNNABLE_POOL = Executors.newScheduledThreadPool(10, r ->
-        new Thread(r, "Essential Thread " + counter.incrementAndGet()));
+    private static final ScheduledExecutorService RUNNABLE_POOL = Executors.newScheduledThreadPool(10, threadFactory);
 
     public static ThreadPoolExecutor POOL = new ThreadPoolExecutor(10, 30,
             0L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
-            r -> new Thread(r, "Essential Thread " + counter.incrementAndGet()));
+            threadFactory);
 
     /**
      * @deprecated This method executes the passed runnable on a background thread.

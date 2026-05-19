@@ -27,10 +27,7 @@ import net.minecraft.client.gui.GuiDisconnected
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiMainMenu
 
-//#if MC==11602 && FORGE
-//$$ import net.minecraft.client.gui.IGuiEventListener
-//$$ import gg.essential.util.textLiteral
-//#elseif MC>=11602
+//#if MC>=11602
 //$$ import gg.essential.util.textLiteral
 //#if MC>=11701
 //$$ import net.minecraft.client.network.ServerAddress

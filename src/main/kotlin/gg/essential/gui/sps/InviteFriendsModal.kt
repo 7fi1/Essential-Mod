@@ -267,15 +267,17 @@ object InviteFriendsModal {
                 // to return to the world settings since. Since the session is active
                 // at this point, calling show() would show the user selection modal
                 if (justStarted && MinecraftUtils.isHostingSPS()) {
-                    replaceWith(createWorldSettingsModal(
-                        modalManager,
-                        emptySet(),
-                        true,
-                        source = source,
-                        callbackAfterOpen = onComplete,
-                    ))
+                    replaceWith(
+                        createWorldSettingsModal(
+                            modalManager,
+                            emptySet(),
+                            true,
+                            source = source,
+                            callbackAfterOpen = onComplete,
+                        )
+                    )
                 } else {
-                    PauseMenuDisplay.showInviteOrHostModalInternal(
+                    PauseMenuDisplay.showInviteOrHostModalInternalOld(
                         source,
                         previousModal = this,
                         worldSummary = worldSummary,

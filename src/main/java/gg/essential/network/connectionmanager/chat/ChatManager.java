@@ -394,7 +394,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
                         message.getChannelId(),
                         message.getSender(),
                         new MessageContent.Plain(messageContent, null),
-                        message.isRead(),
                         message.getReplyTargetId(),
                         message.getLastEditTime(),
                         message.getCreatedAt()
@@ -713,33 +712,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         for (IMessengerManager manager : getCallbacks()) {
             manager.channelUpdated(channel);
         }
-    }
-
-    @Deprecated
-    public void updateReadState(Message message, boolean read) {
-        if (message.isRead() == read) return;
-        Message messageCopy;
-        messageCopy = new Message(
-                message.getId(),
-                message.getChannelId(),
-                message.getSender(),
-                message.getContent(),
-                read,
-                message.getReplyTargetId(),
-                message.getLastEditTime(),
-                message.getCreatedAt()
-        );
-        upsertMessageToChannel(messageCopy.getChannelId(), messageCopy, false);
-
-        for (IMessengerManager iMessengerManager : getCallbacks()) {
-            iMessengerManager.messageReadStateUpdated(message, read);
-        }
-
-        this.connectionManager.send(new ClientChatChannelMessageReadStatePacket(
-            message.getChannelId(),
-            message.getId(),
-            read
-        ));
     }
 
     public State<Integer> getUnreadMessageCount() {

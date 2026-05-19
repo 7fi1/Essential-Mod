@@ -133,13 +133,9 @@ fun toggleElementaDebug() {
 // FIXME preprocessor bug: Workaround for https://github.com/ReplayMod/remap/issues/12
 var ServerData.serverResourcePack
     get() = resourceMode
-    //#if FABRIC || MC >= 11700
-    //$$ set(value) { setResourcePackState(value) }
-    //#else
     set(value) {
         resourceMode = value
     }
-//#endif
 
 fun MCMinecraft.setSession(session: USession) {
     (this as MinecraftExt).setSession(session.toMC())

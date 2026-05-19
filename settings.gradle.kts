@@ -81,8 +81,8 @@ listOf(
     "1.12.2-forge",
 //    ,"1.12.2-vanilla"
 //    , "1.15.2",
-    "1.16.2-forge",
-    "1.16.2-fabric",
+    "1.16.5-forge",
+    "1.16.5-fabric",
     "1.17.1-fabric",
     "1.17.1-forge",
     "1.18.1-fabric",

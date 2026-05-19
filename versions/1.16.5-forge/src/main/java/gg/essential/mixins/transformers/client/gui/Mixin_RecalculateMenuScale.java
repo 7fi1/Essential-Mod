@@ -11,6 +11,7 @@
  */
 package gg.essential.mixins.transformers.client.gui;
 
+import gg.essential.universal.UScreen;
 import net.minecraft.client.MainWindow;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.IngameMenuScreen;
@@ -31,7 +32,7 @@ public class Mixin_RecalculateMenuScale {
 
     @Inject(method = "displayGuiScreen", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/Screen;onClose()V"))
     private void getOldScreen(CallbackInfo callbackInfo) {
-        shouldRecomputeGuiScale = isMenu(Minecraft.getInstance().currentScreen);
+        shouldRecomputeGuiScale = isMenu(UScreen.getCurrentScreen());
     }
 
     @Inject(method = "displayGuiScreen", at = @At(
@@ -43,7 +44,7 @@ public class Mixin_RecalculateMenuScale {
     private void recalculateScale(CallbackInfo callbackInfo) {
         Minecraft minecraft = Minecraft.getInstance();
         MainWindow window = minecraft.getMainWindow();
-        if (isMenu(minecraft.currentScreen) || shouldRecomputeGuiScale) {
+        if (isMenu(UScreen.getCurrentScreen()) || shouldRecomputeGuiScale) {
             window.setGuiScale(window.calcGuiScale(
                     //#if MC>=11900
                     //$$ minecraft.options.getGuiScale().getValue(), minecraft.options.getForceUnicodeFont().getValue()

@@ -219,7 +219,7 @@ class AssetLoader(private val cachePath: Path) {
                         HttpLoggingEventListener.supplyCustomQueueTime(queueTime!!)
                         httpClient.join().newCall(request).execute().use { response ->
                             if (!response.isSuccessful) throw IOException("Unexpected response $response")
-                            response.body()!!.bytes()
+                            response.body.bytes()
                         }
                     }
                     "file" -> {

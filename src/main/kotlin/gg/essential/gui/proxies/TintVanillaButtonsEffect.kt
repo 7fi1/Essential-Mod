@@ -39,7 +39,7 @@ import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.Companion.average
  */
 class TintVanillaButtonsEffect {
 
-    private val resources = Resources(this)
+    private lateinit var resources: Resources
 
     init {
         Resources.drainCleanupQueue()
@@ -57,8 +57,9 @@ class TintVanillaButtonsEffect {
     }
 
     private fun beforeDraw(matrixStack: UMatrixStack, area: AreaToBeTinted) {
-        if (resources.background.width != area.width || resources.background.height != area.height) {
-            resources.background.resize(area.width, area.height)
+        if (!::resources.isInitialized || resources.width != area.width || resources.height != area.height) {
+            if (::resources.isInitialized) resources.close()
+            resources = Resources(this, area.width, area.height)
         }
         resources.background.copyFrom(listOf(GpuTexture.CopyOp(
             platform.outputColorTextureOverride ?: platform.mcFrameBufferColorTexture,
@@ -94,10 +95,6 @@ class TintVanillaButtonsEffect {
 
     private fun afterDraw(matrixStack: UMatrixStack, area: AreaToBeTinted, color: Color) {
         // collect the texture of the button to be tinted from the render target
-        if (resources.button.width != area.width || resources.button.height != area.height) {
-            resources.button.resize(area.width, area.height)
-        }
-
         resources.button.copyFrom(listOf(GpuTexture.CopyOp(
             platform.outputColorTextureOverride ?: platform.mcFrameBufferColorTexture,
             area.xViewport, area.yViewport, 0, 0, area.width, area.height
@@ -158,9 +155,9 @@ class TintVanillaButtonsEffect {
         //#endif
     }
 
-    private class Resources(effect: TintVanillaButtonsEffect) : PhantomReference<TintVanillaButtonsEffect>(effect, referenceQueue), Closeable {
-        val background: GpuTexture = platform.newGpuTexture(1, 1, GpuTexture.Format.RGBA8)
-        val button: GpuTexture = platform.newGpuTexture(1, 1, GpuTexture.Format.RGBA8)
+    private class Resources(effect: TintVanillaButtonsEffect, val width: Int, val height: Int) : PhantomReference<TintVanillaButtonsEffect>(effect, referenceQueue), Closeable {
+        val background: GpuTexture = platform.newGpuTexture(width, height, GpuTexture.Format.RGBA8)
+        val button: GpuTexture = platform.newGpuTexture(width, height, GpuTexture.Format.RGBA8)
 
         init {
             toBeCleanedUp.add(this)
@@ -174,8 +171,8 @@ class TintVanillaButtonsEffect {
 
             toBeCleanedUp.remove(this)
 
-            background.delete()
-            button.delete()
+            background.close()
+            button.close()
         }
 
         companion object {

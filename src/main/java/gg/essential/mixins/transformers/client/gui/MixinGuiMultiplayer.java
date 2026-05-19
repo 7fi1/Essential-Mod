@@ -17,7 +17,7 @@ import gg.essential.gui.multiplayer.EssentialMultiplayerGui;
 import gg.essential.mixins.ext.client.gui.GuiMultiplayerExt;
 import gg.essential.mixins.impl.client.gui.EssentialPostScreenDrawHook;
 import gg.essential.universal.UMatrixStack;
-import gg.essential.universal.UMinecraft;
+import gg.essential.universal.UScreen;
 import gg.essential.util.UDrawContext;
 import kotlin.collections.CollectionsKt;
 import net.minecraft.client.gui.GuiButton;
@@ -106,7 +106,7 @@ public abstract class MixinGuiMultiplayer extends GuiScreen implements GuiMultip
 
     @Override
     public void essential$close() {
-        UMinecraft.getMinecraft().displayGuiScreen(this.parentScreen);
+        UScreen.displayScreen(this.parentScreen);
     }
 
     @Inject(method = "initGui", at = @At("RETURN"))

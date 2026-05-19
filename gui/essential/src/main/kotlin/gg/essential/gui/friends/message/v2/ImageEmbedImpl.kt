@@ -104,7 +104,7 @@ class ImageEmbedImpl(
 
         loadingJob?.cancel()
         loadingJob = coroutineScope.launch {
-            url = platform.cmConnection.getGatewayService("media").baseUrl().resolve(mediaId)?.url()
+            url = platform.cmConnection.getGatewayService("media").baseUrl().resolve(mediaId)?.toUrl()
                 ?: throw IllegalStateException("url is null")
             val bufferedImage = withContext(Dispatchers.IO) {
                 localPaths.firstNotNullOfOrNull { fetchLocalImage(it) } ?: fetchRemoteImage(url!!)

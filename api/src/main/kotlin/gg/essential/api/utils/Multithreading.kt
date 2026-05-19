@@ -19,11 +19,14 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 object Multithreading {
     private val counter = AtomicInteger(0)
+    private val threadFactory = ThreadFactory { runnable ->
+        Thread(runnable, "Thread " + counter.incrementAndGet()).apply {
+            isDaemon = true
+        }
+    }
 
     @JvmStatic
-    val scheduledPool: ScheduledExecutorService = Executors.newScheduledThreadPool(10) { target: Runnable? ->
-        Thread(target, "Thread " + counter.incrementAndGet())
-    }
+    val scheduledPool: ScheduledExecutorService = Executors.newScheduledThreadPool(10, threadFactory)
 
     @JvmStatic
     val pool: ThreadPoolExecutor
@@ -32,8 +35,9 @@ object Multithreading {
     var POOL = ThreadPoolExecutor(
         10, 30,
         0L, TimeUnit.SECONDS,
-        LinkedBlockingQueue()
-    ) { target: Runnable? -> Thread(target, "Thread ${counter.incrementAndGet()}") }
+        LinkedBlockingQueue(),
+        threadFactory,
+    )
 
     fun schedule(r: Runnable, initialDelay: Long, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
         return scheduledPool.scheduleAtFixedRate(r, initialDelay, delay, unit)

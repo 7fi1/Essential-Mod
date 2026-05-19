@@ -121,7 +121,7 @@ public class
         this.runToUnselectEntries = runToUnselectEntries;
 
         // assign dummy parent to drawing element and bind to alpha effect
-        alphaBlock.setParent(new Window(ElementaVersion.V7));
+        alphaBlock.setParent(new Window(ElementaVersion.V10));
         alphaEffect.bindComponent(alphaBlock);
         alphaEffect.setup();
 

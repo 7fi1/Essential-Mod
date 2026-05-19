@@ -25,9 +25,9 @@ import okhttp3.ResponseBody
 import okio.Buffer
 import okio.BufferedSource
 import okio.ByteString
-import okio.Okio
 import okio.Source
 import okio.Timeout
+import okio.buffer
 import org.slf4j.Logger
 import java.io.IOException
 import java.net.InetAddress
@@ -106,7 +106,7 @@ class HttpLoggingEventListener(
         dnsStart = TimeSource.Monotonic.markNow()
     }
 
-    override fun dnsEnd(call: Call, domainName: String, inetAddressList: List<InetAddress>?) {
+    override fun dnsEnd(call: Call, domainName: String, inetAddressList: List<@JvmSuppressWildcards InetAddress>) {
         dnsEnd = TimeSource.Monotonic.markNow()
     }
 
@@ -123,7 +123,7 @@ class HttpLoggingEventListener(
         sslEnd = TimeSource.Monotonic.markNow()
     }
 
-    override fun connectEnd(call: Call, inetSocketAddress: InetSocketAddress, proxy: Proxy?, protocol: Protocol?) {
+    override fun connectEnd(call: Call, inetSocketAddress: InetSocketAddress, proxy: Proxy, protocol: Protocol?) {
         connectEnd = TimeSource.Monotonic.markNow()
     }
 
@@ -259,12 +259,12 @@ class HttpLoggingEventListener(
 
     private fun makeLogRequest(request: Request): HarFile.Entry.Request {
         return HarFile.Entry.Request(
-            method = request.method(),
-            url = request.url().toString(),
+            method = request.method,
+            url = request.url.toString(),
             httpVersion = observedConnection?.protocol()?.toString() ?: "unknown",
             cookies = emptyList(), // TODO would need to extract these from the headers, but we don't use them yet
-            headers = request.headers().let { headers ->
-                List(headers.size()) { i ->
+            headers = request.headers.let { headers ->
+                List(headers.size) { i ->
                     val name = headers.name(i)
                     val value = headers.value(i)
                     name to when (name) {
@@ -274,12 +274,12 @@ class HttpLoggingEventListener(
                     }
                 }
             },
-            queryString = request.url().let { url ->
-                List(url.querySize()) { i ->
+            queryString = request.url.let { url ->
+                List(url.querySize) { i ->
                     url.queryParameterName(i) to url.queryParameterValue(i)
                 }
             },
-            postData = request.body()?.let { body ->
+            postData = request.body?.let { body ->
                 if (call.request().header(REQUEST_BODY_CONTAINS_SECRETS_HEADER) != null) {
                     return@let HarFile.Entry.Request.PostData(
                         mimeType = body.contentType()?.toString() ?: "",
@@ -293,11 +293,11 @@ class HttpLoggingEventListener(
                 //  represented with UTF8, if we ever come across a case where we need to know the exact content.
                 if (body is MultipartBody) {
                     HarFile.Entry.Request.PostData(
-                        mimeType = body.contentType()?.toString() ?: "",
-                        params = body.parts().map { part ->
+                        mimeType = body.contentType().toString(),
+                        params = body.parts.map { part ->
                             val namePrefix = "form-data; name="
                             val filenamePrefix = "; filename="
-                            val disposition = part.headers()?.get("Content-Disposition") ?: namePrefix
+                            val disposition = part.headers?.get("Content-Disposition") ?: namePrefix
                             assert(disposition.startsWith(namePrefix))
                             HarFile.Entry.Request.PostData.Param(
                                 name = disposition.substringAfter(namePrefix).substringBefore(filenamePrefix),
@@ -306,7 +306,7 @@ class HttpLoggingEventListener(
                                     buffer.readUtf8()
                                 },
                                 fileName = if (filenamePrefix in disposition) disposition.substringAfter(filenamePrefix) else null,
-                                contentType = part.body().contentType()?.toString() ?: "",
+                                contentType = part.body.contentType()?.toString() ?: "",
                             )
                         },
                         text = "",
@@ -329,12 +329,12 @@ class HttpLoggingEventListener(
 
     private fun makeLogResponse(response: Response, observedBody: CopiedResponseBody?): HarFile.Entry.Response {
         return HarFile.Entry.Response(
-            status = response.code(),
-            statusText = response.message() ?: "",
+            status = response.code,
+            statusText = response.message,
             httpVersion = observedConnection?.protocol()?.toString() ?: "unknown",
             cookies = emptyList(), // TODO would need to extract these from the headers, but we don't use them yet
-            headers = response.headers().let { headers ->
-                List(headers.size()) { i ->
+            headers = response.headers.let { headers ->
+                List(headers.size) { i ->
                     headers.name(i) to headers.value(i)
                 }
             },
@@ -384,15 +384,15 @@ class HttpLoggingEventListener(
     private fun consoleLogRequest() {
         val request = call.request()
 
-        val bodyStr = request.body()?.let { body ->
+        val bodyStr = request.body?.let { body ->
             val bytes = Buffer().also { body.writeTo(it) }.snapshot()
             if (request.header(REQUEST_BODY_CONTAINS_SECRETS_HEADER) != null) {
-                "<request body redacted, len=${bytes.size()}>"
+                "<request body redacted, len=${bytes.size}>"
             } else {
-                toStringOrHex(bytes, bytes.size().toLong())
+                toStringOrHex(bytes, bytes.size.toLong())
             }
         } ?: ""
-        consoleLogger.info("[$id] ${request.method()} ${request.url()} $bodyStr")
+        consoleLogger.info("[$id] ${request.method} ${request.url} $bodyStr")
     }
 
     private fun consoleLogResponse(response: Response, body: CopiedResponseBody) {
@@ -405,7 +405,7 @@ class HttpLoggingEventListener(
             } else {
                 toStringOrHex(body.buffer.snapshot(), body.fullContentLength)
             }
-        consoleLogger.info("[$id] ${response.code()} $bodyStr")
+        consoleLogger.info("[$id] ${response.code} $bodyStr")
     }
 
     private fun toStringOrHex(byteString: ByteString, fullSize: Long): String {
@@ -426,21 +426,21 @@ class HttpLoggingEventListener(
             } else {
                 val maxLen = 512
                 append("<binary")
-                if (byteString.size() > maxLen) {
+                if (byteString.size > maxLen) {
                     append(" size=")
-                    append(byteString.size())
+                    append(byteString.size)
                 }
                 append(" sha256=")
                 append(byteString.sha256().hex())
                 append(" hex=")
-                append(byteString.substring(0, byteString.size().coerceAtMost(maxLen)).hex())
-                if (byteString.size() > maxLen) {
+                append(byteString.substring(0, byteString.size.coerceAtMost(maxLen)).hex())
+                if (byteString.size > maxLen) {
                     append("…")
                 }
                 append(">")
             }
 
-            if (byteString.size() < fullSize) {
+            if (byteString.size < fullSize) {
                 append(if (CONSOLE_LOG_FULL_BODY) "\n" else " ")
                 append("(truncated, full size is ")
                 append(fullSize)
@@ -462,13 +462,13 @@ class HttpLoggingEventListener(
         }
 
         private fun removeInternalHeaders(request: Request): Request {
-            val headers = request.headers()
-            if ((0 until headers.size()).none { headers.name(it).startsWith(HTTP_LOGGER_HEADER_PREFIX) }) {
+            val headers = request.headers
+            if ((0 until headers.size).none { headers.name(it).startsWith(HTTP_LOGGER_HEADER_PREFIX) }) {
                 return request
             }
 
             val builder = request.newBuilder()
-            for (i in 0 until headers.size()) {
+            for (i in 0 until headers.size) {
                 val name = headers.name(i)
                 if (name.startsWith(HTTP_LOGGER_HEADER_PREFIX)) {
                     builder.removeHeader(name)
@@ -478,10 +478,10 @@ class HttpLoggingEventListener(
         }
 
         private fun captureResponseBody(call: Call, rawResponse: Response): Response {
-            val rawBody = rawResponse.body()!!
+            val rawBody = rawResponse.body
 
             val rawSource = rawBody.source()
-            val wrappedSource = Okio.buffer(object : Source {
+            val wrappedSource = object : Source {
                 private var totalSize = 0L
                 private val buffer = Buffer()
 
@@ -490,8 +490,8 @@ class HttpLoggingEventListener(
                     if (bytesRead > 0) {
                         totalSize += bytesRead
 
-                        val bytesToCopy = bytesRead.coerceAtMost(MAX_OBSERVED_BODY_SIZE - buffer.size())
-                        sink.copyTo(buffer, sink.size() - bytesRead, bytesToCopy)
+                        val bytesToCopy = bytesRead.coerceAtMost(MAX_OBSERVED_BODY_SIZE - buffer.size)
+                        sink.copyTo(buffer, sink.size - bytesRead, bytesToCopy)
                     }
                     return bytesRead
                 }
@@ -513,10 +513,10 @@ class HttpLoggingEventListener(
                 }
 
                 override fun timeout(): Timeout = rawSource.timeout()
-            })
+            }
 
             return rawResponse.newBuilder()
-                .body(ResponseBodyWithWrappedSource(rawBody, wrappedSource))
+                .body(ResponseBodyWithWrappedSource(rawBody, wrappedSource.buffer()))
                 .build()
         }
     }
@@ -559,8 +559,8 @@ class HttpLoggingEventListener(
             ),
         )
         private fun isTextLikeMimeType(mediaType: MediaType): Boolean {
-            if (mediaType.type() == "text") return true
-            return TEXT_LIKE_MIME_TYPES[mediaType.type()]?.contains(mediaType.subtype()) == true
+            if (mediaType.type == "text") return true
+            return TEXT_LIKE_MIME_TYPES[mediaType.type]?.contains(mediaType.subtype) == true
         }
 
         // Thread-safety: Access to either of these must be `synchronize`d on [observedResponseBodyMap].

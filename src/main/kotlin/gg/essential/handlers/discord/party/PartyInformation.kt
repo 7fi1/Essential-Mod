@@ -9,6 +9,8 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
+
+
 package gg.essential.handlers.discord.party
 
 data class PartyInformation(

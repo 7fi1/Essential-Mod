@@ -32,7 +32,6 @@ object EssentialCommandRegistry : CommandRegistry {
     internal val commands = ConcurrentHashMap<String, Pair<Command, Boolean>>()
     private val friends = CommandMcFriends()
     private val message = CommandMessage()
-    private val inviteFriends = CommandInviteFriends()
     private val commandSession = CommandSession
     private val invite = CommandInvite
 
@@ -55,13 +54,11 @@ object EssentialCommandRegistry : CommandRegistry {
         if (!EssentialConfig.essentialFull) {
             unregisterCommand(friends)
             unregisterCommand(message)
-            unregisterCommand(inviteFriends)
             unregisterCommand(commandSession)
             unregisterCommand(invite)
         } else {
             registerCommand(friends)
             registerCommand(message)
-            registerCommand(inviteFriends)
             registerCommand(commandSession)
             registerCommand(invite)
         }

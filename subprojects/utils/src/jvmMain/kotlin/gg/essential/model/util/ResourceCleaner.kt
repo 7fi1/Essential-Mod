@@ -21,7 +21,7 @@ class ResourceCleaner<T> {
     private val referenceQueue = ReferenceQueue<T>()
     private val toBeCleanedUp: MutableSet<Resource> = Collections.newSetFromMap(ConcurrentHashMap())
 
-    fun register(owner: T, cleanup: Runnable) {
+    fun register(owner: T, cleanup: AutoCloseable) {
         toBeCleanedUp.add(Resource(owner, cleanup))
     }
 
@@ -31,13 +31,13 @@ class ResourceCleaner<T> {
         }
     }
 
-    private inner class Resource(owner: T, cleanup: Runnable) : PhantomReference<T>(owner, referenceQueue), Closeable {
-        var cleanup: Runnable? = cleanup
+    private inner class Resource(owner: T, cleanup: AutoCloseable) : PhantomReference<T>(owner, referenceQueue), Closeable {
+        var cleanup: AutoCloseable? = cleanup
 
         override fun close() {
             toBeCleanedUp.remove(this)
 
-            cleanup?.run()
+            cleanup?.close()
             cleanup = null
         }
     }

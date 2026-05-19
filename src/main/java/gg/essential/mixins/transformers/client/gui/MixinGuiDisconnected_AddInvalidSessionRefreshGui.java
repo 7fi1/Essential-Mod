@@ -86,7 +86,7 @@ public abstract class MixinGuiDisconnected_AddInvalidSessionRefreshGui extends G
         if (essentialGui == null) return;
 
         essentialGui.setupButtons(
-                //#if MC<=11602
+                //#if MC < 1.17
                 CollectionsKt.filterIsInstance(this.buttonList, GuiButton.class),
                 this::addButton
                 //#else

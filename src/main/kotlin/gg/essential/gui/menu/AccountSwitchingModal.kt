@@ -12,7 +12,6 @@
 package gg.essential.gui.menu
 
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.SequenceAnimatedUIImage
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.effect
@@ -21,6 +20,7 @@ import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.childBasedHeight
 import gg.essential.gui.layoutdsl.color
 import gg.essential.gui.layoutdsl.column
+import gg.essential.gui.layoutdsl.image
 import gg.essential.gui.layoutdsl.outline
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.spacer
@@ -28,7 +28,6 @@ import gg.essential.gui.layoutdsl.text
 import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.overlay.ModalManager
 import java.awt.Color
-import java.util.concurrent.TimeUnit
 
 class AccountSwitchingModal(
     modalManager: ModalManager,
@@ -49,12 +48,7 @@ class AccountSwitchingModal(
                 Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(EssentialPalette.TEXT_SHADOW_LIGHT)
             )
             spacer(height = 10f)
-            SequenceAnimatedUIImage(
-                "/assets/essential/textures/loading/loading_", ".png",
-                12,
-                80,
-                TimeUnit.MILLISECONDS,
-            )(Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(Color.BLACK))
+            image(EssentialPalette.LOADING_ANIMATION, Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(Color.BLACK))
         }
     }
 

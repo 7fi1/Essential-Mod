@@ -21,12 +21,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -54,6 +56,7 @@ val httpClient: CompletableFuture<OkHttpClient> = CompletableFuture.supplyAsync 
     val (sslContext, trustManagers) = CertChain().loadEmbedded().done()
     val trustManager = trustManagers[0] as X509TrustManager
     OkHttpClient.Builder()
+        .dispatcher(Dispatcher(ExecutorAsAService(Dispatchers.IO.asExecutor())))
         .sslSocketFactory(sslContext.socketFactory, trustManager)
         .readTimeout(60, TimeUnit.SECONDS)
         .eventListenerFactory(HttpLoggingEventListener.Factory(
@@ -96,7 +99,7 @@ suspend fun httpGet(url: String, request: (Request.Builder) -> Unit = {}): Respo
     val response = httpCall(Request.Builder().url(url).apply(request).build())
     if(!response.isSuccessful) {
         response.close()
-        throw IOException("Error from '$url': ${response.code()} ${response.message()}")
+        throw IOException("Error from '$url': ${response.code} ${response.message}")
     }
     return response
 }
@@ -104,7 +107,7 @@ suspend fun httpGet(url: String, request: (Request.Builder) -> Unit = {}): Respo
 @JvmOverloads
 @Throws(IOException::class)
 suspend fun httpGetToString(url: String, request: (Request.Builder) -> Unit = {}): String =
-    httpGet(url, request).body()!!.string()
+    httpGet(url, request).body.string()
 
 @JvmOverloads
 @Throws(IOException::class)
@@ -114,7 +117,7 @@ fun httpGetToStringBlocking(url: String, request: (Request.Builder) -> Unit = {}
 @JvmOverloads
 @Throws(IOException::class)
 suspend fun httpGetToBytes(url: String, request: (Request.Builder) -> Unit = {}): ByteArray =
-    httpGet(url, request).body()!!.bytes()
+    httpGet(url, request).body.bytes()
 
 @JvmOverloads
 @Throws(IOException::class)
@@ -124,7 +127,7 @@ fun httpGetToBytesBlocking(url: String, request: (Request.Builder) -> Unit = {})
 @JvmOverloads
 @Throws(IOException::class)
 suspend fun httpGetToInputStream(url: String, request: (Request.Builder) -> Unit = {}): InputStream =
-    httpGet(url, request).body()!!.byteStream()
+    httpGet(url, request).body.byteStream()
 
 @JvmOverloads
 @Throws(IOException::class)

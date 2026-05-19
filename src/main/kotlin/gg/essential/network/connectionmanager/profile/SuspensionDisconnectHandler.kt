@@ -20,6 +20,7 @@ import gg.essential.mixins.ext.server.dispatcher
 import gg.essential.mixins.transformers.client.gui.GuiDisconnectedAccessor
 import gg.essential.network.connectionmanager.ConnectionManager
 import gg.essential.universal.UMinecraft
+import gg.essential.universal.UScreen
 import gg.essential.util.GuiUtil.pushModal
 import gg.essential.util.ServerType
 import gg.essential.util.UUIDUtil
@@ -69,7 +70,7 @@ object SuspensionDisconnectHandler {
 
             if (hostSuspension || selfSuspension) {
                 event.isCancelled = true
-                UMinecraft.getMinecraft().displayGuiScreen(GuiMainMenu())
+                UScreen.displayScreen(GuiMainMenu())
 
                 if (hostSuspension) {
                     pushModal {

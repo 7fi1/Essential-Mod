@@ -14,7 +14,7 @@ package gg.essential.mixins.transformers.events;
 import com.llamalad7.mixinextras.sugar.Local;
 import gg.essential.Essential;
 import gg.essential.event.gui.GuiClickEvent;
-import net.minecraft.client.MinecraftClient;
+import gg.essential.universal.UScreen;
 import net.minecraft.client.Mouse;
 import net.minecraft.client.gui.screen.Screen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -60,7 +60,7 @@ public abstract class Mixin_GuiClickEvent {
         GuiClickEvent event = new GuiClickEvent(mouseX, mouseY, mouseButton, screen);
         //#endif
         Essential.EVENT_BUS.post(event);
-        if (event.isCancelled() || MinecraftClient.getInstance().currentScreen != screen) {
+        if (event.isCancelled() || UScreen.getCurrentScreen() != screen) {
             ci.cancel();
         }
     }

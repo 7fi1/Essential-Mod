@@ -25,7 +25,6 @@ import gg.essential.gui.friends.modals.RenameGroupModal
 import gg.essential.gui.friends.modals.createAddFriendsToGroupModal
 import gg.essential.gui.friends.previews.ChannelPreview
 import gg.essential.gui.friends.state.IMessengerStates
-import gg.essential.gui.util.toStateV2List
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.ServerType
 import gg.essential.util.USession
@@ -62,14 +61,8 @@ private fun addMarkMessagesReadOption(
 ) {
     if (messages.getUnreadChannelState(channelId).getUntracked()) {
         options.add(ContextOptionMenu.Option("Mark as Read", image = EssentialPalette.MARK_UNREAD_10X7) {
-            if (platform.cmConnection.usingProtocol >= 9) {
-                val latestMessage = messages.getLatestMessage(channelId).getUntracked() ?: return@Option
-                messages.setLastReadMessage(latestMessage)
-            } else {
-                messages.getMessageListState(channelId).getUntracked().forEach {
-                    messages.setUnreadState(it, false)
-                }
-            }
+            val latestMessage = messages.getLatestMessage(channelId).getUntracked() ?: return@Option
+            messages.setLastReadMessage(latestMessage)
         })
     }
 }
@@ -242,8 +235,7 @@ private fun showGroupDropdown(
             image = EssentialPalette.MARK_UNREAD_10X7
         ) {
             // We don't want to show anyone currently in the group here
-            val potentialFriends = socialMenuState.relationships.getObservableFriendList()
-                .toStateV2List()
+            val potentialFriends = socialMenuState.relationships.friends
                 .mapList { list ->
                     list.filter { !channel.members.contains(it) && !socialMenuState.isSuspended(it)() }
                 }

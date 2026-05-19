@@ -181,7 +181,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
     }
 
     public void addRemoteSession(@NotNull UPnPSession session) {
-        final UPnPSession previousSession = this.remoteSessions.put(session.getHostUUID(), session);
+        this.remoteSessions.put(session.getHostUUID(), session);
 
         EssentialMultiplayerGui gui = EssentialMultiplayerGui.getInstance();
         if (gui != null) {
@@ -214,10 +214,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             return;
         }
 
-        this.updateQueue.enqueue(
-            new ClientUPnPSessionInvitesAddPacket(invited),
-            null
-        );
+        this.updateQueue.enqueue(new ClientUPnPSessionInvitesAddPacket(invited));
     }
 
     private void revokeInvites(Set<UUID> removed) {
@@ -225,10 +222,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             return;
         }
 
-        this.updateQueue.enqueue(
-            new ClientUPnPSessionInvitesRemovePacket(removed),
-            null
-        );
+        this.updateQueue.enqueue(new ClientUPnPSessionInvitesRemovePacket(removed));
     }
 
     public synchronized void updateInvitedUsers(Set<UUID> invited) {
@@ -645,7 +639,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             getExecutor(integratedServer).execute(() -> {
                 //#if MC<=11202
                 integratedServer.getPlayerList().setGameType(gameType);
-                //#elseif MC<=11602
+                //#elseif MC < 1.17
                 //$$ integratedServer.getPlayerList().setGameType(gameType);
                 //#else
                 //$$  integratedServer.setDefaultGameMode(gameType);

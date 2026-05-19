@@ -18,7 +18,6 @@ import gg.essential.elementa.font.DefaultFonts
 import gg.essential.elementa.utils.withAlpha
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.CosmeticPreview
-import gg.essential.gui.common.SequenceAnimatedUIImage
 import gg.essential.gui.common.bundleRenderPreview
 import gg.essential.gui.common.modal.OpenLinkModal
 import gg.essential.gui.common.outfitRenderPreview
@@ -102,7 +101,6 @@ import gg.essential.util.toShortString
 import gg.essential.vigilance.utils.onLeftClick
 import java.awt.Color
 import java.net.URI
-import java.util.concurrent.TimeUnit
 
 data class CosmeticItemTag(val item: Item) : Tag
 
@@ -558,12 +556,7 @@ private fun LayoutScope.cosmeticTimer(item: Item, owned: State<Boolean>, wardrob
                     "Leaving in $time"
                 }
             }).hoverScope()) {
-                SequenceAnimatedUIImage(
-                    "/assets/essential/textures/studio/clock_", ".png",
-                    4,
-                    1000,
-                    TimeUnit.MILLISECONDS,
-                )(Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(EssentialPalette.BLACK_SHADOW))
+                image(EssentialPalette.CLOCK_ANIMATION, Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(EssentialPalette.BLACK_SHADOW))
             }
         }
     }

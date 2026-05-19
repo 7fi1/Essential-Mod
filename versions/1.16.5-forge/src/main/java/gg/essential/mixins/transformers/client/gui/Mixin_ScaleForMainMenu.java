@@ -13,7 +13,7 @@ package gg.essential.mixins.transformers.client.gui;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import gg.essential.handlers.PauseMenuDisplay;
-import gg.essential.universal.UMinecraft;
+import gg.essential.universal.UScreen;
 import net.minecraft.client.MainWindow;
 import net.minecraft.client.gui.screen.Screen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public class Mixin_ScaleForMainMenu {
     @ModifyExpressionValue(method = "calcGuiScale", at = @At(value = "CONSTANT", args = "intValue=320"))
     private int modifyMinWidth(int original) {
-        Screen screen = UMinecraft.getMinecraft().currentScreen;
+        Screen screen = UScreen.getCurrentScreen();
         return screen != null && PauseMenuDisplay.canRescale(screen) ? PauseMenuDisplay.getMinWidth() : original;
     }
 }

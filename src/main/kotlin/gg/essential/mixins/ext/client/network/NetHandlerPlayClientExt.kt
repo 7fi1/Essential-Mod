@@ -21,4 +21,6 @@ interface NetHandlerPlayClientExt {
 
     val `essential$ingameEquippedOutfitsManager`: IngameEquippedOutfitsManager
     val `essential$ingameEquippedOutfitsUpdateEncoder`: IngameEquippedOutfitsUpdateEncoder
+
+    val `essential$maxPlayers`: Int
 }

@@ -63,7 +63,32 @@ private fun Project.addMixinDependency(platform: Platform) {
     dependencies {
         if (platform.mcVersion < 11400) {
             // Our special mixin which has its Guava 21 dependency relocated, so it can run alongside Guava 17
-            "implementation"("jij"("gg.essential:mixin:0.1.0+mixin.0.8.4")!!)
+            "jij"("gg.essential:mixin")
+
+            if (!System.getProperty("idea.sync.active", "false").toBoolean()) {
+                "implementation"("gg.essential:mixin")
+            } else {
+                // IntelliJ by default doesn't use the actual patched mixin jar which our project produces
+                // but instead includes its dependencies (unpatched mixin) and source folders (the patches).
+                // The patches are usually applied via a task at build time, but IntelliJ circumvents that.
+                // To trick IntelliJ into using the patched mixin, we'll, instead of directly depending
+                // on `gg.essential:mixin` (which would be resolved to a subproject), manually resolve that
+                // dependency to a file (the patched jar), and then depend on that file.
+                val patchedFile = configurations.detachedConfiguration(
+                    // FIXME this currently needs `isTransitive = false` because the mixin project inappropriately
+                    //       exposes the unpatched mixin jar via its `apiElements` as well.
+                    dependencies.create("gg.essential:mixin") { isTransitive = false }
+                ).incoming.artifacts.artifactFiles
+                "implementation"(patchedFile)
+                // On a fresh checkout, the patched jar doesn't exist yet (and on an updated checkout, it may be
+                // outdated), so we'll additionally ask for it to be built by Gradle on any IDEA sync.
+                val prepareEssentialLoader by tasks.registering {
+                    inputs.files(patchedFile)
+                    outputs.upToDateWhen { false }
+                }
+                // the `ideaSyncTask` task is provided by Loom and automatically ran on sync
+                tasks.named("ideaSyncTask") { dependsOn(prepareEssentialLoader) }
+            }
         }
 
         // Use more recent mixin AP so we get reproducible refmaps (and hopefully less bugs in general)

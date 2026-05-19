@@ -102,7 +102,7 @@ class TintVanillaButtonsEffect {
             val averageCol = averageButtonColor(drawnPageTexture, randomRect.x, randomRect.y, randomRect.width, randomRect.height)
 
             if (averageCol == null) {
-                drawnPageTexture.delete()
+                drawnPageTexture.close()
                 return
             }
 
@@ -134,7 +134,7 @@ class TintVanillaButtonsEffect {
                 }
             }
 
-            drawnPageTexture.delete()
+            drawnPageTexture.close()
 
             nextPage?.finalizeAndTintPage()
         }

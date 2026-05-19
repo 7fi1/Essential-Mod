@@ -12,7 +12,6 @@
 package gg.essential.gui.common.modal
 
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.SequenceAnimatedUIImage
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.effect
 import gg.essential.gui.layoutdsl.LayoutScope
@@ -20,11 +19,11 @@ import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.box
 import gg.essential.gui.layoutdsl.childBasedHeight
 import gg.essential.gui.layoutdsl.color
+import gg.essential.gui.layoutdsl.image
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.overlay.ModalFlow
 import gg.essential.gui.overlay.ModalManager
 import java.awt.Color
-import java.util.concurrent.TimeUnit
 
 class ConnectingModal(
     modalManager: ModalManager,
@@ -61,12 +60,7 @@ class ConnectingModal(
 
     override fun LayoutScope.layoutBody() {
         box(Modifier.childBasedHeight(6f)) {
-            SequenceAnimatedUIImage(
-                "/assets/essential/textures/loading/loading_", ".png",
-                12,
-                80,
-                TimeUnit.MILLISECONDS,
-            )(Modifier.color(EssentialPalette.TEXT).shadow(Color.BLACK))
+            image(EssentialPalette.LOADING_ANIMATION, Modifier.color(EssentialPalette.TEXT).shadow(Color.BLACK))
         }
     }
 

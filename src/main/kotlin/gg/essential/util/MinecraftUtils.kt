@@ -30,6 +30,7 @@ import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.util.stateBy
 import gg.essential.sps.SpsAddress
 import gg.essential.universal.UChat
+import gg.essential.universal.UScreen
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiMainMenu
 import net.minecraft.client.gui.GuiMultiplayer
@@ -216,7 +217,7 @@ object MinecraftUtils : MinecraftUtils {
         previousScreen: GuiScreen? = GuiMultiplayer(GuiMainMenu()),
         showDisconnectWarning: Boolean = true,
     ) {
-        if (UMinecraft.getMinecraft().currentScreen is GuiConnecting) {
+        if (UScreen.currentScreen is GuiConnecting) {
             Essential.logger.warn("Attempted to connect to a server whilst already connecting!")
             return
         }
@@ -268,11 +269,7 @@ object MinecraftUtils : MinecraftUtils {
     fun isHostingSPS() = Essential.getInstance().connectionManager.spsManager.localSession != null
 
     fun shutdown() =
-        //#if FORGE && MC<11700
         UMinecraft.getMinecraft().shutdown()
-        //#else
-        //$$ UMinecraft.getMinecraft().stop()
-        //#endif
 
     class HangOnModal(manager: ModalManager, serverName: State<String>, action: () -> Unit) : ConfirmDenyModal(manager, false) {
         init {

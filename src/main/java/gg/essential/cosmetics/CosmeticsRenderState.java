@@ -11,9 +11,7 @@
  */
 package gg.essential.cosmetics;
 
-import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
-import gg.essential.connectionmanager.common.enums.ProfileStatus;
 import gg.essential.gui.common.EmulatedUI3DPlayer;
 import gg.essential.mixins.impl.client.entity.AbstractClientPlayerExt;
 import gg.essential.mixins.impl.client.renderer.entity.ArmorRenderingUtil;
@@ -21,7 +19,6 @@ import gg.essential.mod.cosmetics.CosmeticSlot;
 import gg.essential.model.ModelInstance;
 import gg.essential.model.backend.PlayerPose;
 import gg.essential.model.util.PlayerPoseManager;
-import gg.essential.network.connectionmanager.profile.ProfileManager;
 import gg.essential.util.UIdentifier;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.util.ResourceLocation;
@@ -29,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.UUID;
 
 import static gg.essential.util.UIdentifierKt.toMC;
 
@@ -44,7 +40,6 @@ public interface CosmeticsRenderState {
 
     ResourceLocation emissiveCapeTexture();
 
-    boolean onlineIndicator();
     ModelInstance nametagIcon();
 
     boolean isSneaking();
@@ -121,15 +116,6 @@ public interface CosmeticsRenderState {
         }
 
         @Override
-        public boolean onlineIndicator() {
-            if (!EssentialConfig.INSTANCE.getShowEssentialIndicatorOnNametag()) return false;
-            ProfileManager profileManager = Essential.getInstance().getConnectionManager().getProfileManager();
-            UUID uuid = player.getGameProfile().getId();
-            ProfileStatus status = profileManager.getStatus(uuid);
-            return status != ProfileStatus.OFFLINE;
-        }
-
-        @Override
         public ModelInstance nametagIcon() {
             if (!EssentialConfig.INSTANCE.getShowEssentialIndicatorOnNametag()) return null;
             EquippedCosmetic cosmetic = playerExt().getCosmeticsState().getCosmetics().get(CosmeticSlot.ICON);
@@ -179,7 +165,6 @@ public interface CosmeticsRenderState {
         private Set<Integer> blockedArmorSlots = Collections.emptySet();
         private ResourceLocation skinTexture;
         private ResourceLocation emissiveCapeTexture;
-        private boolean onlineIndicator;
         private ModelInstance nametagIcon;
         private boolean isSneaking;
         private float cosmeticFrozenYaw;
@@ -210,11 +195,6 @@ public interface CosmeticsRenderState {
         }
 
         @Override
-        public boolean onlineIndicator() {
-            return onlineIndicator;
-        }
-
-        @Override
         public ModelInstance nametagIcon() {
             return nametagIcon;
         }
@@ -237,7 +217,6 @@ public interface CosmeticsRenderState {
             blockedArmorSlots = live.blockedArmorSlots();
             skinTexture = live.skinTexture();
             emissiveCapeTexture = live.emissiveCapeTexture();
-            onlineIndicator = live.onlineIndicator();
             nametagIcon = live.nametagIcon();
             isSneaking = live.isSneaking();
             cosmeticFrozenYaw = live.cosmeticFrozenYaw();

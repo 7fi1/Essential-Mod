@@ -14,13 +14,11 @@ package gg.essential.mod.cosmetics.database
 import gg.essential.cosmetics.CosmeticBundleId
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.cosmetics.CosmeticId
-import gg.essential.cosmetics.CosmeticTypeId
 import gg.essential.cosmetics.FeaturedPageCollectionId
 import gg.essential.cosmetics.ImplicitOwnership
 import gg.essential.cosmetics.ImplicitOwnershipId
 import gg.essential.mod.cosmetics.CosmeticBundle
 import gg.essential.mod.cosmetics.CosmeticCategory
-import gg.essential.mod.cosmetics.CosmeticType
 import gg.essential.mod.cosmetics.featured.FeaturedPageCollection
 import gg.essential.network.cosmetics.Cosmetic
 
@@ -28,9 +26,6 @@ import gg.essential.network.cosmetics.Cosmetic
 interface CosmeticsDatabase {
     suspend fun getCategory(id: CosmeticCategoryId): CosmeticCategory?
     suspend fun getCategories(): List<CosmeticCategory>
-
-    suspend fun getType(id: CosmeticTypeId): CosmeticType?
-    suspend fun getTypes(): List<CosmeticType>
 
     suspend fun getCosmeticBundle(id: CosmeticBundleId): CosmeticBundle? // rename to getBundle() when removing feature flag
     suspend fun getCosmeticBundles(): List<CosmeticBundle> // rename to getBundles() when removing feature flag

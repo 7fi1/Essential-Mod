@@ -38,6 +38,7 @@ import gg.essential.network.connectionmanager.features.Feature
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import kotlin.collections.map
 
 fun WardrobeState.hasEnoughCoins(item: Item): Boolean {
     return (item.getCost(this).get() ?: 0) <= coins.get()

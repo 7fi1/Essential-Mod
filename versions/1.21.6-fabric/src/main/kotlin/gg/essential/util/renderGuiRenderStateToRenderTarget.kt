@@ -12,7 +12,6 @@
 package gg.essential.util
 
 import com.mojang.blaze3d.systems.RenderSystem
-import gg.essential.model.util.Color
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
@@ -43,7 +42,7 @@ private val COMPOSITE_PIPELINE = URenderPipeline.builderWithDefaultShader(
 fun renderGuiRenderStateToRenderTarget(matrixStack: UMatrixStack, guiRenderState: GuiRenderState) {
     val resultColor = renderGuiRenderStateToTexture(guiRenderState)
     blitTextureToRenderTarget(matrixStack, resultColor)
-    resultColor.delete()
+    resultColor.close()
 }
 
 /**
@@ -67,8 +66,8 @@ fun renderGuiRenderStateToTexture(guiRenderState: GuiRenderState): GpuTexture {
     val orgDepth = platform.newGpuTexture(width, height, GpuTexture.Format.DEPTH32)
     orgColor.copyFrom(mcColor)
     orgDepth.copyFrom(mcDepth)
-    mcColor.clearColor(Color(0u))
-    mcDepth.clearDepth(1f)
+    mcColor.clearColor()
+    mcDepth.clearDepth()
 
     // Backup projection matrix
     // GuiRenderer replaces this buffer with its own, which is invalidated in its `close`, so we need to backup
@@ -109,8 +108,8 @@ fun renderGuiRenderStateToTexture(guiRenderState: GuiRenderState): GpuTexture {
     // Restore framebuffer
     mcColor.copyFrom(orgColor)
     mcDepth.copyFrom(orgDepth)
-    orgColor.delete()
-    orgDepth.delete()
+    orgColor.close()
+    orgDepth.close()
 
     return resultColor
 }

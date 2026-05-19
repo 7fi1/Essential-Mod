@@ -21,7 +21,7 @@ import gg.essential.minecraftauth.util.execute
 import gg.essential.util.har.requestBodyContainsSecrets
 import kotlinx.serialization.encodeToString
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.*
 
 object MinecraftSessionService {
@@ -47,7 +47,7 @@ object MinecraftSessionService {
         val request = JoinServerRequest(accessToken, uuid.toString().replace("-", ""), serverId)
         val (status, content) = Request.Builder().url(JOIN_URI)
             .requestBodyContainsSecrets()
-            .post(RequestBody.create(JSON_MEDIA_TYPE, JSON.encodeToString(request)))
+            .post(JSON.encodeToString(request).toRequestBody(JSON_MEDIA_TYPE))
             .build().execute()
 
         when (status) {

@@ -62,8 +62,8 @@ fun Project.configurePreprocessTree(versions: File) {
         val fabric11801 = createNode("1.18.1-fabric", 11801, "yarn")
         val forge11701 = createNode("1.17.1-forge", 11701, "srg")
         val fabric11701 = createNode("1.17.1-fabric", 11701, "yarn")
-        val fabric11602 = createNode("1.16.2-fabric", 11602, "yarn")
-        val forge11602 = createNode("1.16.2-forge", 11602, "srg")
+        val fabric11605 = createNode("1.16.5-fabric", 11605, "yarn")
+        val forge11605 = createNode("1.16.5-forge", 11605, "srg")
         val forge11202 = createNode("1.12.2-forge", 11202, "srg")
         val forge10809 = createNode("1.8.9-forge", 10809, "srg")
 
@@ -108,9 +108,9 @@ fun Project.configurePreprocessTree(versions: File) {
         fabric11802.link(fabric11801)
         fabric11801.link(fabric11701)
         forge11701.link(fabric11701)
-        fabric11701.link(fabric11602, versions.resolve("1.17.1-1.16.2.txt"))
-        fabric11602.link(forge11602)
-        forge11602.link(forge11202, versions.resolve("1.16.2-1.12.2.txt"))
+        fabric11701.link(fabric11605, versions.resolve("1.17.1-1.16.5.txt"))
+        fabric11605.link(forge11605)
+        forge11605.link(forge11202, versions.resolve("1.16.5-1.12.2.txt"))
         forge11202.link(forge10809, versions.resolve("1.12.2-1.8.9.txt"))
     }
 }

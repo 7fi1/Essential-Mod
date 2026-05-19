@@ -12,6 +12,7 @@
 package gg.essential.gui.friends.message.v2
 
 import com.sparkuniverse.toolbox.chat.enums.ChannelType
+import gg.essential.config.EssentialConfig
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.components.Window
@@ -28,6 +29,7 @@ import gg.essential.gui.common.modal.configure
 import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.common.shadow.ShadowEffect
 import gg.essential.gui.elementa.GuiScaleOffsetConstraint
+import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.add
 import gg.essential.gui.elementa.state.v2.color.toConstraint
 import gg.essential.gui.elementa.state.v2.combinators.and
@@ -36,6 +38,7 @@ import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.combinators.not
 import gg.essential.gui.elementa.state.v2.combinators.or
 import gg.essential.gui.elementa.state.v2.mapEach
+import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableListStateOf
 import gg.essential.gui.elementa.state.v2.onChange
 import gg.essential.gui.elementa.state.v2.stateOf
@@ -45,11 +48,18 @@ import gg.essential.gui.friends.message.MessageScreen
 import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.friends.message.NewReportMessageModal
 import gg.essential.gui.friends.state.IMessengerStates
+import gg.essential.gui.layoutdsl.Alignment
+import gg.essential.gui.layoutdsl.Modifier
+import gg.essential.gui.layoutdsl.alignBoth
+import gg.essential.gui.layoutdsl.hoverScope
+import gg.essential.gui.layoutdsl.hoverTooltip
+import gg.essential.gui.layoutdsl.layoutAsBox
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.sendCheckmarkNotification
 import gg.essential.gui.util.hoveredState
+import gg.essential.gui.util.hoveredStateV2
 import gg.essential.universal.UDesktop
 import gg.essential.universal.UKeyboard
 import gg.essential.universal.UMatrixStack
@@ -58,8 +68,6 @@ import gg.essential.util.*
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.vigilance.utils.onLeftClick
 import java.time.Instant
-
-import gg.essential.gui.elementa.state.v2.stateBy as stateByV2
 
 class MessageWrapperImpl(
     message: ClientMessage,
@@ -83,11 +91,6 @@ class MessageWrapperImpl(
             it.hoveredState()
         }.toV2().map { it }
     }
-    @Deprecated("Not used in protocol 9 or later")
-    private val markedUnreadManually = BasicState(false)
-
-    @Deprecated("Not used in protocol 9 or later")
-    private val unreadState = messengerStates.getUnreadMessageState(message)
 
     private val topSpacer by Spacer(height = 5f) childOf this
 
@@ -147,17 +150,20 @@ class MessageWrapperImpl(
             } childOf this
 
             val messagePreviewText = when (val part = replyTo.parts.firstOrNull()) {
-                is ClientMessage.Part.Text -> part.content
-                is ClientMessage.Part.Image -> "Image"
-                else -> "Unknown"
+                is ClientMessage.Part.Text -> State {
+                    if (EssentialConfig.chatFilterWithSource().first) part.filteredContent else part.unfilteredContent
+                }
+                is ClientMessage.Part.Image -> stateOf("Image")
+                else -> stateOf("Unknown")
             }
 
             val replyTextContent = if (replyTo == MessageRef.DELETED) {
                 BasicState("Deleted Message")
             } else {
-                UuidNameLookup.getNameAsState(replyTo.sender).map { username ->
-                    "$username: ${messagePreviewText.replace(Regex("(\r\n|\r|\n)"), "")}"
-                }
+                memo {
+                    val username = UuidNameLookup.nameState(replyTo.sender)()
+                    "$username: ${messagePreviewText().replace(Regex("(\r\n|\r|\n)"), "")}"
+                }.toV1(this)
             }
 
             // Width of container is set to actual text width of replyText so sibling components are positioned correctly when replyText is truncated
@@ -266,6 +272,7 @@ class MessageWrapperImpl(
 
             fun runAction() {
                 if (sentByClient) {
+                    if (message.sendState !is SendState.Confirmed) return
                     messageScreen.editingMessage.set(message)
                 } else {
                     messageScreen.replyingTo.set(message)
@@ -279,6 +286,8 @@ class MessageWrapperImpl(
                 height = 100.percent boundTo messageBox
             }.onRightClick { openOptionMenu(it, line) } childOf this
 
+            val anyLineHovered = State { messageLinesHoveredStates().any { it() } }
+
             actionButtonHitbox.constrain {
                 x = (-7).pixels(alignOpposite = !sentByClient) boundTo messageBox
                 y = (-7).pixels boundTo messageBox
@@ -288,21 +297,24 @@ class MessageWrapperImpl(
                 runAction()
                 USound.playButtonPress()
                 it.stopPropagation()
-            }.bindHoverEssentialTooltip(actionTooltipText, EssentialTooltip.Position.ABOVE, 3f) childOf this
+            }.layoutAsBox(Modifier.hoverScope().hoverTooltip(actionTooltipText, position = EssentialTooltip.Position.ABOVE, padding = 3f)) {
+                if_({ actionButtonHitbox.hoveredStateV2()() || anyLineHovered() || messageHitboxPadding.hoveredStateV2()() }) {
+                    val actionButton by IconButton(actionButtonIcon).constrain {
+                        width = 100.percent - 4.pixels
+                        height = AspectConstraint()
+                        color = actionButtonHitbox.hoveredStateV2().letState { if (it) EssentialPalette.BUTTON_HIGHLIGHT else EssentialPalette.BUTTON }.toConstraint()
+                    }.rebindIconColor(
+                        actionButtonHitbox.hoveredState().map { if (it) EssentialPalette.TEXT_HIGHLIGHT else EssentialPalette.TEXT }
+                    ).onActiveClick { runAction() } effect ShadowEffect(EssentialPalette.BLACK)
+                    actionButton(Modifier.alignBoth(Alignment.Center))
+                }
+            }
 
-            val buttonHovered = actionButtonHitbox.hoveredState()
+            actionButtonHovered.set(State { actionButtonHitbox.hoveredStateV2()() || messageHitboxPadding.hoveredStateV2()() })
 
-            val actionButton by IconButton(actionButtonIcon).constrain {
-                width = 100.percent - 4.pixels
-                height = AspectConstraint()
-                color = buttonHovered.map { if (it) EssentialPalette.BUTTON_HIGHLIGHT else EssentialPalette.BUTTON }.toConstraint()
-            }.centered().rebindIconColor(
-                buttonHovered.map { if (it) EssentialPalette.TEXT_HIGHLIGHT else EssentialPalette.TEXT }
-            ).onActiveClick { runAction() } effect ShadowEffect(EssentialPalette.BLACK)
-
-            val anyLineHovered = stateByV2 { messageLinesHoveredStates().any { it() } }
-            actionButtonHovered.set((buttonHovered or messageHitboxPadding.hoveredState()).toV2())
-            actionButton.bindParent(actionButtonHitbox, buttonHovered or anyLineHovered.toV1(this) or messageHitboxPadding.hoveredState())
+            if (message.sendState == SendState.Confirmed) {
+                actionButtonHitbox childOf this
+            }
         }
     }
 
@@ -337,12 +349,7 @@ class MessageWrapperImpl(
         }
 
         val markUnreadOption = ContextOptionMenu.Option("Mark Unread", image = EssentialPalette.MARK_UNREAD_10X7) {
-            if (platform.cmConnection.usingProtocol >= 9) {
-                messageScreen.markMessageAsUnread(this)
-            } else {
-                markSelfUnread()
-                messageScreen.markedManuallyUnread(this)
-            }
+            messageScreen.markMessageAsUnread(this)
         }
 
         val reportOption = ContextOptionMenu.Option(
@@ -364,7 +371,7 @@ class MessageWrapperImpl(
                 } else {
                     val copyOption = ContextOptionMenu.Option("Copy", image = EssentialPalette.COPY_10X7) {
                         UDesktop.setClipboardString(
-                            component.selectedText.ifEmpty { component.messageContent }.trim().removePrefix("<")
+                            component.selectedText.ifEmpty { component.messageContent.getUntracked() }.trim().removePrefix("<")
                                 .removeSuffix(">")
                         )
                     }
@@ -457,15 +464,6 @@ class MessageWrapperImpl(
         }
     }
 
-    /**
-     * Marks the internal states of this component as unread
-     */
-    @Deprecated("Not used in protocol 9 or later")
-    fun markSelfUnread() {
-        messengerStates.setUnreadState(message, true)
-        markedUnreadManually.set(true)
-    }
-
     override fun flashHighlight() {
         messageLines.get().forEach {
             it.flashHighlight()
@@ -484,16 +482,6 @@ class MessageWrapperImpl(
         if (replyTo != null && !replyTo.isInitialized() && (getTop() > -600)) {
             Window.enqueueRenderOperation {
                 replyTo.eagerlyLoad()
-            }
-        }
-    }
-
-    @Deprecated("Not used in protocol 9 or later")
-    fun markRead() {
-        // Check the message should be marked as read
-        if (message.sent && !markedUnreadManually.get() && unreadState.get()) {
-            Window.enqueueRenderOperation {
-                messengerStates.setUnreadState(message, false)
             }
         }
     }

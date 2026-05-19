@@ -198,19 +198,19 @@ data class HarFile(
     }
 }
 
-typealias NameValuePair = @Serializable(NameValuePairSerializer::class) Pair<String, String>
+typealias NameValuePair = @Serializable(NameValuePairSerializer::class) Pair<String, String?>
 
 @Serializable
-private data class NameValuePairDataClass(val name: String, val value: String, val comment: String? = null)
-private object NameValuePairSerializer : KSerializer<Pair<String, String>> {
+private data class NameValuePairDataClass(val name: String, val value: String?, val comment: String? = null)
+private object NameValuePairSerializer : KSerializer<Pair<String, String?>> {
     private val inner = NameValuePairDataClass.serializer()
     override val descriptor: SerialDescriptor = inner.descriptor
 
-    override fun deserialize(decoder: Decoder): Pair<String, String> {
+    override fun deserialize(decoder: Decoder): Pair<String, String?> {
         return decoder.decodeSerializableValue(inner).let { Pair(it.name, it.value) }
     }
 
-    override fun serialize(encoder: Encoder, value: Pair<String, String>) {
+    override fun serialize(encoder: Encoder, value: Pair<String, String?>) {
         encoder.encodeSerializableValue(inner, NameValuePairDataClass(value.first, value.second))
     }
 }

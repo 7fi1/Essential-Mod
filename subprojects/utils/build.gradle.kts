@@ -36,7 +36,7 @@ kotlin {
     dependencies {
         api(libs.slf4j.api)
         api(project(":feature-flags"))
-        api("com.squareup.okhttp3:okhttp:3.9.0")
+        api("com.squareup.okhttp3:okhttp:5.3.2")
     }
 
     kotlin.jvmToolchain(8)

@@ -17,9 +17,11 @@ import gg.essential.gui.screenshot.downsampling.ErrorImage
 import gg.essential.gui.screenshot.downsampling.PixelBuffer
 import gg.essential.gui.screenshot.image.PixelBufferTexture
 import gg.essential.universal.UMinecraft
+import gg.essential.util.OperatingSystem
 import gg.essential.util.RefCounted
 import gg.essential.util.UIdentifier
 import gg.essential.util.executor
+import gg.essential.util.os
 import gg.essential.util.toMC
 import net.minecraft.client.Minecraft
 import org.lwjgl.opengl.GL11
@@ -168,7 +170,13 @@ var asyncErrored = false
 //#endif
 
 private fun makeUploadBackend(): UploadBackend {
-    val supported = System.getProperty("essential.async_texture_loading")?.toBoolean() ?: true
+    val supported =
+        //#if MC <= 1.12.2
+        // Disable this flag due to a LWJGL2 (<= 1.12.2) + MacOS threading bug
+        if (os == OperatingSystem.MACOS) false else
+        //#endif
+            System.getProperty("essential.async_texture_loading")?.toBoolean() ?: true
+
 
     if (!supported || asyncErrored) {
         return NotAsyncUploadBackend()

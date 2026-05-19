@@ -17,8 +17,8 @@ public class BuildInfo {
         //$$ 10809;
         //#elseif MC == 1.12.2
         11202;
-        //#elseif MC == 1.16.2
-        //$$ 11602;
+        //#elseif MC == 1.16.5
+        //$$ 11605;
         //#elseif MC == 1.17.1
         //$$ 11701;
         //#elseif MC == 1.18.1

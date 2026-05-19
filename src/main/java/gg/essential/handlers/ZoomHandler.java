@@ -15,6 +15,7 @@ import gg.essential.config.EssentialConfig;
 import gg.essential.elementa.constraints.animation.Animations;
 import gg.essential.event.gui.MouseScrollEvent;
 import gg.essential.universal.UMinecraft;
+import gg.essential.universal.UScreen;
 import gg.essential.util.OptiFineUtil;
 import me.kbrewster.eventbus.Subscribe;
 import net.minecraft.client.settings.GameSettings;
@@ -59,7 +60,7 @@ public class ZoomHandler {
     public float applyModifiers(float f) {
         if (OptiFineUtil.isLoaded()) return f;
         GameSettings settings = UMinecraft.getSettings();
-        if (UMinecraft.getMinecraft().currentScreen == null && getZoomState()) {
+        if (UScreen.getCurrentScreen() == null && getZoomState()) {
             if (!isZoomActive) {
                 isZoomActive = true;
                 timeOfLastUpdate = System.currentTimeMillis();

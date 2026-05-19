@@ -24,7 +24,7 @@ import gg.essential.util.har.requestBodyContainsSecrets
 import gg.essential.util.har.responseBodyContainsSecrets
 import kotlinx.serialization.encodeToString
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 object MinecraftAuthenticationService {
     private const val AUTHENTICATION_URI = "https://api.minecraftservices.com/authentication/login_with_xbox"
@@ -48,7 +48,7 @@ object MinecraftAuthenticationService {
             .header("Accept", "application/json")
             .requestBodyContainsSecrets()
             .responseBodyContainsSecrets()
-            .post(RequestBody.create(JSON_MEDIA_TYPE, JSON.encodeToString(request)))
+            .post(JSON.encodeToString(request).toRequestBody(JSON_MEDIA_TYPE))
             .build().execute()
 
         return when (status) {

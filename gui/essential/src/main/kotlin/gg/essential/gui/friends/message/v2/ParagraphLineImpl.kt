@@ -29,6 +29,7 @@ import gg.essential.gui.common.constraints.MarkdownContentWidthConstraint
 import gg.essential.gui.common.modal.OpenLinkModal
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
 import gg.essential.gui.elementa.essentialmarkdown.drawables.HeaderDrawable
+import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.layoutdsl.Modifier
@@ -45,7 +46,7 @@ import java.net.URISyntaxException
 
 class ParagraphLineImpl(
     private val wrapper: MessageWrapper,
-    messageContent: String,
+    messageContent: State<String>,
 ) : ParagraphLine(
     messageContent,
     wrapper,

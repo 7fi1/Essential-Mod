@@ -32,6 +32,7 @@ import gg.essential.gui.screenshot.handler.ScreenshotMetadataManager
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
 import gg.essential.media.model.Media
 import gg.essential.universal.UMinecraft
+import gg.essential.universal.UScreen
 import gg.essential.util.resource.EssentialAssetResourcePack
 import net.minecraft.client.gui.GuiOptions
 import net.minecraft.client.resources.FileResourcePack
@@ -106,7 +107,7 @@ fun findCodeSource(javaClass: Class<*>): CodeSource? {
 
     // With ModLauncher (Forge 1.16 edition), mod jars are on a pseudo "modjar" protocol, using the mod id as host.
     // For these, we need to unwrap them like the ModJarURLHandler does:
-    //#if FORGE && MC==11602
+    //#if FORGE && MC == 1.16.5
     //$$ if (url.protocol == "modjar") {
     //$$     val modList = net.minecraftforge.fml.loading.FMLLoader.getLoadingModList()
     //$$     return CodeSource.Jar(modList.getModFileById(url.host).file.filePath)
@@ -214,11 +215,16 @@ fun addEssentialResourcePack(consumer: Consumer<IResourcePack>) {
         }
         is CodeSource.Directory -> {
             var path = source.path
-            if (!path.resolve("pack.mcmeta").exists()) {
+            val possiblePaths = listOf(
+                path,
+                // When running via IntelliJ, `path` may be versions/1.12.2-forge/out/classes
+                // but resources may be stored separately at versions/1.12.2-forge/out/resources
+                path.resolve("../resources"),
                 // When running via Gradle, `path` will be versions/1.12.2-forge/build/classes/java/main
                 // but resources are stored separately at versions/1.12.2-forge/build/resources/main
-                path = path.resolve("../../../resources/main")
-            }
+                path.resolve("../../../resources/main"),
+            )
+            path = possiblePaths.find { it.resolve("pack.mcmeta").exists() } ?: path
             //#if MC>=12005
             //$$ DirectoryResourcePack(info, path)
             //#elseif MC>=11903
@@ -487,7 +493,7 @@ val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -
                             null -> {
                                 GuiUtil.openScreen {
                                     GuiOptions(
-                                        UMinecraft.getMinecraft().currentScreen!!,
+                                        UScreen.currentScreen!!,
                                         UMinecraft.getSettings(),
                                         //#if MC >= 26.1
                                         //$$ UMinecraft.getWorld() != null,
@@ -498,9 +504,9 @@ val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -
                             "keybinds" -> {
                                 GuiUtil.openScreen {
                                     //#if MC>=11800
-                                    //$$ KeybindsScreen(UMinecraft.getMinecraft().currentScreen!!, UMinecraft.getSettings())
+                                    //$$ KeybindsScreen(UScreen.currentScreen!!, UMinecraft.getSettings())
                                     //#else
-                                    GuiControls(UMinecraft.getMinecraft().currentScreen!!, UMinecraft.getSettings())
+                                    GuiControls(UScreen.currentScreen!!, UMinecraft.getSettings())
                                     //#endif
                                 }
                             }

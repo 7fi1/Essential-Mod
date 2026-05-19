@@ -91,7 +91,6 @@ import gg.essential.gui.notification.warning
 import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.overlay.ModalManager
-import gg.essential.gui.overlay.launchModalFlow
 import gg.essential.gui.sps.InviteFriendsModal
 import gg.essential.gui.sps.WorldSelectionModal
 import gg.essential.gui.util.addTag
@@ -106,6 +105,7 @@ import gg.essential.network.connectionmanager.ConnectionManagerStatus
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
 import gg.essential.network.connectionmanager.suspension.suspensionModal
 import gg.essential.sps.SpsAddress
+import gg.essential.universal.UScreen
 import gg.essential.universal.USound
 import gg.essential.util.FirewallUtil
 import gg.essential.util.Client
@@ -117,7 +117,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import me.kbrewster.eventbus.Subscribe
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiIngameMenu
 import net.minecraft.client.gui.GuiMultiplayer
 import net.minecraft.client.gui.GuiScreen
@@ -441,8 +440,6 @@ class PauseMenuDisplay {
         fun showInviteOrHostModal(
             source: SPSSessionSource,
             prepopulatedInvites: Set<UUID> = emptySet(),
-            worldSummary: WorldSummary? = null,
-            showIPWarning: Boolean = true,
             callback: () -> Unit = {},
         ) {
             GuiUtil.launchModalFlow {
@@ -452,7 +449,7 @@ class PauseMenuDisplay {
                     object : Modal(modalManager) {
                         override fun onOpen() {
                             super.onOpen()
-                            showInviteOrHostModalInternal(source, prepopulatedInvites, worldSummary, this, showIPWarning, callback)
+                            showInviteOrHostModalInternalOld(source, prepopulatedInvites, null, this, true, callback)
                         }
 
                         override val modalName: String? get() = null
@@ -463,7 +460,7 @@ class PauseMenuDisplay {
             }
         }
 
-        fun showInviteOrHostModalInternal(
+        fun showInviteOrHostModalInternalOld(
             source: SPSSessionSource,
             prepopulatedInvites: Set<UUID> = emptySet(),
             worldSummary: WorldSummary? = null,
@@ -488,7 +485,7 @@ class PauseMenuDisplay {
                 builder: (ModalManager) -> Modal
             ) {
                 fun Modal.retryModal(showIPWarningOverride: Boolean = showIPWarning) {
-                    showInviteOrHostModalInternal(
+                    showInviteOrHostModalInternalOld(
                         source,
                         prepopulatedInvites,
                         worldSummary,
@@ -520,7 +517,7 @@ class PauseMenuDisplay {
                 pushModal(builder)
             }
 
-            if (Minecraft.getMinecraft().currentScreen.isMainMenu && worldSummary == null) {
+            if (UScreen.currentScreen.isMainMenu && worldSummary == null) {
                 // The world selection modal does not get any network warnings, those will be shown
                 // in the later stage of the modal (see where `worldSummary != null`).
                 pushModalAndWarnings(showNetworkRelatedWarnings = false) { WorldSelectionModal(it) }

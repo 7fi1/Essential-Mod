@@ -15,21 +15,22 @@ import gg.essential.minecraftauth.exception.AuthenticationException
 import gg.essential.util.httpCall
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 
-val JSON_MEDIA_TYPE = MediaType.parse("application/json")
+val JSON_MEDIA_TYPE = "application/json".toMediaType()
 
 fun Request.execute(): Pair<Int, String> {
     return runBlocking {
         val response = httpCall(this@execute)
-        val code = response.code()
+        val code = response.code
         if (code == 429) {
             response.close()
             // If we are rate-limited, there is no other useful information that we can get, and we should just bail out.
             throw AuthenticationException.Ratelimited()
         }
 
-        val content = response.body().use { it?.charStream()?.readText() } ?: ""
+        val content = response.body.use { it.charStream().readText() }
         code to content
     }
 }

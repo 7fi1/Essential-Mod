@@ -24,6 +24,7 @@ import org.lwjgl.opengl.GL11.GL_RGBA
 import org.lwjgl.opengl.GL30
 import org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE
 import java.nio.ByteBuffer
+import java.nio.FloatBuffer
 
 //#if MC>=12105
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
@@ -124,32 +125,22 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
         }
     }
 
-    override fun readPixelColor(x: Int, y: Int): Color {
-        val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
-        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, colorReadFrameBuffer)
-        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, glId, 0)
-        val result = glReadPixelColor(x, y)
-        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, 0, 0)
-        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
-        return result
-    }
-
-    override fun readPixelDepth(x: Int, y: Int): Float {
-        val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
-        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, depthReadFrameBuffer)
-        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, glId, 0)
-        val result = glReadPixelDepth(x, y)
-        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, 0, 0)
-        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
-        return result
-    }
-
     override fun readPixelColors(x: Int, y: Int, width: Int, height: Int): Bitmap {
         val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
         glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, colorReadFrameBuffer)
         glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, glId, 0)
         val result = glReadPixelColors(x, y, width, height)
         glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, 0, 0)
+        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
+        return result
+    }
+
+    override fun readPixelDepths(x: Int, y: Int, width: Int, height: Int): FloatBuffer {
+        val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
+        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, depthReadFrameBuffer)
+        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, glId, 0)
+        val result = glReadPixelDepths(x, y, width, height)
+        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, 0, 0)
         glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
         return result
     }
@@ -215,39 +206,18 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
             )
         }
 
-        private val tmpFloatBuffer = BufferUtils.createFloatBuffer(4)
-
-        private fun glReadPixelColor(x: Int, y: Int): Color {
+        private fun glReadPixelDepths(x: Int, y: Int, width: Int, height: Int): FloatBuffer {
+            val floatBuffer = BufferUtils.createFloatBuffer(width * height)
             GL11.glReadPixels(
                 x,
                 y,
-                1,
-                1,
-                GL_RGBA,
-                GL_FLOAT,
-                tmpFloatBuffer,
-            )
-            return with(tmpFloatBuffer) {
-                Color(
-                    r = (get(0) * 255).toUInt().toUByte(),
-                    g = (get(1) * 255).toUInt().toUByte(),
-                    b = (get(2) * 255).toUInt().toUByte(),
-                    a = (get(3) * 255).toUInt().toUByte(),
-                )
-            }
-        }
-
-        private fun glReadPixelDepth(x: Int, y: Int): Float {
-            GL11.glReadPixels(
-                x,
-                y,
-                1,
-                1,
+                width,
+                height,
                 GL_DEPTH_COMPONENT,
                 GL_FLOAT,
-                tmpFloatBuffer,
+                floatBuffer,
             )
-            return tmpFloatBuffer.get(0)
+            return floatBuffer
         }
     }
 }

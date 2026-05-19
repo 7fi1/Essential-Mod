@@ -52,12 +52,20 @@ abstract class InternalEssentialGUI(
         }
     }
 
+    //#if MC>=1.20.5
+    //$$ override fun onDisplayed() {
+    //$$     super.onDisplayed()
+    //$$
+    //$$     screenOpenMutable.set(true)
+    //$$ }
+    //#else
     override fun initScreen(width: Int, height: Int) {
         super.initScreen(width, height)
 
         // Note: initScreen also gets called on resize, but since the state will already be `true`, this is fine
         screenOpenMutable.set(true)
     }
+    //#endif
 
     override fun onDrawScreen(matrixStack: UMatrixStack, mouseX: Int, mouseY: Int, partialTicks: Float) {
         super.onDrawScreen(matrixStack, mouseX, mouseY, partialTicks)

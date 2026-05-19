@@ -124,7 +124,7 @@ interface GuiEssentialPlatform {
     fun resolveMessageRef(messageRef: MessageRef)
 
     // TODO inline once everything's accessible
-    fun haveActiveRemoteSpsSession(address: String): Boolean
+    fun haveActiveRemoteSpsSession(host: UUID): Boolean
 
     val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -> Unit
 
@@ -200,6 +200,8 @@ interface GuiEssentialPlatform {
     fun parseIpAddress(address: String): InetAddress?
 
     fun loadIntegratedServerIcon(): BufferedImage?
+
+    fun isInMainMenu(): Boolean
 
     // TODO: Eventually move override to :gui:essential project
     val modalPrerequisites: ModalPrerequisites

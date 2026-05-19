@@ -67,15 +67,11 @@ public class SocialManager implements NetworkedManager {
     }
 
     private void sendInvitesForServer(String server, Set<UUID> friends) {
-        friends.forEach(uuid -> {
-            connectionManager.send(new SocialInviteToServerPacket(uuid, server));
-        });
+        friends.forEach(uuid -> connectionManager.send(new SocialInviteToServerPacket(uuid, server)));
     }
 
     private void revokeInvites(Set<UUID> friends) {
-        friends.forEach(uuid -> {
-            connectionManager.send(new SocialInviteToServerCancelPacket(uuid));
-        });
+        friends.forEach(uuid -> connectionManager.send(new SocialInviteToServerCancelPacket(uuid)));
     }
 
     public void setInvitedFriendsOnServer(String server, Set<UUID> friends) {
@@ -104,7 +100,6 @@ public class SocialManager implements NetworkedManager {
     public void resetState() {
         this.invitedFriends.forEach((ignored, uuids) -> revokeInvites(uuids));
         this.invitedFriends.clear();
-
         this.incomingServerInvites.clear();
     }
 

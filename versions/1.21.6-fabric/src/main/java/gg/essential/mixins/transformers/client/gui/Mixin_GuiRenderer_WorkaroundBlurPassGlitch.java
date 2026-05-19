@@ -57,11 +57,9 @@ public class Mixin_GuiRenderer_WorkaroundBlurPassGlitch {
             );
 
             // ensure clearTex is ready and clear
-            if (clearTex == null) {
+            if (clearTex == null || clearTex.getWidth() != tex.getWidth() || clearTex.getHeight() != tex.getHeight()) {
+                if (clearTex != null) clearTex.close();
                 clearTex = new OwnedGlGpuTexture(tex.getWidth(), tex.getHeight(), GpuTexture.Format.DEPTH32);
-                clearTex.clearDepth(1f);
-            } else if (clearTex.getWidth() != tex.getWidth() || clearTex.getHeight() != tex.getHeight()) {
-                clearTex.resize(tex.getWidth(), tex.getHeight());
                 clearTex.clearDepth(1f);
             }
 
@@ -74,7 +72,7 @@ public class Mixin_GuiRenderer_WorkaroundBlurPassGlitch {
     @Unique
     private void cleanupClearTexture() {
         if (clearTex != null) {
-            clearTex.delete();
+            clearTex.close();
             clearTex = null;
         }
     }

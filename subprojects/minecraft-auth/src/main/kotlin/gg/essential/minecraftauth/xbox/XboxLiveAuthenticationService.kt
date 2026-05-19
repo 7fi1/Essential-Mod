@@ -23,7 +23,7 @@ import gg.essential.util.har.requestBodyContainsSecrets
 import gg.essential.util.har.responseBodyContainsSecrets
 import kotlinx.serialization.encodeToString
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 object XboxLiveAuthenticationService {
     private const val XBL_AUTHENTICATION_URI = "https://user.auth.xboxlive.com/user/authenticate"
@@ -80,7 +80,7 @@ object XboxLiveAuthenticationService {
             .header("Accept", "application/json")
             .requestBodyContainsSecrets()
             .responseBodyContainsSecrets()
-            .post(RequestBody.create(JSON_MEDIA_TYPE, JSON.encodeToString(request)))
+            .post(JSON.encodeToString(request).toRequestBody(JSON_MEDIA_TYPE))
             .build().execute()
 
         when (status) {

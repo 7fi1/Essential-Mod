@@ -154,7 +154,7 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
 
         onPrimaryAction {
             selectedWorld.get()?.let { world ->
-                PauseMenuDisplay.showInviteOrHostModalInternal(
+                PauseMenuDisplay.showInviteOrHostModalInternalOld(
                     SPSSessionSource.MAIN_MENU,
                     previousModal = this,
                     worldSummary = world,
@@ -191,8 +191,8 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
             this@WorldSelectionModal.close()
             //#if MC>=12109
             //$$ val mc = MinecraftClient.getInstance()
-            //$$ val prevScreen = mc.currentScreen
-            //$$ CreateWorldScreen.show(mc) { mc.setScreen(prevScreen) }
+            //$$ val prevScreen = gg.essential.universal.UScreen.currentScreen
+            //$$ CreateWorldScreen.show(mc) { gg.essential.universal.UScreen.displayScreen(prevScreen) }
             //#elseif MC>=11900
             //$$ CreateWorldScreen.create(MinecraftClient.getInstance(), GuiUtil.openedScreen())
             //#else

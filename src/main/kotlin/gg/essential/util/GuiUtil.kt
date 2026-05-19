@@ -31,7 +31,6 @@ import gg.essential.gui.overlay.launchModalFlow
 import gg.essential.gui.wardrobe.Wardrobe
 import gg.essential.network.connectionmanager.features.Feature
 import gg.essential.universal.GuiScale
-import gg.essential.universal.UMinecraft
 import gg.essential.universal.UScreen
 import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.gui.GuiScreen
@@ -135,11 +134,11 @@ object GuiUtil : GuiUtil, OverlayManager by OverlayManagerImpl, ModalManager by 
                     mapOf(Pair("name", screen.javaClass.name))
                 )
             )
-        }?.let { UMinecraft.getMinecraft().displayGuiScreen(it) } }
+        }?.let { UScreen.displayScreen(it) } }
     }
 
     override fun openedScreen(): GuiScreen? {
-        return UMinecraft.getMinecraft().currentScreen
+        return UScreen.currentScreen
     }
 
     fun getScreenName(screen: GuiScreen): String {

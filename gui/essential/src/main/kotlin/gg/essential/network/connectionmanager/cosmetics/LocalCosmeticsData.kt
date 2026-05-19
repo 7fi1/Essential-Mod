@@ -14,7 +14,6 @@ package gg.essential.network.connectionmanager.cosmetics
 import gg.essential.cosmetics.CosmeticBundleId
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.cosmetics.CosmeticId
-import gg.essential.cosmetics.CosmeticTypeId
 import gg.essential.cosmetics.FeaturedPageCollectionId
 import gg.essential.cosmetics.ImplicitOwnership
 import gg.essential.cosmetics.ImplicitOwnershipId
@@ -26,7 +25,6 @@ import gg.essential.handlers.io.FileEventType
 import gg.essential.handlers.io.FileSystemEvent
 import gg.essential.mod.cosmetics.CosmeticBundle
 import gg.essential.mod.cosmetics.CosmeticCategory
-import gg.essential.mod.cosmetics.CosmeticType
 import gg.essential.mod.cosmetics.database.GitRepoCosmeticsDatabase
 import gg.essential.mod.cosmetics.featured.FeaturedPageCollection
 import gg.essential.network.cosmetics.Cosmetic
@@ -165,20 +163,6 @@ class LocalCosmeticsData private constructor(
             }
         }
 
-        for (id in changes.types) {
-            val existingIndex = state.types.get().indexOfFirst { it.id == id }
-            val type = database.loadedTypes[id]
-            if (type != null) {
-                if (existingIndex >= 0) {
-                    state.types.set(existingIndex, type)
-                } else {
-                    state.types.add(type)
-                }
-            } else {
-                state.types.removeAt(existingIndex)
-            }
-        }
-
         for (id in changes.bundles) {
             val existingIndex = state.bundles.get().indexOfFirst { it.id == id }
             val bundle = database.loadedBundles[id]
@@ -242,9 +226,6 @@ class LocalCosmeticsData private constructor(
         for ((id, category) in msg.categories) {
             changes.putAll(database.computeChanges(id, category))
         }
-        for ((id, type) in msg.types) {
-            changes.putAll(database.computeChanges(id, type))
-        }
         for ((id, bundle) in msg.bundles) {
             changes.putAll(database.computeChanges(id, bundle))
         }
@@ -287,7 +268,6 @@ class LocalCosmeticsData private constructor(
 
     fun writeChanges(
         categories: Map<CosmeticCategoryId, CosmeticCategory?>,
-        types: Map<CosmeticTypeId, CosmeticType?>,
         bundles: Map<CosmeticBundleId, CosmeticBundle?>,
         featuredPageCollections: Map<FeaturedPageCollectionId, FeaturedPageCollection?>,
         implicitOwnerships: Map<ImplicitOwnershipId, ImplicitOwnership?>,
@@ -297,7 +277,6 @@ class LocalCosmeticsData private constructor(
         updateChannel.trySend(
             Msg.WriteData(
                 categories,
-                types,
                 bundles,
                 featuredPageCollections,
                 implicitOwnerships,
@@ -312,7 +291,6 @@ class LocalCosmeticsData private constructor(
         class FilesChanged(val updates: List<FileSystemEvent>) : Msg
         class WriteData(
             val categories: Map<CosmeticCategoryId, CosmeticCategory?>,
-            val types: Map<CosmeticTypeId, CosmeticType?>,
             val bundles: Map<CosmeticBundleId, CosmeticBundle?>,
             val featuredPageCollections: Map<FeaturedPageCollectionId, FeaturedPageCollection?>,
             val implicitOwnerships: Map<ImplicitOwnershipId, ImplicitOwnership?>,

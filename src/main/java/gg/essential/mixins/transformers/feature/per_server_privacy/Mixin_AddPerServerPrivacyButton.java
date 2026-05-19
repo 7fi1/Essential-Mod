@@ -91,8 +91,8 @@ public abstract class Mixin_AddPerServerPrivacyButton extends GuiScreen {
         //#else
         int offset = Math.max(minY - resourcePacks.y, 0);
 
-        //#if MC==11602
-        // Only 1.16.2 is different, it reverts to the original indices in 1.17+ as the resource-pack button is changed
+        //#if MC == 1.16.5
+        // Only 1.16 is different, it reverts to the original indices in 1.17+ as the resource-pack button is changed
         //$$ buttonList.get(1).y += offset;
         //$$ buttonList.get(2).y += offset;
         //#else

@@ -192,7 +192,9 @@ object CommandSession : Command("esession") {
     fun handleOpen() {
         when (ServerType.current()) {
             is ServerType.SPS.Host -> MinecraftUtils.sendMessage("Cannot start session, one is already running.")
-            is ServerType.Singleplayer, is ServerType.SupportsInvites -> PauseMenuDisplay.showInviteOrHostModal(SPSSessionSource.COMMAND)
+            is ServerType.Singleplayer, is ServerType.SupportsInvites -> {
+                PauseMenuDisplay.showInviteOrHostModal(SPSSessionSource.COMMAND)
+            }
             else -> MinecraftUtils.sendMessage("Cannot start session, your current world does not support invites")
         }
     }

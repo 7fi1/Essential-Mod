@@ -13,6 +13,7 @@ package gg.essential.mixins.transformers.events;
 
 import gg.essential.Essential;
 import gg.essential.event.gui.MouseScrollEvent;
+import gg.essential.universal.UScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHelper;
 import net.minecraft.client.gui.screen.Screen;
@@ -30,7 +31,7 @@ public class Mixin_MouseScrollEvent {
 
     @Inject(method = "scrollCallback", at = @At("HEAD"), cancellable = true)
     private void onMouseScrolled(long handle, double xoffset, double yoffset, CallbackInfo ci) {
-        Screen screen = this.minecraft.currentScreen;
+        Screen screen = UScreen.getCurrentScreen();
         //#if MC>=11900
         //$$ boolean discreteMouseScroll = this.client.options.getDiscreteMouseScroll().getValue();
         //$$ double mouseWheelSensitivity = this.client.options.getMouseWheelSensitivity().getValue();
@@ -45,7 +46,7 @@ public class Mixin_MouseScrollEvent {
             ci.cancel();
         }
 
-        if (this.minecraft.currentScreen != screen) {
+        if (UScreen.getCurrentScreen() != screen) {
             ci.cancel(); // screen was closed, prevent the event from reaching the new screen
         }
     }

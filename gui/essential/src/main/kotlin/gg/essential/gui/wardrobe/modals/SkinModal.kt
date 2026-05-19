@@ -39,6 +39,7 @@ import gg.essential.image.PNGFile
 import gg.essential.mod.Model
 import gg.essential.mod.Skin
 import gg.essential.network.mojang.ManagedMojangProfileApi
+import gg.essential.network.mojang.MojangApiException
 import gg.essential.network.mojang.MojangProfileLookupApi
 import gg.essential.universal.USound
 import gg.essential.util.*
@@ -244,6 +245,14 @@ class SkinModal private constructor(
             // FIXME shouldn't need to use runBlocking here
             val skin = try {
                 runBlocking { mojangApi.uploadSkin(bytes, model) }
+            } catch (mae: MojangApiException) {
+                LOGGER.error("An error occurred while updating skin", mae)
+                val (title, msg) = when (mae.response.details?.status) {
+                    "BANNED_SKIN" -> "Banned Skin" to "The skin you tried to upload is banned by Mojang"
+                    else -> "Skin Upload" to "Skin Upload failed!"
+                }
+                Notifications.push(title, msg)
+                return@SkinModal
             } catch (e: Exception) {
                 LOGGER.error("Failed to upload skin", e)
                 Notifications.push("Skin Upload", "Skin upload failed!")

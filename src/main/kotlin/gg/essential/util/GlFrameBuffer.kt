@@ -47,42 +47,21 @@ import org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING
 import java.awt.Color
 
 class GlFrameBufferImpl(
-    width: Int,
-    height: Int,
-    private val colorFormat: GpuTexture.Format,
-    private val depthFormat: GpuTexture.Format,
+    override val width: Int,
+    override val height: Int,
+    colorFormat: GpuTexture.Format,
+    depthFormat: GpuTexture.Format,
 ) : GlFrameBuffer {
-    override var width: Int = width
-        private set
-    override var height: Int = height
-        private set
-
-    override var frameBuffer = -1
-        private set
-    override lateinit var texture: GlGpuTexture
-    override lateinit var depthStencil: GlGpuTexture
+    override val frameBuffer: Int
+    override val texture: GlGpuTexture
+    override val depthStencil: GlGpuTexture
 
     init {
-        init()
-    }
-
-    override fun resize(width: Int, height: Int) {
-        if (this.width == width && this.height == height && this.frameBuffer != -1) {
-            return
-        }
-        this.width = width
-        this.height = height
-
-        delete()
-        init()
-    }
-
-    private fun init() {
         frameBuffer = glGenFramebuffers()
         texture = OwnedGlGpuTexture(width, height, colorFormat)
         depthStencil = OwnedGlGpuTexture(width, height, depthFormat)
 
-        withFrameBuffer(frameBuffer) {
+        use {
             glFramebufferTexture2D(
                 GL_FRAMEBUFFER,
                 GL_COLOR_ATTACHMENT0,
@@ -104,26 +83,20 @@ class GlFrameBufferImpl(
         }
     }
 
-    override fun delete() {
-        depthStencil.delete()
+    private var closed = false
+    override fun close() {
+        if (closed) return
+        closed = true
 
-        texture.delete()
+        depthStencil.close()
 
-        if (frameBuffer != -1) {
-            glDeleteFramebuffers(frameBuffer)
-            frameBuffer = -1
-        }
+        texture.close()
+
+        glDeleteFramebuffers(frameBuffer)
     }
 
     override fun <T> use(block: () -> T): T {
-        if (frameBuffer == -1) {
-            resize(width, height)
-        }
-        return withFrameBuffer(frameBuffer, block)
-    }
-
-    private fun <T> withFrameBuffer(glId: Int, block: () -> T): T {
-        val unbind = bind(glId)
+        val unbind = bind(frameBuffer)
         try {
             return block()
         } finally {
@@ -178,9 +151,6 @@ class GlFrameBufferImpl(
     }
 
     override fun bind(): () -> Unit {
-        if (frameBuffer == -1) {
-            resize(width, height)
-        }
         return bind(frameBuffer)
     }
 

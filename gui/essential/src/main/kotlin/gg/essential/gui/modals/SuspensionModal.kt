@@ -14,7 +14,6 @@ package gg.essential.gui.modals
 import gg.essential.config.EssentialConfig
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.OutlineButtonStyle
-import gg.essential.gui.common.SequenceAnimatedUIImage
 import gg.essential.gui.common.modal.EssentialModal2
 import gg.essential.gui.common.textStyle
 import gg.essential.gui.elementa.state.v2.withSystemTime
@@ -43,7 +42,6 @@ import gg.essential.util.openInBrowser
 import gg.essential.util.toShortString
 import java.net.URI
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 class SuspensionModal(
     modalManager: ModalManager,
@@ -117,12 +115,7 @@ class SuspensionModal(
             column {
                 spacer(height = 1f)
                 row(Modifier.childBasedWidth().alignHorizontal(Alignment.Center(true)), Arrangement.spacedBy(5f)) {
-                    SequenceAnimatedUIImage(
-                        "/assets/essential/textures/studio/clock_", ".png",
-                        4,
-                        1000,
-                        TimeUnit.MILLISECONDS,
-                    )(Modifier.color(EssentialPalette.RED).shadow(EssentialPalette.BLACK))
+                    image(EssentialPalette.CLOCK_ANIMATION, Modifier.color(EssentialPalette.RED).shadow(EssentialPalette.BLACK))
                     text(
                         { withSystemTime { it.until(expiresAt).toShortString() } },
                         Modifier.color(EssentialPalette.TEXT_MID_GRAY).shadow(EssentialPalette.BLACK)

@@ -38,6 +38,7 @@ class GameActivityStateProvider : ActivityStateProvider {
 
         return when (val state = this.state) {
             is ServerType.Singleplayer -> ActivityState.Singleplayer
+
             is ServerType.Multiplayer -> ActivityState.Multiplayer(state.address)
 
             is ServerType.Realms -> ActivityState.Realm

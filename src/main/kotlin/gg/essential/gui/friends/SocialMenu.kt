@@ -18,6 +18,7 @@ import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.components.Window
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
+import gg.essential.elementa.utils.ObservableAddEvent
 import gg.essential.gui.InternalEssentialGUI
 import gg.essential.gui.common.ContextOptionMenu
 import gg.essential.gui.common.bindConstraints
@@ -30,7 +31,6 @@ import gg.essential.gui.friends.modals.BlockConfirmationModal
 import gg.essential.gui.friends.modals.ConfirmJoinModal
 import gg.essential.gui.friends.modals.FriendRemoveConfirmationModal
 import gg.essential.gui.friends.previews.ChannelPreview
-import gg.essential.gui.friends.state.SocialStateManager
 import gg.essential.gui.friends.state.SocialStates
 import gg.essential.gui.friends.tabs.ChatTab
 import gg.essential.gui.friends.tabs.FriendsTab
@@ -43,15 +43,18 @@ import gg.essential.gui.notification.warning
 import gg.essential.gui.util.onItemAdded
 import gg.essential.universal.UMinecraft
 import gg.essential.util.*
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.GuiUtil.launchModalFlow
+import gg.essential.util.getOtherUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
+import kotlin.collections.filter
 
 class SocialMenu(
     channelIdToOpen: Long? = null
 ): InternalEssentialGUI(
-    ElementaVersion.V6,
+    ElementaVersion.V10,
     "Social",
     discordActivityDescription = "Messaging friends",
 ), GuiRequiresTOS, SocialMenuActions {
@@ -61,11 +64,9 @@ class SocialMenu(
 
     val isScreenOpen = screenOpen
 
-    val socialStateManager = SocialStateManager(connectionManager)
-
     var selectedTab = mutableStateOf(Tab.CHAT)
 
-    private val socialMenuState = object : SocialMenuState, SocialStates by socialStateManager {
+    private val socialMenuState = object : SocialMenuState, SocialStates by platform.createSocialStates() {
         override val tab: State<Tab>
             get() = selectedTab
     }
@@ -80,7 +81,7 @@ class SocialMenu(
 
     val chatTab by ChatTab(
         selectedTab,
-        socialStateManager,
+        socialMenuState,
         this,
         tabsSelector,
         titleBar,
@@ -89,7 +90,7 @@ class SocialMenu(
     )
     val friendsTab by FriendsTab(
         selectedTab,
-        socialStateManager,
+        socialMenuState,
         this,
         connectionManager.socialMenuNewFriendRequestNoticeManager,
         tabsSelector,
@@ -97,7 +98,7 @@ class SocialMenu(
     )
     private val titleManagementActions by SocialTitleManagementActions(
         selectedTab,
-        socialStateManager,
+        socialMenuState,
         this,
     ).constrain {
         y = CenterPixelConstraint()
@@ -145,11 +146,11 @@ class SocialMenu(
             chatTab.openTopChannel()
         }
 
-        socialStateManager.messengerStates.registerResetListener {
+        socialMenuState.messages.registerResetListener {
             channelToRestore = chatTab.currentMessageView.get()?.preview?.channel?.id
         }
 
-        socialStateManager.messengerStates.getObservableChannelList().onItemAdded {
+        socialMenuState.messages.getObservableChannelList().onItemAdded {
             if (it.id == channelToRestore) {
 
                 channelToRestore = null
@@ -241,7 +242,7 @@ class SocialMenu(
 
     override fun joinSessionWithConfirmation(user: UUID) {
         if (UMinecraft.getWorld() != null) {
-            if (!socialStateManager.statusStates.joinSession(user)) {
+            if (!socialMenuState.activity.joinSession(user)) {
                 Notifications.warning("World invite expired", "")
             }
             return
@@ -251,7 +252,7 @@ class SocialMenu(
             val isSps = connectionManager.spsManager.remoteSessions.any { it.hostUUID == user }
             GuiUtil.pushModal { manager ->
                 ConfirmJoinModal(manager, it, isSps).onPrimaryAction {
-                    if (!socialStateManager.statusStates.joinSession(user)) {
+                    if (!socialMenuState.activity.joinSession(user)) {
                         Notifications.warning("World invite expired", "")
                     }
                 }
@@ -273,7 +274,7 @@ class SocialMenu(
 
     override fun blockOrUnblock(uuid: UUID) {
         UUIDUtil.getName(uuid).thenAcceptOnMainThread {
-            val block = !socialStateManager.relationships.isBlocked(uuid)
+            val block = !socialMenuState.relationships.isBlocked(uuid)
             val blockText = if (block) {
                 "Block"
             } else {
@@ -282,9 +283,9 @@ class SocialMenu(
             GuiUtil.pushModal { manager ->
                 BlockConfirmationModal(manager, it, blockText).onPrimaryAction {
                     if (block) {
-                        socialStateManager.relationshipStates.blockPlayer(uuid, true)
+                        socialMenuState.relationships.blockPlayer(uuid, true)
                     } else {
-                        socialStateManager.relationshipStates.unblockPlayer(uuid, true)
+                        socialMenuState.relationships.unblockPlayer(uuid, true)
                     }
                 }
             }
@@ -293,16 +294,41 @@ class SocialMenu(
 
     override fun addOrRemoveFriend(uuid: UUID) {
         UUIDUtil.getName(uuid).thenAcceptOnMainThread {
-            if (socialStateManager.relationships.isFriend(uuid)) {
+            if (socialMenuState.relationships.isFriend(uuid)) {
                 GuiUtil.pushModal { manager ->
                     FriendRemoveConfirmationModal(manager, it).onPrimaryAction {
-                        socialStateManager.relationshipStates.removeFriend(uuid, false)
+                        socialMenuState.relationships.removeFriend(uuid, false)
                     }
                 }
             } else {
-                socialStateManager.relationshipStates.addFriend(uuid, false)
+                socialMenuState.relationships.addFriend(uuid, false)
             }
 
+        }
+    }
+
+    init {
+        val observableFriendList = socialMenuState.relationships.getObservableFriendList()
+        val observableChannelList = socialMenuState.messages.getObservableChannelList()
+        val directMessages = observableChannelList.mapNotNull {
+            it.getOtherUser()
+        }
+
+        observableFriendList.filter {
+            it !in directMessages
+        }.forEach {
+            UUIDUtil.getName(it).thenAcceptOnMainThread { name ->
+                connectionManager.chatManager.createDM(it, name, null) // Callback will trigger a change in observableChannelList
+            }
+        }
+
+        observableFriendList.addObserver { _, event ->
+            if (event is ObservableAddEvent<*>) {
+                val newFriend = event.element.value as UUID
+                UUIDUtil.getName(newFriend).thenAcceptOnMainThread { name ->
+                    connectionManager.chatManager.createDM(newFriend, name, null) // Callback will trigger a change in observableChannelList
+                }
+            }
         }
     }
 

@@ -45,7 +45,7 @@ import gg.essential.util.*
 import java.nio.file.Path
 
 class ScreenshotBrowser(editPath: Path? = null) : InternalEssentialGUI(
-    ElementaVersion.V6,
+    ElementaVersion.V10,
     "Pictures",
     discordActivityDescription = "Browsing pictures",
 ) {

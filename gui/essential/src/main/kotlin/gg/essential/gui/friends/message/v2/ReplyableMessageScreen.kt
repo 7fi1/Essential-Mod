@@ -12,6 +12,7 @@
 package gg.essential.gui.friends.message.v2
 
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Plain
+import gg.essential.config.EssentialConfig
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessageRejectedPacket
 import gg.essential.elementa.UIComponent
@@ -33,6 +34,7 @@ import gg.essential.gui.elementa.state.v2.mutableListStateOf
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.onChange
 import gg.essential.gui.elementa.state.v2.removeAll
+import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toList
 import gg.essential.gui.elementa.state.v2.toListState
 import gg.essential.gui.elementa.state.v2.toSet
@@ -290,12 +292,8 @@ class ReplyableMessageScreen(
     }
 
     override fun draw(matrixStack: UMatrixStack) {
-        if (platform.cmConnection.usingProtocol >= 9) {
-            if (!markedManuallyUnread) {
-                findAndMarkLatestMessageAsRead()
-            }
-        } else {
-            markAllAsRead()
+        if (!markedManuallyUnread) {
+            findAndMarkLatestMessageAsRead()
         }
         super.draw(matrixStack)
     }
@@ -344,73 +342,36 @@ class ReplyableMessageScreen(
         // Insert at the oldest message
         val sortedMessages = messageListState.getUntracked().sortedBy { it.sendTime }
 
-        if (platform.cmConnection.usingProtocol >= 9) {
-            val sortedOtherUserMessages = sortedMessages.filter { USession.activeNow().uuid != it.sender }
+        val sortedOtherUserMessages = sortedMessages.filter { USession.activeNow().uuid != it.sender }
 
-            if (sortedOtherUserMessages.isEmpty()) {
+        if (sortedOtherUserMessages.isEmpty()) {
+            return
+        }
+
+        val lastReadMessageId = messengerStates.getLastReadMessageId(channel.id).getUntracked()
+
+        if (lastReadMessageId != null) {
+            if (sortedOtherUserMessages.last().id <= lastReadMessageId) {
+                addedUnreadDivider = true
                 return
             }
 
-            val lastReadMessageId = messengerStates.getLastReadMessageId(channel.id).getUntracked()
-
-            if (lastReadMessageId != null) {
-                if (sortedOtherUserMessages.last().id <= lastReadMessageId) {
-                    addedUnreadDivider = true
-                    return
-                }
-
-                if (sortedOtherUserMessages.first().id > lastReadMessageId && sortedMessages.any { it.id == lastReadMessageId }) {
-                    insertDividerAt(sortedOtherUserMessages.first())
-                    return
-                }
-
-                sortedOtherUserMessages.firstOrNull { it.id > lastReadMessageId }?.let {
-                    insertDividerAt(it)
-                    return
-                }
-            } else {
-                if (receivedAllMessages) {
-                    // All messages are unread and the new line divider should appear at the top of the list
-                    insertDividerAt(sortedOtherUserMessages.first())
-                    return
-                }
+            if (sortedOtherUserMessages.first().id > lastReadMessageId && sortedMessages.any { it.id == lastReadMessageId }) {
+                insertDividerAt(sortedOtherUserMessages.first())
+                return
             }
-            return
-        }
 
-        if (sortedMessages.none { messengerStates.getUnreadMessageState(it).getUntracked() }) {
-            // There are no unread messages. All messages are already read, so we won't need to place any divider this
-            // time.
-            // In fact, we mustn't place any divider in the future because if we do, it's probably on a message that
-            // was sent while the screen is open and while technically correct (they are new after all!), we don't want
-            // that.
-            addedUnreadDivider = true
-            return
-        }
-
-        if (sortedMessages.isEmpty()) {
-            return
-        }
-
-        // Account for edge case
-        // 1. All messages are unread and the new line divider should appear at the top of the list
-        // 2. There is only a single unread message in the channel
-        val first = sortedMessages.first()
-        if (messengerStates.getUnreadMessageState(first).getUntracked() && receivedAllMessages) {
-            insertDividerAt(first)
-            return
-        }
-
-        sortedMessages.zipWithNext { current, next ->
-            val currentUnread = messengerStates.getUnreadMessageState(current).getUntracked()
-            val nextUnread = messengerStates.getUnreadMessageState(next).getUntracked()
-
-            if (!currentUnread && nextUnread) {
-                insertDividerAt(next)
+            sortedOtherUserMessages.firstOrNull { it.id > lastReadMessageId }?.let {
+                insertDividerAt(it)
+                return
+            }
+        } else {
+            if (receivedAllMessages) {
+                // All messages are unread and the new line divider should appear at the top of the list
+                insertDividerAt(sortedOtherUserMessages.first())
                 return
             }
         }
-
     }
 
     private fun requestMoreMessages() {
@@ -465,11 +426,13 @@ class ReplyableMessageScreen(
                 is ClientMessage.Part.Gift -> GiftEmbedImpl(part.id, messageWrapper)
                 is ClientMessage.Part.Image -> ImageEmbedImpl(part.id, messageWrapper)
                 is ClientMessage.Part.Skin -> SkinEmbedImpl(part.skin, messageWrapper)
-                is ClientMessage.Part.Text -> ParagraphLineImpl(messageWrapper, part.content)
+                is ClientMessage.Part.Text -> ParagraphLineImpl(messageWrapper) {
+                    if (EssentialConfig.chatFilterWithSource().first) part.filteredContent else part.unfilteredContent
+                }
             })
         }
         if (messages.isEmpty()) {
-            messages.add(ParagraphLineImpl(messageWrapper, ""))
+            messages.add(ParagraphLineImpl(messageWrapper, stateOf("")))
         }
         return messages
     }
@@ -543,9 +506,6 @@ class ReplyableMessageScreen(
     }
 
     override fun onOpen() {
-        if (platform.cmConnection.usingProtocol < 9) {
-            markAllAsRead()
-        }
     }
 
     override fun onClose() {
@@ -578,13 +538,6 @@ class ReplyableMessageScreen(
             throw IllegalArgumentException("Cannot remove a message which has been sent successfully or received")
         }
         sendQueue.removeAll { it.id == message.id }
-    }
-
-    @Deprecated("Not used in protocol 9 or later")
-    override fun markAllAsRead() {
-        content.childrenOfType<MessageWrapperImpl>().forEach {
-            it.markRead()
-        }
     }
 
     private fun findAndMarkLatestMessageAsRead() {
@@ -620,26 +573,6 @@ class ReplyableMessageScreen(
             // Add the unread message divider
             insertUnreadDivider()
         }
-    }
-
-    @Deprecated("Not used in protocol 9 or later")
-    override fun markedManuallyUnread(messageWrapper: MessageWrapper) {
-        scroller.holdScrollVerticalLocation(messageWrapper) {
-            addedUnreadDivider = false
-
-            // Delete the existing unread divider if it exists
-            content.children.find { it is UnreadDivider }?.hide(instantly = true)
-
-            content.childrenOfType<MessageWrapperImpl>().filter {
-                it.sendTime >= messageWrapper.sendTime && !it.sentByClient
-            }.forEach {
-                it.markSelfUnread()
-            }
-
-            // Add the unread message divider
-            insertUnreadDivider()
-        }
-
     }
 
     private companion object {

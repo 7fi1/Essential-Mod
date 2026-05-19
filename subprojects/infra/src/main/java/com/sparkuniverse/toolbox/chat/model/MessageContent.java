@@ -59,12 +59,8 @@ public class MessageContent {
             }
         }
 
-        public @NotNull String getText(boolean filter) {
-            if (!filter && unfiltered != null) {
-                return unfiltered;
-            } else {
-                return text;
-            }
+        public @NotNull String getText() {
+            return text;
         }
     }
 

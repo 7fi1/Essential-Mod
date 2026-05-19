@@ -16,7 +16,7 @@ import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.GpuTexture
 import java.awt.Color
 
-interface GlFrameBuffer {
+interface GlFrameBuffer : AutoCloseable {
     val width: Int
     val height: Int
 
@@ -24,8 +24,7 @@ interface GlFrameBuffer {
     val texture: GpuTexture
     val depthStencil: GpuTexture
 
-    fun resize(width: Int, height: Int)
-    fun delete()
+    override fun close() // does not throw Exception
 
     fun bind(): () -> Unit
     fun <T> use(block: () -> T): T

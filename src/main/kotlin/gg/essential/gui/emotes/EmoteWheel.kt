@@ -80,6 +80,7 @@ import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.network.cosmetics.toInfra
 import gg.essential.universal.UKeyboard
 import gg.essential.universal.UMinecraft
+import gg.essential.universal.UScreen
 import gg.essential.universal.wrappers.UPlayer
 import gg.essential.util.GuiUtil
 import gg.essential.util.MinecraftUtils
@@ -328,7 +329,7 @@ class EmoteWheel : WindowScreen(
 
         @JvmStatic
         fun open() {
-            if (UMinecraft.getMinecraft().currentScreen != null || emoteClicked) {
+            if (UScreen.currentScreen != null || emoteClicked) {
                 return
             }
 

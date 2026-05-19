@@ -29,14 +29,15 @@ import java.awt.Color
  */
 abstract class UIFrameBuffer : UIComponent(), ImageProvider {
     private var dirty = true
-    private val frameBuffer = GlFrameBuffer(0, 0)
+    private var frameBuffer: GlFrameBuffer? = null
 
     fun markDirty() {
         dirty = true
     }
 
     open fun delete() {
-        frameBuffer.delete()
+        frameBuffer?.close()
+        frameBuffer = null
     }
 
     override fun draw(matrixStack: UMatrixStack) {
@@ -64,10 +65,12 @@ abstract class UIFrameBuffer : UIComponent(), ImageProvider {
         val frameWidth = realWidth.toInt()
         val frameHeight = realHeight.toInt()
 
-        if (frameWidth != frameBuffer.width || frameHeight != frameBuffer.height) {
-            frameBuffer.resize(frameWidth, frameHeight)
+        if (frameWidth != frameBuffer?.width || frameHeight != frameBuffer?.height) {
+            frameBuffer?.close()
+            frameBuffer = GlFrameBuffer(frameWidth, frameHeight)
             dirty = true
         }
+        val frameBuffer = frameBuffer!!
 
         if (dirty) {
             dirty = false // reset this before rendering, so the renderVG method can re-set it
@@ -82,7 +85,7 @@ abstract class UIFrameBuffer : UIComponent(), ImageProvider {
     override fun drawImage(matrixStack: UMatrixStack, x: Double, y: Double, width: Double, height: Double, color: Color) {
         drawFrameBuffer(width, height)
 
-        frameBuffer.drawTexture(matrixStack, x, y, width, height, color)
+        frameBuffer?.drawTexture(matrixStack, x, y, width, height, color)
     }
 
     /**

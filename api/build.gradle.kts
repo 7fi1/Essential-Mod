@@ -60,6 +60,7 @@ dependencies {
     val ucMcVersion = when (platform.mcVersion) {
         12101 -> "1.21"
         11802 -> "1.18.1"
+        11605 -> "1.16.2"
         else -> mcVersionStr
     }
     // These versions are configured in gradle/libs.versions.toml

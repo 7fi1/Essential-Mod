@@ -25,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -48,7 +49,7 @@ class GatewayServicesManager(
                 // `/` will be discarded (because that's how relative URL resolving works).
                 var baseUrlStr = info.url
                 if (!baseUrlStr.endsWith("/")) baseUrlStr += "/"
-                val baseUrl = HttpUrl.parse(baseUrlStr)
+                val baseUrl = baseUrlStr.toHttpUrlOrNull()
                 if (baseUrl == null) {
                     LOGGER.warn("Failed to parse url for service `{}`: {}", id, info.url)
                     continue
@@ -107,7 +108,7 @@ class GatewayServicesManager(
                 builder.configure(serviceInfo, path)
                 val response = httpClient.newCall(builder.build()).executeAwait()
 
-                if (response.code() == 401) {
+                if (response.code == 401) {
                     response.close()
                     serviceInfo.expired = true
                     continue

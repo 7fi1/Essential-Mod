@@ -490,25 +490,29 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                     name = "Notifications"
                     description = "Notifications appear in the bottom right corner."
                 }
-                switch(friendConnectionStatusState) {
-                    name = "Friend online alert"
-                    description = "Receive a notification when a friend comes online."
-                }
-                switch(messageReceivedNotificationsState) {
-                    name = "Direct message notifications"
-                    description = "Receive a notification when you get a direct message in Essential chat."
-                }
-                switch(groupMessageReceivedNotificationsState) {
-                    name = "Group message notifications"
-                    description = "Receive a notification when you get a group message in Essential chat."
-                }
-                switch(messageSoundState) {
-                    name = "Message received sound"
-                    description = "Plays a sound when receiving a message."
-                }
-                switch(updateModalState) {
-                    name = "Essential update notifications"
-                    description = "Displays a notification modal after Essential has been updated."
+                dynamic {
+                    if (!disableAllNotificationsState()) {
+                        switch(friendConnectionStatusState) {
+                            name = "Friend online alert"
+                            description = "Receive a notification when a friend comes online."
+                        }
+                        switch(messageReceivedNotificationsState) {
+                            name = "Direct message notifications"
+                            description = "Receive a notification when you get a direct message in Essential chat."
+                        }
+                        switch(groupMessageReceivedNotificationsState) {
+                            name = "Group message notifications"
+                            description = "Receive a notification when you get a group message in Essential chat."
+                        }
+                        switch(messageSoundState) {
+                            name = "Message received sound"
+                            description = "Plays a sound when receiving a message."
+                        }
+                        switch(updateModalState) {
+                            name = "Essential update notifications"
+                            description = "Displays a notification modal after Essential has been updated."
+                        }
+                    }
                 }
             }
 

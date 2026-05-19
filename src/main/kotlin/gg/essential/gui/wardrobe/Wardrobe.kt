@@ -58,7 +58,7 @@ class Wardrobe(
     initialCategory: WardrobeCategory? = null,
     initialEmoteWheel: Boolean = false,
 ) : InternalEssentialGUI(
-    ElementaVersion.V6,
+    ElementaVersion.V10,
     "Wardrobe",
     discordActivityDescription = "Customizing their character",
 ), GuiRequiresTOS {
@@ -112,7 +112,6 @@ class Wardrobe(
     private val configurationMenu by lazy { ConfigurationMenu(state) }
     private val cosmeticConfiguration by lazy { CosmeticConfiguration(state) }
     private val cosmeticCategoryConfiguration by lazy { CosmeticCategoryConfiguration(state) }
-    private val cosmeticTypeConfiguration by lazy { CosmeticTypeConfiguration(state) }
     private val cosmeticBundleConfiguration by lazy { CosmeticBundleConfiguration(state) }
     private val featuredPageCollectionConfiguration by lazy { FeaturedPageCollectionConfiguration(state) }
     private val implicitOwnershipConfiguration by lazy { ImplicitOwnershipConfiguration(state) }
@@ -130,7 +129,6 @@ class Wardrobe(
         when {
             state.currentlyEditingCosmetic() != null -> cosmeticConfiguration
             state.currentlyEditingCosmeticBundle() != null -> cosmeticBundleConfiguration
-            state.currentlyEditingCosmeticType() != null -> cosmeticTypeConfiguration
             state.currentlyEditingCosmeticCategory() != null -> cosmeticCategoryConfiguration
             state.currentlyEditingFeaturedPageCollection() != null -> featuredPageCollectionConfiguration
             state.currentlyEditingImplicitOwnership() != null -> implicitOwnershipConfiguration

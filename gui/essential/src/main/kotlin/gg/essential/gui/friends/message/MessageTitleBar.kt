@@ -22,13 +22,17 @@ import gg.essential.gui.common.*
 import gg.essential.gui.common.constraints.CenterPixelConstraint
 import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.mapList
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.friends.state.SocialStates
+import gg.essential.gui.layoutdsl.Arrangement
 import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.Modifier
+import gg.essential.gui.layoutdsl.fillHeight
 import gg.essential.gui.layoutdsl.heightAspect
 import gg.essential.gui.layoutdsl.layout
+import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.util.hoveredState
@@ -83,10 +87,7 @@ class MessageTitleBar(
 
 
         // Member container is not bound if this is an announcement channel
-        memberContainer.bindChildren(
-            socialStates.messages.getObservableMemberList(preview.channel.id),
-            filter = { it != USession.activeNow().uuid }
-        ) { uuid ->
+        fun LayoutScope.member(uuid: UUID, modifier: Modifier = Modifier) {
             Member(uuid).also { member ->
                 member.bindHoverEssentialTooltip(memo {
                     if (member.isMemberSuspendedState()) {
@@ -95,6 +96,15 @@ class MessageTitleBar(
                         UuidNameLookup.nameState(uuid, "Loading...")()
                     }
                 }.toV1(member))
+            }(modifier)
+        }
+        val members = socialStates.messages.getMembers(preview.channel.id)
+        val otherMembers = members.mapList { it - USession.active().uuid }
+        memberContainer.layout {
+            row(Modifier.fillHeight(), Arrangement.spacedBy(3f)) {
+                forEach(otherMembers) { uuid ->
+                    member(uuid)
+                }
             }
         }
 
@@ -187,8 +197,6 @@ class MessageTitleBar(
             constrain {
                 width = ChildBasedSizeConstraint()
                 height = ChildBasedSizeConstraint()
-                x = SiblingConstraint(3f)
-                y = CenterPixelConstraint()
             }
 
             layout {

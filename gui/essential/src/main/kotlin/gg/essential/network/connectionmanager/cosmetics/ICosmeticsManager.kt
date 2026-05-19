@@ -22,6 +22,8 @@ interface ICosmeticsManager {
     val localCosmeticsData: LocalCosmeticsData?
     val cosmeticsDataWithChanges: CosmeticsDataWithChanges?
 
+    val wardrobeSettings: WardrobeSettings
+
     val unlockedCosmetics: State<Set<CosmeticId>>
     val unlockedCosmeticsData: State<Map<CosmeticId, CosmeticUnlockData>>
 

@@ -198,6 +198,23 @@ public class Plugin implements IMixinConfigPlugin {
         //$$ }
         //#endif
 
+        // All versions 1.21.5+ are v3.4.0+ of fancy menu so we no longer want this mixin to be capable of silently failing
+        //#if MC >= 1.18.2 && MC < 1.21.5
+        //$$ if (mixinClassName.endsWith("Mixin_AbstractElement_CacheRealMousePos")) {
+        //$$     // Fields, and reason for mixin existing, added in v3.4.0
+        //$$     return testClass("de.keksuccino.fancymenu.customization.element.AbstractElement",
+        //$$             clazz -> {
+        //$$                 for (org.objectweb.asm.tree.FieldNode field : clazz.fields) {
+        //$$                     if ("cachedMouseX".equals(field.name)) {
+        //$$                         return true;
+        //$$                     }
+        //$$                 }
+        //$$                 return false;
+        //$$             }
+        //$$     );
+        //$$ }
+        //#endif
+
         // Due to changes in FancyMenu, we need a different Mixin for v2.14.10 and above. This version can be identified
         // by the ScreenBackgroundRenderedEvent class.
         if (mixinClassName.endsWith("Mixin_FancyMainMenu_GuiDrawScreenEvent_Pre") && hasClass("de.keksuccino.fancymenu.events.ScreenBackgroundRenderedEvent")) {
@@ -235,7 +252,7 @@ public class Plugin implements IMixinConfigPlugin {
             transformer.preApply(targetClass);
         }
 
-        //#if MC==11602 && FABRIC || MC==12004 && FABRIC
+        //#if MC==11605 && FABRIC || MC==12004 && FABRIC
         //$$ if (inOurDevEnv && mixinClassName.endsWith("Mixin_RenderParticleSystemOfClientWorld")) {
         //$$     // Workaround for a mixin """feature""" where in a development environment it'll strip the descriptor from
         //$$     // target references and thereby match methods that were never meant to be matched.

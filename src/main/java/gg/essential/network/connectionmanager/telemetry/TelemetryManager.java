@@ -15,6 +15,7 @@ import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
 import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket;
 import gg.essential.connectionmanager.common.packet.telemetry.ServerRecognizedTelemetryPacket;
+import gg.essential.data.OnboardingData;
 import gg.essential.elementa.state.v2.ReferenceHolder;
 import gg.essential.event.client.InitializationEvent;
 import gg.essential.event.essential.TosAcceptedEvent;
@@ -40,7 +41,6 @@ import me.kbrewster.eventbus.Subscribe;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.opengl.GL11;
 import oshi.SystemInfo;
 //#if MC<11701
 import oshi.hardware.Processor;
@@ -205,6 +205,12 @@ public class TelemetryManager implements NetworkedManager {
         PERSISTENT_TOAST_CLICKED,
     }
 
+    public void sendAutoUpdateTelemetry() {
+        enqueue(new ClientTelemetryPacket("AUTO_UPDATE_STATE ", new HashMap<String, Object>() {{
+            put("state", EssentialConfig.INSTANCE.getAutoUpdate());
+        }}));
+    }
+
     @Subscribe
     public void onServerJoin(ServerJoinEvent event) {
         SpsAddress spsAddress = SpsAddress.parse(event.getServerData().serverIP);
@@ -216,7 +222,7 @@ public class TelemetryManager implements NetworkedManager {
     }
 
     @Subscribe
-    public void sendHardwareAndOSTelemetry(@NotNull final TosAcceptedEvent event) {
+    public void sendHardwareTelemetry(@NotNull final TosAcceptedEvent event) {
 
         final Map<String, Object> hardwareMap = new HashMap<>();
 
@@ -235,19 +241,19 @@ public class TelemetryManager implements NetworkedManager {
             hardwareMap.putIfAbsent("cpu", "UNKNOWN");
         }
 
-        hardwareMap.put("gpu", GL11.glGetString(GL11.GL_RENDERER));
         hardwareMap.put("allocatedMemory", Runtime.getRuntime().maxMemory() / 1024L / 1024L);
 
-        try {
-            hardwareMap.put("os", System.getProperty("os.name", "UNKNOWN"));
-            hardwareMap.put("osVersion", System.getProperty("os.version", "UNKNOWN"));
-        } catch (Exception e) {
-            Essential.logger.warn("Failed to get Operating System information", e);
-            hardwareMap.putIfAbsent("os", "UNKNOWN");
-            hardwareMap.putIfAbsent("osVersion", "UNKNOWN");
-        }
-
         enqueue(new ClientTelemetryPacket("HARDWARE_V2", hardwareMap));
+
+        // Sends on init once per PC, and always when the value is changed later
+        if (!OnboardingData.hasSentAutoUpdateTelemetryBefore()) {
+            sendAutoUpdateTelemetry();
+            OnboardingData.setSentAutoUpdateTelemetry();
+        }
+        StateKt.onChange(EssentialConfig.INSTANCE.getAutoUpdateState(), referenceHolder, (o, b)-> {
+            sendAutoUpdateTelemetry();
+            return Unit.INSTANCE;
+        });
     }
 
     @Subscribe

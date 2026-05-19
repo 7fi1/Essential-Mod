@@ -132,7 +132,7 @@ import java.util.*
 //$$ import net.minecraft.client.util.math.MatrixStack
 //#endif
 
-//#if MC==11602
+//#if MC == 1.16.5
 //$$ import dev.folomeev.kotgl.matrix.matrices.mutables.set
 //$$ import gg.essential.model.util.toMat4
 //$$ import net.minecraft.client.renderer.GLAllocation
@@ -432,7 +432,7 @@ open class UI3DPlayer(
         //#if MC>=12106
         //$$ @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") // missing Nullable annotation
         //$$ RenderSystem.setProjectionMatrix(orgProjectionMatrixBuffer, orgProjectionType)
-        //$$ RenderSystem.queueFencedTask { projectionMatrixBuffer.buffer.close() }
+        //$$ projectionMatrixBuffer.buffer.close()
         //#elseif MC>=12102
         //$$ RenderSystem.setProjectionMatrix(orgProjectionMatrix, orgProjectionType);
         //#elseif MC>=12000
@@ -702,7 +702,7 @@ open class UI3DPlayer(
     private fun setupPlayerLight(): () -> Unit {
         val stack = CMatrixStack()
 
-        //#if MC==11602
+        //#if MC == 1.16.5
         //$$ // 1.16 is a weird mix of legacy gl stack and explicit pojo stack
         //$$ // The lighting setup method already ignores the gl stack but the renderer doesn't yet take the pojo stack
         //$$ // stack as a separate input, so one actually has to combine the two stacks when setting lighting for it
@@ -756,7 +756,7 @@ open class UI3DPlayer(
             //#if MC>=12106
             //$$ @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") // missing Nullable annotation
             //$$ RenderSystem.setShaderLights(orgShaderLights)
-            //$$ RenderSystem.queueFencedTask { shaderLights.buffer.close() }
+            //$$ shaderLights.buffer.close()
             //#elseif MC>=11400
             //$$ RenderHelper.setupGui3DDiffuseLighting()
             //#else

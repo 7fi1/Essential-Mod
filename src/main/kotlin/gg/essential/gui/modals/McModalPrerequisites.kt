@@ -52,8 +52,7 @@ object McModalPrerequisites : ModalPrerequisites() {
                     isConnecting = { (connectionStatus() == ConnectionManagerStatus.Success && (!connectionManager.suspensionManager.isLoaded() || !connectionManager.rulesManager.isLoaded())) || connectionStatus() == null },
                     continuation = continuation
                 )
-            }
-            PrerequisiteResult.SUCCESS
+            }.toResult()
         } else {
             PrerequisiteResult.PASS
         }
@@ -61,8 +60,7 @@ object McModalPrerequisites : ModalPrerequisites() {
 
     override suspend fun ModalFlow.doCosmeticsModal(): PrerequisiteResult {
         if (!Essential.getInstance().connectionManager.cosmeticsManager.cosmeticsLoaded.getUntracked()) {
-            cosmeticsLoadingModal()
-            return PrerequisiteResult.SUCCESS
+            return cosmeticsLoadingModal().toResult()
         }
         return PrerequisiteResult.PASS
     }

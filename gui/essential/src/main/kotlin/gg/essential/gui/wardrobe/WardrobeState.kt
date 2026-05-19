@@ -16,7 +16,6 @@ import com.google.common.collect.ImmutableMap
 import gg.essential.cosmetics.CosmeticBundleId
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.cosmetics.CosmeticId
-import gg.essential.cosmetics.CosmeticTypeId
 import gg.essential.cosmetics.EquippedCosmetic
 import gg.essential.cosmetics.FeaturedPageCollectionId
 import gg.essential.cosmetics.ImplicitOwnershipId
@@ -117,8 +116,6 @@ class WardrobeState(
 
     val cosmeticsData = cosmeticsManager.cosmeticsData
 
-    val rawTypes = cosmeticsManager.cosmeticsData.types
-
     val rawCategories = cosmeticsManager.cosmeticsData.categories
 
     val rawBundles = cosmeticsManager.cosmeticsData.bundles
@@ -182,8 +179,6 @@ class WardrobeState(
     }}.toListState()
 
     val currentCategory = mutableStateOf(initialCategory ?: allCategories.get().first { it !is WardrobeCategory.SubCategory })
-
-    val types = rawTypes
 
     val bundles = rawBundles
 
@@ -497,7 +492,6 @@ class WardrobeState(
 
     val currentlyEditingCosmeticId = mutableStateOf<CosmeticId?>(null)
     val currentlyEditingCosmeticBundleId = mutableStateOf<CosmeticBundleId?>(null)
-    val currentlyEditingCosmeticTypeId = mutableStateOf<CosmeticTypeId?>(null)
     val currentlyEditingCosmeticCategoryId = mutableStateOf<CosmeticCategoryId?>(null)
     val currentlyEditingFeaturedPageCollectionId = mutableStateOf<FeaturedPageCollectionId?>(null)
     val currentlyEditingImplicitOwnershipId = mutableStateOf<ImplicitOwnershipId?>(null)
@@ -505,7 +499,6 @@ class WardrobeState(
 
     val currentlyEditingCosmetic = stateBy { currentlyEditingCosmeticId()?.let { id -> cosmetics().find { it.id == id } } }
     val currentlyEditingCosmeticBundle = stateBy { currentlyEditingCosmeticBundleId()?.let { id -> bundles().find { it.id == id } } }
-    val currentlyEditingCosmeticType = stateBy { currentlyEditingCosmeticTypeId()?.let { id -> types().find { it.id == id } } }
     val currentlyEditingCosmeticCategory = stateBy { currentlyEditingCosmeticCategoryId()?.let { id -> rawCategories().find { it.id == id } } }
     val currentlyEditingFeaturedPageCollection = stateBy { currentlyEditingFeaturedPageCollectionId()?.let { id -> rawFeaturedPageCollections().find { it.id == id } } }
     val currentlyEditingImplicitOwnership = stateBy { currentlyEditingImplicitOwnershipId()?.let { id -> rawImplicitOwnerships().find { it.id == id } } }
@@ -518,7 +511,6 @@ class WardrobeState(
             showingDiagnosticsFor(),
             currentlyEditingCosmetic(),
             currentlyEditingCosmeticBundle(),
-            currentlyEditingCosmeticType(),
             currentlyEditingCosmeticCategory(),
             currentlyEditingFeaturedPageCollection(),
             currentlyEditingSortWeightCategory(),

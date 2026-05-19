@@ -46,10 +46,10 @@ import gg.essential.mixins.ext.client.multiplayer.ext
 import gg.essential.mixins.ext.client.multiplayer.recommendedVersion
 import gg.essential.mixins.ext.client.multiplayer.showDownloadIcon
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager
+import gg.essential.universal.UScreen
 import gg.essential.util.GuiUtil
 import gg.essential.util.UDrawContext
 import gg.essential.util.createEssentialTooltip
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiMultiplayer
 import net.minecraft.client.gui.ServerSelectionList
@@ -307,7 +307,7 @@ class EssentialMultiplayerGui {
                     // Switch to Favorites tab, select server and scroll to it
                     EssentialConfig.currentMultiplayerTab = 0
                     screen.ext.refresh()
-                    val newScreen = Minecraft.getMinecraft().currentScreen as GuiMultiplayer
+                    val newScreen = UScreen.currentScreen as GuiMultiplayer
                     val newList = newScreen.acc.serverListSelector
                     //#if MC>=11600
                     //$$ val lastServer = newList.eventListeners.lastOrNull { it is NormalEntry }

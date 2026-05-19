@@ -30,7 +30,7 @@ import gg.essential.universal.GuiScale
 import gg.essential.util.GuiUtil
 
 class WorldShareSettingsGui : InternalEssentialGUI(
-    ElementaVersion.V6,
+    ElementaVersion.V10,
     "World Host Settings",
     GuiScale.scaleForScreenSize().ordinal,
 ), GuiRequiresTOS {

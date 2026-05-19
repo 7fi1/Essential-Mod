@@ -18,6 +18,7 @@ import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.withAlpha
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.friends.message.v2.SendState
+import gg.essential.gui.image.AnimatedResourceImageFactory
 import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.image.ImageGeneratorSettings
 import gg.essential.gui.image.ResourceImageFactory
@@ -1090,6 +1091,10 @@ object EssentialPalette {
 
     @JvmField
     val SIGN_OUT_8X7: ImageFactory = ResourceImageFactory("/assets/essential/textures/account/sign_out_8x7.png")
+
+    val LOADING_ANIMATION = AnimatedResourceImageFactory("/assets/essential/textures/loading/loading_", ".png", 12, 80)
+
+    val CLOCK_ANIMATION = AnimatedResourceImageFactory("/assets/essential/textures/studio/clock_", ".png", 4, 1000)
 
     @LoadsResources("/assets/essential/textures/friends/group_[a-z]+.png")
     private fun createGroupIconFactory(name: String): ImageFactory =

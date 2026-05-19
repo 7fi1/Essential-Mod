@@ -35,10 +35,6 @@ public class Message {
     @NotNull
     public MessageContent content;
 
-    @Deprecated
-    @SerializedName("e")
-    private final boolean read;
-
     @SerializedName("f")
     @Nullable
     private final Long replyTargetId;
@@ -57,7 +53,6 @@ public class Message {
             final long channelId,
             final @NotNull UUID sender,
             final @NotNull MessageContent content,
-            final boolean read,
             final @Nullable Long replyTargetId,
             final @Nullable Long lastEditTime,
             final long createdAt
@@ -66,7 +61,6 @@ public class Message {
         this.channelId = channelId;
         this.sender = sender;
         this.content = content;
-        this.read = read;
         this.replyTargetId = replyTargetId;
         this.lastEditTime = lastEditTime;
         this.createdAt = createdAt;
@@ -88,11 +82,6 @@ public class Message {
     @NotNull
     public MessageContent getContent() {
         return this.content;
-    }
-
-    @Deprecated
-    public boolean isRead() {
-        return this.read;
     }
 
     @Nullable

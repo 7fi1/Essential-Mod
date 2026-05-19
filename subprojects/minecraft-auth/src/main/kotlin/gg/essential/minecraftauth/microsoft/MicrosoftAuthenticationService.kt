@@ -22,6 +22,7 @@ import gg.essential.util.har.requestBodyContainsSecrets
 import gg.essential.util.har.responseBodyContainsSecrets
 import okhttp3.FormBody
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import java.net.URI
 import java.security.SecureRandom
@@ -34,10 +35,10 @@ object MicrosoftAuthenticationService {
     private const val SCOPE = "XboxLive.signin XboxLive.offline_access"
 
     // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow#request-an-authorization-code
-    private const val OAUTH_AUTHORIZATION_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize"
+    private val OAUTH_AUTHORIZATION_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize".toHttpUrl()
 
     // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow#request-an-access-token-with-a-client_secret
-    private const val OAUTH_EXCHANGE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token"
+    private val OAUTH_EXCHANGE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token".toHttpUrl()
 
     /**
      * Attempts to exchange an authorization code for a Microsoft access token.
@@ -98,9 +99,9 @@ object MicrosoftAuthenticationService {
             "code_challenge_method" to "S256"
         )
 
-        val httpBuilder = HttpUrl.parse(OAUTH_AUTHORIZATION_URL)!!.newBuilder()
+        val httpBuilder = OAUTH_AUTHORIZATION_URL.newBuilder()
         parameters.forEach { httpBuilder.addQueryParameter(it.key, it.value) }
-        return httpBuilder.build().uri()
+        return httpBuilder.build().toUri()
     }
 
 

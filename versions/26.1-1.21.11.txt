@@ -31,6 +31,7 @@ net.minecraft.client.renderer.rendertype.RenderTypes entityCutoutCull() entityCu
 net.minecraft.client.Screenshot lambda$grab$1() method_22691()
 net.minecraft.client.gui.screens.multiplayer.ServerSelectionList$OnlineServerEntry this$0 field_19117
 net.minecraft.client.renderer.feature.NameTagFeatureRenderer renderTranslucent() render()
+net.minecraft.client.server.IntegratedServer lambda$halt$0() method_4816()
 
 net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
 net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry clientboundPlay()Lnet/fabricmc/fabric/api/networking/v1/PayloadTypeRegistry; playS2C()

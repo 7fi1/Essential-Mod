@@ -25,12 +25,12 @@ inline fun <reified T> decodeMojangResponse(response: Response): T =
     decodeMojangResponse(response, serializer<T>())
 
 fun <T> decodeMojangResponse(response: Response, deserializer: DeserializationStrategy<T>): T {
-    when (response.code()) {
+    when (response.code) {
         429 -> throw RateLimitException()
         else -> {}
     }
 
-    val body = response.body()!!.string()
+    val body = response.body.string()
 
     try {
         return json.decodeFromString(deserializer, body)
@@ -39,7 +39,7 @@ fun <T> decodeMojangResponse(response: Response, deserializer: DeserializationSt
             json.decodeFromString<ErrorResponse>(body)
         } catch (e1: Exception) {
             e.addSuppressed(e1)
-            throw IOException("Invalid response (code ${response.code()}): `$body`", e)
+            throw IOException("Invalid response (code ${response.code}): `$body`", e)
         }
         throw MojangApiException(error)
     }
@@ -47,9 +47,13 @@ fun <T> decodeMojangResponse(response: Response, deserializer: DeserializationSt
 
 @Serializable
 data class ErrorResponse(
-    val error: String,
+    val error: String? = null,
     val errorMessage: String,
     val cause: String? = null,
+    val details: Details? = null,
 )
+
+@Serializable
+data class Details(val status: String? = null)
 
 class MojangApiException(val response: ErrorResponse) : IOException(response.toString())

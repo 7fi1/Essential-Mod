@@ -29,10 +29,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
@@ -51,7 +51,7 @@ class MojangProfileApi(
     val accessToken: String,
     val retryOnRateLimit: Boolean = false,
 ) {
-    private val JSON = MediaType.parse("application/json")
+    private val JSON = "application/json".toMediaType()
     private val URL_BASE = System.getProperty(
         "minecraft.api.services.host",
         "https://api.minecraftservices.com",
@@ -93,7 +93,7 @@ class MojangProfileApi(
                 @Serializable
                 data class Payload(val url: String, val variant: Model)
                 val payload = json.encodeToString(Payload(skin.url, skin.model))
-                post(RequestBody.create(JSON, payload))
+                post(payload.toRequestBody(JSON))
             } else {
                 delete()
             }
@@ -111,7 +111,7 @@ class MojangProfileApi(
 
             post(MultipartBody.Builder().apply {
                 setType(MultipartBody.FORM)
-                addFormDataPart("file", "skin.png", RequestBody.create(MediaType.parse("image/png"), png))
+                addFormDataPart("file", "skin.png", png.toRequestBody("image/png".toMediaType()))
                 addFormDataPart("variant", model.variant)
             }.build())
         }.build()
@@ -129,7 +129,7 @@ class MojangProfileApi(
                 @Serializable
                 data class Payload(val capeId: String)
                 val payload = json.encodeToString(Payload(id))
-                put(RequestBody.create(JSON, payload))
+                put(payload.toRequestBody(JSON))
             } else {
                 delete()
             }

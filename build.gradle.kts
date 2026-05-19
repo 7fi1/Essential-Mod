@@ -113,6 +113,22 @@ dependencies {
         }
     }
 
+    // for fancy menu v3 injecting
+    if (mcVersion >= 1_20_00) {
+        repositories.modrinth()
+        when {
+            platform.isFabric -> modCompileOnly("maven.modrinth:fancymenu:L92PEacB")
+            platform.isForge -> modCompileOnly("maven.modrinth:fancymenu:MbyfTTsz")
+            platform.isNeoForge && mcVersion >= 1_20_04 -> modCompileOnly("maven.modrinth:fancymenu:EX9HJeRD")
+        }
+    } else if (mcVersion >= 1_18_00) {
+        repositories.modrinth()
+        when {
+            platform.isFabric -> modCompileOnly("maven.modrinth:fancymenu:MLK7D2vG")
+            platform.isForge -> modCompileOnly("maven.modrinth:fancymenu:qwfP40Aa")
+        }
+    }
+
     // Want to test with Optifine in your development environment?
     // Set this to true, reload the Gradle project and add the Optifine jar into your mods folder.
     // Bonus: Run with -Doptifabric.extract=true to get extracted and remapped OF classes/patches in `run/.optifine`.

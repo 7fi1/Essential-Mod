@@ -122,6 +122,16 @@ object OnboardingData : OnboardingData {
         state.set { it.copy(seenServerDiscovery = true) }
     }
 
+    @JvmStatic
+    fun hasSentAutoUpdateTelemetryBefore(): Boolean {
+        return getData().sentAutoUpdateTelemetry
+    }
+
+    @JvmStatic
+    fun setSentAutoUpdateTelemetry() {
+        state.set { it.copy(sentAutoUpdateTelemetry = true) }
+    }
+
     override fun hasAcceptedEssentialTOS(): Boolean = hasAcceptedTos()
 
     override fun hasDeniedEssentialTOS(): Boolean = hasDeniedTos()
@@ -162,5 +172,7 @@ object OnboardingData : OnboardingData {
         val hasShownWikiToast: Boolean = false,
         @SerialName("seen_server_discovery")
         val seenServerDiscovery: Boolean = false,
+        @SerialName("sent_auto_update_telemetry")
+        val sentAutoUpdateTelemetry: Boolean = false,
     )
 }

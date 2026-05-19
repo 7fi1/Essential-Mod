@@ -15,8 +15,13 @@ import gg.essential.elementa.components.UIImage
 import gg.essential.elementa.components.inspector.Inspector
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.AutoImageSize
+import gg.essential.gui.common.SequenceAnimatedUIImage
 import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.image.AnimatedResourceImageFactory
 import gg.essential.gui.image.ImageFactory
+import org.slf4j.LoggerFactory
+
+private val LOGGER = LoggerFactory.getLogger("Essential Logger")
 
 fun LayoutScope.image(icon: ImageFactory, modifier: Modifier = Modifier): UIImage {
     val image = icon.create()
@@ -37,6 +42,10 @@ fun LayoutScope.icon(icon: State<ImageFactory>, modifier: Modifier = Modifier) =
 @Deprecated("Using StateV1 is discouraged, use StateV2 instead")
 fun LayoutScope.icon(icon: gg.essential.elementa.state.State<ImageFactory>, modifier: Modifier = Modifier) =
     bind(icon) { icon(it, modifier) }
+
+fun LayoutScope.image(image: AnimatedResourceImageFactory, modifier: Modifier = Modifier): SequenceAnimatedUIImage {
+    return image.create()(modifier)
+}
 
 @Suppress("unused")
 private val init = run {

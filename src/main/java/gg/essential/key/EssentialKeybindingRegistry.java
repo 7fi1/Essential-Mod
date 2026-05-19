@@ -34,6 +34,7 @@ import gg.essential.network.connectionmanager.sps.SPSSessionSource;
 import gg.essential.network.cosmetics.Cosmetic;
 import gg.essential.universal.UKeyboard;
 import gg.essential.universal.UMinecraft;
+import gg.essential.universal.UScreen;
 import gg.essential.universal.wrappers.UPlayer;
 import gg.essential.util.*;
 import me.kbrewster.eventbus.Subscribe;
@@ -91,19 +92,19 @@ public class EssentialKeybindingRegistry {
     // Note: This gets called incredibly early in Minecraft's initialization, be very careful what you do here.
     public KeyBinding[] registerKeyBinds(KeyBinding[] allBindings) {
         new EssentialKeybinding("ESSENTIAL_FRIENDS", CATEGORY, UKeyboard.KEY_H).requiresEssentialFull().withInitialPress(() -> {
-            if (!UKeyboard.isKeyDown(UKeyboard.KEY_F3) && UMinecraft.getMinecraft().currentScreen == null) {
+            if (!UKeyboard.isKeyDown(UKeyboard.KEY_F3) && UScreen.getCurrentScreen() == null) {
                 GuiUtil.openScreen(SocialMenu.class, SocialMenu::new);
             }
         });
 
         EssentialKeybinding studio = new EssentialKeybinding("COSMETIC_STUDIO", CATEGORY, UKeyboard.KEY_B).withInitialPress(() -> {
-            if (!UKeyboard.isKeyDown(UKeyboard.KEY_F3) && UMinecraft.getMinecraft().currentScreen == null) {
+            if (!UKeyboard.isKeyDown(UKeyboard.KEY_F3) && UScreen.getCurrentScreen() == null) {
                 GuiUtil.openScreen(Wardrobe.class, Wardrobe::new);
             }
         });
 
         new EssentialKeybinding("SCREENSHOT_MANAGER", CATEGORY, UKeyboard.KEY_I).requiresEssentialFull().withInitialPress(() -> {
-            if (!UKeyboard.isKeyDown(UKeyboard.KEY_F3) && UMinecraft.getMinecraft().currentScreen == null) {
+            if (!UKeyboard.isKeyDown(UKeyboard.KEY_F3) && UScreen.getCurrentScreen() == null) {
                 GuiUtil.openScreen(ScreenshotBrowser.class, ScreenshotBrowser::new);
             }
         });
@@ -162,7 +163,9 @@ public class EssentialKeybindingRegistry {
             });
 
         EssentialKeybinding invite = new EssentialKeybinding("INVITE_FRIENDS", CATEGORY, UKeyboard.KEY_NONE)
-            .withInitialPress(() -> PauseMenuDisplay.Companion.showInviteOrHostModal(SPSSessionSource.KEYBIND));
+            .withInitialPress(() -> {
+                PauseMenuDisplay.Companion.showInviteOrHostModal(SPSSessionSource.KEYBIND);
+            });
 
         quick_access_open = new EssentialKeybinding("MENU_ACCESS", CATEGORY, UKeyboard.KEY_G)
                 .withInitialPress(QuickAccessModal::openInGame)

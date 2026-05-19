@@ -374,16 +374,17 @@ fun claimFreeItemNow(item: Item.CosmeticOrEmote, wardrobeState: WardrobeState) {
     val cosmetic = item.cosmetic
     val cosmeticsManager = wardrobeState.cosmeticsManager
     wardrobeState.unlockedCosmetics.set { it + cosmetic.id }
-    cosmeticsManager.claimFreeItems(setOf(cosmetic.id)).whenCompleteAsync({ success, throwable ->
-        if (!success || throwable != null) {
-            throwable?.printStackTrace()
-            wardrobeState.unlockedCosmetics.set { it - cosmetic.id }
-            Notifications.error("Error", "Failed to claim item.")
-        } else {
-            sendCosmeticUnlockedToast(cosmetic, wardrobeState.selectedPreviewingEquippedSettings.map { it[item.id] ?: listOf() })
-            EssentialSounds.playPurchaseConfirmationSound()
-        }
-    }, Dispatchers.Client.asExecutor())
+    cosmeticsManager.claimFreeItems(setOf(cosmetic.id))
+        .whenCompleteAsync({ success, throwable ->
+            if (throwable != null || !success) {
+                throwable?.printStackTrace()
+                wardrobeState.unlockedCosmetics.set { it - cosmetic.id }
+                Notifications.error("Error", "Failed to claim item.")
+            } else {
+                sendCosmeticUnlockedToast(cosmetic, wardrobeState.selectedPreviewingEquippedSettings.map { it[item.id] ?: listOf() })
+                EssentialSounds.playPurchaseConfirmationSound()
+            }
+        }, Dispatchers.Client.asExecutor())
 }
 
 fun handleVariantHover(variant: CosmeticProperty.Variants.Variant, item: Item.CosmeticOrEmote, state: WardrobeState, hovered: Boolean) {

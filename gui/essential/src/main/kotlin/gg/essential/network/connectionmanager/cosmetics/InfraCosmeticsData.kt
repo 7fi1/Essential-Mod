@@ -21,10 +21,12 @@ import gg.essential.cosmetics.CosmeticBundleId
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.cosmetics.CosmeticId
 import gg.essential.cosmetics.model.CosmeticStoreBundle
+import gg.essential.gui.elementa.state.v2.MutableListState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.add
 import gg.essential.gui.elementa.state.v2.clear
 import gg.essential.gui.elementa.state.v2.combinators.letState
+import gg.essential.gui.elementa.state.v2.mutableListStateOf
 import gg.essential.gui.elementa.state.v2.set
 import gg.essential.mod.EssentialAsset
 import gg.essential.mod.cosmetics.CosmeticAssets
@@ -56,6 +58,8 @@ class InfraCosmeticsData private constructor(
 ) : CosmeticsData by state {
     constructor(cmConnection: CMConnection, assetLoader: AssetLoader) : this(cmConnection, assetLoader, MutableCosmeticsData())
 
+    private val types: MutableListState<CosmeticType> = mutableListStateOf()
+
     private val categoriesKnownOrRequested = mutableSetOf<CosmeticCategoryId>()
     private val activeCategoryRequests = mutableMapOf<CosmeticCategoryId, Instant>()
 
@@ -74,6 +78,7 @@ class InfraCosmeticsData private constructor(
 
     fun resetState() {
         state.clear()
+        types.clear()
 
         categoriesKnownOrRequested.clear()
         activeCategoryRequests.clear()
@@ -101,11 +106,11 @@ class InfraCosmeticsData private constructor(
 
     fun addType(infraType: InfraType) {
         val type = infraType.toMod()
-        val existingIndex = state.types.get().indexOfFirst { it.id == type.id }
+        val existingIndex = types.get().indexOfFirst { it.id == type.id }
         if (existingIndex >= 0) {
-            state.types.set(existingIndex, type)
+            types.set(existingIndex, type)
         } else {
-            state.types.add(type)
+            types.add(type)
         }
     }
 
@@ -126,7 +131,7 @@ class InfraCosmeticsData private constructor(
         }
 
         settingsFuture.thenAcceptAsync({ settings ->
-            val type: CosmeticType = getType(infraCosmetic.type)
+            val type: CosmeticType = types.getUntracked().find { it.id == infraCosmetic.type }
                 ?: CosmeticType(infraCosmetic.type, CosmeticSlot.FULL_BODY, emptyMap(), emptyMap())
             val cosmetic = infraCosmetic.toMod(type, settings)
 

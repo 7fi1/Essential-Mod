@@ -20,11 +20,11 @@ import gg.essential.network.connectionmanager.telemetry.TelemetryManager
 import gg.essential.notices.NoticeType
 import gg.essential.notices.model.Notice
 import gg.essential.universal.UMinecraft
+import gg.essential.universal.UScreen
 import gg.essential.util.GuiUtil
 import gg.essential.util.Multithreading
 import gg.essential.util.isMainMenu
 import me.kbrewster.eventbus.Subscribe
-import net.minecraft.client.Minecraft
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -50,7 +50,7 @@ class PersistentToastNoticeListener(
             return
         }
         notices.add(notice)
-        if (Minecraft.getMinecraft().currentScreen.isMainMenu) {
+        if (UScreen.currentScreen.isMainMenu) {
             pushNoticeToast(notice)
         }
     }

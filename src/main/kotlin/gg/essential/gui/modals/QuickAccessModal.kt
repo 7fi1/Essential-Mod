@@ -122,7 +122,6 @@ class QuickAccessModal(modalManager: ModalManager) : Modal(modalManager) {
                     buttonModifier.hoverScope().hoverTooltip("World Host Settings"))
             }
 
-
             if_({ hostableOrHasInviteButton() && hasInviteButton() }) {
                 MenuButton(notEmpty) {
                     close()

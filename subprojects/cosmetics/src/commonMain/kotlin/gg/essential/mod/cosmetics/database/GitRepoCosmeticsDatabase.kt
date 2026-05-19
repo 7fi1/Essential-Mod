@@ -16,7 +16,6 @@ package gg.essential.mod.cosmetics.database
 import gg.essential.cosmetics.CosmeticBundleId
 import gg.essential.cosmetics.CosmeticCategoryId
 import gg.essential.cosmetics.CosmeticId
-import gg.essential.cosmetics.CosmeticTypeId
 import gg.essential.cosmetics.FeaturedPageCollectionId
 import gg.essential.cosmetics.FeaturedPageWidth
 import gg.essential.cosmetics.ImplicitOwnership
@@ -27,7 +26,6 @@ import gg.essential.mod.cosmetics.CosmeticBundle
 import gg.essential.mod.cosmetics.CosmeticCategory
 import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.mod.cosmetics.CosmeticTier
-import gg.essential.mod.cosmetics.CosmeticType
 import gg.essential.mod.cosmetics.featured.FeaturedPage
 import gg.essential.mod.cosmetics.featured.FeaturedPageCollection
 import gg.essential.mod.cosmetics.settings.CosmeticProperty
@@ -45,8 +43,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.UseSerializers
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.modules.plus
@@ -99,7 +95,6 @@ class GitRepoCosmeticsDatabase(
     private val observedFolders = mutableMapOf<Path, MutableSet<Path>>()
 
     private val categories = mutableMapOf<CosmeticCategoryId, CosmeticCategory>()
-    private val types = mutableMapOf<CosmeticTypeId, CosmeticType>()
     private val bundles = mutableMapOf<CosmeticBundleId, CosmeticBundle>()
     private val featuredPageCollections = mutableMapOf<FeaturedPageCollectionId, FeaturedPageCollection>()
     private val implicitOwnerships = mutableMapOf<ImplicitOwnershipId, CosmeticImplicitOwnership>()
@@ -107,7 +102,6 @@ class GitRepoCosmeticsDatabase(
     private val lazyCosmetics = mutableMapOf<CosmeticId, Path>()
 
     private val categoryByPath = mutableMapOf<Path, CosmeticCategoryId>()
-    private val typeByPath = mutableMapOf<Path, CosmeticTypeId>()
     private val bundleByPath = mutableMapOf<Path, CosmeticBundleId>()
     private val featuredPageCollectionByPath = mutableMapOf<Path, FeaturedPageCollectionId>()
     private val implicitOwnershipsByPath = mutableMapOf<Path, ImplicitOwnershipId>()
@@ -115,8 +109,6 @@ class GitRepoCosmeticsDatabase(
 
     val loadedCategories: Map<CosmeticCategoryId, CosmeticCategory>
         get() = categories
-    val loadedTypes: Map<CosmeticTypeId, CosmeticType>
-        get() = types
     val loadedBundles: Map<CosmeticBundleId, CosmeticBundle>
         get() = bundles
     val loadedFeaturedPageCollections: Map<FeaturedPageCollectionId, FeaturedPageCollection>
@@ -145,9 +137,6 @@ class GitRepoCosmeticsDatabase(
             if (file.str.endsWith(".category-metadata.json")) {
                 fileObservers.getOrPut(file, ::Observers).categories.add(file)
             }
-            if (file.str.endsWith(".type-metadata.json")) {
-                fileObservers.getOrPut(file, ::Observers).types.add(file)
-            }
             if (file.str.endsWith(".store-bundle-metadata.json")) {
                 fileObservers.getOrPut(file, ::Observers).bundles.add(file)
             }
@@ -168,12 +157,7 @@ class GitRepoCosmeticsDatabase(
             }
         }
 
-        return updateFiles(newPaths.keys
-            // FIXME This is a hack to ensure types are loaded before cosmetics, because backpatching cosmetics
-            //  via [updateTypeInCosmetics] is broken now.
-            //  Modifying type files is still broken, but since we want to get rid of them eventually anyway, I can't
-            //  be bothered to fix [updateTypeInCosmetics] properly.
-            .sortedByDescending { it.str.endsWith(".type-metadata.json") })
+        return updateFiles(newPaths.keys)
     }
 
     suspend fun removeFiles(filesOrFolders: Set<String>): Changes {
@@ -205,7 +189,6 @@ class GitRepoCosmeticsDatabase(
 
     private suspend fun updateFiles(files: Collection<Path>): Changes {
         val categoriesChanged = mutableSetOf<CosmeticCategoryId>()
-        val typesChanged = mutableSetOf<CosmeticTypeId>()
         val cosmeticsChanged = mutableSetOf<CosmeticId>()
         val bundlesChanged = mutableSetOf<CosmeticBundleId>()
         val featuredPagesCollectionsChanged = mutableSetOf<FeaturedPageCollectionId>()
@@ -223,24 +206,6 @@ class GitRepoCosmeticsDatabase(
                     if (categoryId != null) {
                         categories.remove(categoryId)
                         categoryId
-                    } else {
-                        null
-                    }
-                }
-            }
-
-            observers.types.toList().mapNotNullTo(typesChanged) { path ->
-                val type = tryLoadType(path)
-                if (type != null) {
-                    updateTypeInCosmetics(types[type.id], type).forEach { cosmeticsChanged.add(it.id) }
-                    types[type.id] = type
-                    typeByPath[path] = type.id
-                    type.id
-                } else {
-                    val typeId = typeByPath.remove(path)
-                    if (typeId != null) {
-                        types.remove(typeId)
-                        typeId
                     } else {
                         null
                     }
@@ -333,28 +298,11 @@ class GitRepoCosmeticsDatabase(
 
         return Changes(
             categoriesChanged,
-            typesChanged,
             cosmeticsChanged,
             bundlesChanged,
             featuredPagesCollectionsChanged,
             implicitOwnershipsChanged,
         )
-    }
-
-    private fun updateTypeInCosmetics(oldType: CosmeticType?, newType: CosmeticType): List<Cosmetic> {
-        return if (oldType != newType) {
-            val updatedCosmetics = cosmetics.values.mapNotNull { cosmetic ->
-                if (types.values.find { it.slot == cosmetic.slot }?.id == newType.id) {
-                    cosmetic.copy(base = cosmetic.base.copy(slot = newType.slot))
-                } else {
-                    null
-                }
-            }
-            updatedCosmetics.forEach { cosmetics[it.id] = it }
-            updatedCosmetics
-        } else {
-            emptyList()
-        }
     }
 
     private suspend fun tryLoadCategory(metadataFile: Path): CosmeticCategory? {
@@ -364,17 +312,6 @@ class GitRepoCosmeticsDatabase(
             fileAccess.loadCategory(json, metadataFile, assetFromPath)
         } catch (e: Exception) {
             Exception("Failed to load category at $metadataFile", e).printStackTrace()
-            null
-        }
-    }
-
-    private suspend fun tryLoadType(metadataFile: Path): CosmeticType? {
-        if (metadataFile !in files) return null
-        return try {
-            val fileAccess = FileAccessImpl(metadataFile) { types }
-            fileAccess.loadType(json, metadataFile)
-        } catch (e: Exception) {
-            Exception("Failed to load type at $metadataFile", e).printStackTrace()
             null
         }
     }
@@ -416,7 +353,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { cosmetics }
-            fileAccess.loadCosmetic(json, metadataFile, assetFromPath) { typeId -> types[typeId] }
+            fileAccess.loadCosmetic(json, metadataFile, assetFromPath)
         } catch (e: Exception) {
             Exception("Failed to load cosmetic at $metadataFile", e).printStackTrace()
             makeErrorCosmetic(metadataFile, Cosmetic.Diagnostic.fatal(
@@ -468,49 +405,6 @@ class GitRepoCosmeticsDatabase(
                 category.availableAfter,
                 category.availableUntil,
                 originalMetadata?.override ?: CategoryMetadata.Overrides(),
-            )
-        } else {
-            null
-        }
-
-        if (metadata != originalMetadata) {
-            changes[metadataFile] = metadata?.let { json.encodeToString(it).encodeToByteArray() }
-        }
-
-        return changes.mapKeys { it.key.str }
-    }
-
-    /**
-     * Computes the file changes necessary to update the type with [id] to match the given [type] data.
-     * Returns a map of paths relative to the repository root with associated file data (or null if the file is to be
-     * deleted).
-     *
-     * If no such type exists, a new one is created.
-     * If the passed type data is `null`, the existing type with [id] (if any) will be deleted.
-     *
-     * Note that does by itself not apply these changes. It is the responsibility of the caller to apply the returned
-     * values to the real file system and to call [updateFiles] if they wish these changes to be reflected in the state
-     * of this [GitRepoCosmeticsDatabase].
-     */
-    suspend fun computeChanges(id: CosmeticTypeId, type: CosmeticType?): Map<String, ByteArray?> {
-        val existingMetadataFile = typeByPath.entries.firstNotNullOfOrNull { if (it.value == id) it.key else null }
-        val metadataFile = when {
-            existingMetadataFile != null -> existingMetadataFile
-            type != null -> Path.of("configuration/types/${id.lowercase()}.type-metadata.json")
-            else -> return emptyMap()
-        }
-
-        val originalMetadata = files[metadataFile]
-            ?.let { json.decodeFromString<TypeMetadata>(it().decodeToString()) }
-
-        val changes = mutableMapOf<Path, ByteArray?>()
-
-        val metadata = if (type != null) {
-            TypeMetadata(
-                1,
-                type.id,
-                type.slot,
-                type.displayNames,
             )
         } else {
             null
@@ -662,15 +556,27 @@ class GitRepoCosmeticsDatabase(
      */
     suspend fun computeChanges(id: CosmeticId, cosmetic: Cosmetic?): Map<String, ByteArray?> {
         val originalCosmetic = cosmetics[id]
-
         val existingMetadataFile = cosmeticByPath.entries.firstNotNullOfOrNull { if (it.value == id) it.key else null }
+        return if (originalCosmetic != null && cosmetic != null && originalCosmetic.slot != cosmetic.slot) {
+            // If the slot has changed, we need to delete the original and re-create it in the new folder
+            computeChanges(id, null, originalCosmetic, existingMetadataFile) + computeChanges(id, cosmetic, null, null)
+        } else {
+            computeChanges(id, cosmetic, originalCosmetic, existingMetadataFile)
+        }
+    }
+
+    private suspend fun computeChanges(
+        id: CosmeticId,
+        cosmetic: Cosmetic?,
+        originalCosmetic: Cosmetic?,
+        existingMetadataFile: Path?,
+    ): Map<String, ByteArray?> {
         val metadataFile = when {
             existingMetadataFile != null -> existingMetadataFile
             cosmetic != null -> {
                 val root = if (cosmetic.slot == CosmeticSlot.EMOTE) "emotes" else "cosmetics"
-                val type = types.values.find { it.slot == cosmetic.slot }?.id?.lowercase()?.removeSuffix("_emote")
-                    ?.let { if (it == "emote") "basic" else it } ?: error("Unable to find cosmetic type using slot")
-                Path.of("$root/$type/${id.lowercase()}/${id.lowercase()}.cosmetic-metadata.json")
+                val slot = if (cosmetic.slot == CosmeticSlot.EMOTE) "basic" else cosmetic.slot.id.lowercase()
+                Path.of("$root/$slot/${id.lowercase()}/${id.lowercase()}.cosmetic-metadata.json")
             }
             else -> return emptyMap()
         }
@@ -758,7 +664,6 @@ class GitRepoCosmeticsDatabase(
                 cosmetic.defaultSortWeight.takeUnless { it == 20 },
                 (override ?: CosmeticMetadataOverrides()).copy(
                     id = cosmetic.id.takeUnless { it == fileId.uppercase() },
-                    type = types.values.find { it.slot == cosmetic.slot }?.id?.takeUnless { it == folder.parent.name.uppercase() }
                 ),
             )
             if (originalMetadataV3 != newMetadataV3) {
@@ -791,10 +696,8 @@ class GitRepoCosmeticsDatabase(
         return changes.mapKeys { it.key.str }
     }
 
-    override suspend fun getCategory(id: CosmeticTypeId): CosmeticCategory? = categories[id]
+    override suspend fun getCategory(id: CosmeticCategoryId): CosmeticCategory? = categories[id]
     override suspend fun getCategories(): List<CosmeticCategory> = categories.values.toList()
-    override suspend fun getType(id: CosmeticTypeId): CosmeticType? = types[id]
-    override suspend fun getTypes(): List<CosmeticType> = types.values.toList()
 
     override suspend fun getCosmeticBundle(id: CosmeticBundleId): CosmeticBundle? = bundles[id]
 
@@ -831,7 +734,6 @@ class GitRepoCosmeticsDatabase(
 
     data class Changes(
         val categories: Set<CosmeticCategoryId>,
-        val types: Set<CosmeticTypeId>,
         val cosmetics: Set<CosmeticId>,
         val bundles: Set<CosmeticBundleId>,
         val featuredPageCollections: Set<FeaturedPageCollectionId>,
@@ -840,7 +742,6 @@ class GitRepoCosmeticsDatabase(
         operator fun plus(other: Changes) =
             Changes(
                 categories + other.categories,
-                types + other.types,
                 cosmetics + other.cosmetics,
                 (bundles + other.bundles), // Remove () when removing flag
                 (featuredPageCollections + other.featuredPageCollections), // Remove () when removing flag
@@ -854,20 +755,18 @@ class GitRepoCosmeticsDatabase(
                 emptySet(),
                 emptySet(),
                 emptySet(),
-                emptySet(),
             )
         }
     }
 
     private class Observers {
         val categories = mutableSetOf<Path>()
-        val types = mutableSetOf<Path>()
         val cosmetics = mutableSetOf<Path>()
         val bundles = mutableSetOf<Path>()
         val featuredPageCollections = mutableSetOf<Path>()
         val implicitOwnerships = mutableSetOf<Path>()
 
-        fun isEmpty() = categories.isEmpty() && types.isEmpty() && cosmetics.isEmpty() && bundles.isEmpty() && featuredPageCollections.isEmpty() && implicitOwnerships.isEmpty()
+        fun isEmpty() = categories.isEmpty() && cosmetics.isEmpty() && bundles.isEmpty() && featuredPageCollections.isEmpty() && implicitOwnerships.isEmpty()
     }
 
     private inner class FileAccessImpl(
@@ -932,16 +831,6 @@ class GitRepoCosmeticsDatabase(
             val icon: String? = null,
         )
     }
-
-    @Serializable
-    data class TypeMetadata(
-        @SerialName("metadata_revision")
-        val rev: Int,
-        val id: CosmeticTypeId,
-        val slot: CosmeticSlot,
-        @SerialName("display_name")
-        val displayName: Map<String, String>,
-    )
 
     @Serializable
     data class BundleMetadata(
@@ -1036,7 +925,6 @@ class GitRepoCosmeticsDatabase(
     @Serializable
     data class CosmeticMetadataOverrides(
         val id: CosmeticId? = null,
-        val type: CosmeticTypeId? = null,
 
         @SerialName("asset.geometry.steve")
         val geometrySteve: String? = null,
@@ -1109,6 +997,9 @@ private value class Path private constructor(val str: String) {
     val parent: Path
         get() = this / ".."
 
+    val parents: Sequence<Path>
+        get() = generateSequence(this) { it.parent.takeUnless(Path::isEmpty) }.drop(1)
+
     fun isEmpty() = str.isEmpty()
     fun isIn(other: Path) = str.startsWith("$other/")
     fun relativeTo(other: Path) = Path(str.removePrefix(other.str).removePrefix("/"))
@@ -1175,17 +1066,6 @@ private suspend fun FileAccess.loadCategory(json: Json, metadataFile: Path, asse
     )
 }
 
-private suspend fun FileAccess.loadType(json: Json, metadataFile: Path): CosmeticType {
-    val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
-    val metadata = json.decodeFromString<GitRepoCosmeticsDatabase.TypeMetadata>(metadataJson().decodeToString())
-    return CosmeticType(
-        metadata.id,
-        metadata.slot,
-        metadata.displayName,
-        emptyMap(),
-    )
-}
-
 private suspend fun FileAccess.loadBundle(json: Json, metadataFile: Path): CosmeticBundle {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadata = json.decodeFromString<GitRepoCosmeticsDatabase.BundleMetadata>(metadataJson().decodeToString())
@@ -1216,7 +1096,7 @@ private suspend fun FileAccess.loadImplicitOwnership(json: Json, metadataFile: P
     return json.decodeFromString<ImplicitOwnership>(metadataJson().decodeToString())
 }
 
-private suspend fun FileAccess.loadCosmetic(json: Json, metadataFile: Path, assetBuilder: AssetBuilder, getType: (id: CosmeticTypeId) -> CosmeticType?): Cosmetic {
+private suspend fun FileAccess.loadCosmetic(json: Json, metadataFile: Path, assetBuilder: AssetBuilder): Cosmetic {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadataUnknownVersion = jsonWithIgnoreUnknownKeys.decodeFromString<GitRepoCosmeticsDatabase.CosmeticMetadataVUnknown>(metadataJson().decodeToString())
     val metadata: GitRepoCosmeticsDatabase.CosmeticMetadataV0
@@ -1294,23 +1174,18 @@ private suspend fun FileAccess.loadCosmetic(json: Json, metadataFile: Path, asse
         assets[path.str] = assetBuilder(filePath.str, file)
     }
 
-    val folderTypeId = folder.parent.name.uppercase()
-    val type = override.type?.let(getType)
-        // Special cases for emotes to avoid repetition because the parent folder is already called `emotes`
-        ?: getType(if (folderTypeId == "BASIC") "EMOTE" else folderTypeId + "_EMOTE")
-        // Regular folder-derived type
-        ?: getType(folderTypeId)
-        // Unknown type
-        ?: CosmeticType(
-            folderTypeId,
-            CosmeticSlot.of(folderTypeId),
-            mapOf("en_us" to folderTypeId),
-            emptyMap(),
-        )
+    val slot =
+        if (folder.parents.lastOrNull()?.str == "emotes") CosmeticSlot.EMOTE
+        else CosmeticSlot.of(folder.parent.name.uppercase())
+
+    if (slot !in CosmeticSlot.values()) {
+        throw IllegalArgumentException("Cosmetic slot `${slot.id}` is unknown. If you'd like to create a new slot, contact the mod dev team.")
+    }
+
     return Cosmetic(
         CosmeticBase(
             override.id ?: fileId.uppercase(), // repo files use lowercase ids, actual ids should be uppercase
-            type.slot,
+            slot,
             metadata.tier,
             mapOf("en_us" to fileId, LOCAL_PATH to folder.str) + metadata.displayName,
             assets,

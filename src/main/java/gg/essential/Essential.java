@@ -196,6 +196,7 @@ public class Essential implements EssentialAPI {
         PlayerSkinLookup.INSTANCE.supplySkinFromGame(USession.Companion.activeNow().getUuid(), SkinKt.getSkinFromMinecraft());
 
         dispatchStaticInitializers();
+
     }
 
     @SuppressWarnings({

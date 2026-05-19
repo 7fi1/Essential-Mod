@@ -11,7 +11,6 @@
  */
 package gg.essential.gui.common
 
-import gg.essential.config.LoadsResources
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.components.UIImage
 import gg.essential.elementa.constraints.CopyConstraintColor
@@ -19,12 +18,11 @@ import gg.essential.elementa.dsl.boundTo
 import gg.essential.elementa.dsl.constrain
 import gg.essential.elementa.dsl.percent
 import gg.essential.elementa.state.BasicState
+import gg.essential.gui.image.ImageFactory
 import java.util.concurrent.TimeUnit
 
-class SequenceAnimatedUIImage @LoadsResources("%pathPrefix%[0-9]+%pathSuffix%") constructor(
-    val pathPrefix: String,
-    val pathSuffix: String,
-    val frameCount: Int,
+class SequenceAnimatedUIImage(
+    val frames: List<ImageFactory>,
     val delay: Long,
     val timeUnit: TimeUnit,
 ) : UIContainer() {
@@ -37,15 +35,15 @@ class SequenceAnimatedUIImage @LoadsResources("%pathPrefix%[0-9]+%pathSuffix%") 
         private set
 
     init {
-        val frames = Array(frameCount, init = {
-            UIImage.ofResourceCached("$pathPrefix${it + 1}$pathSuffix").constrain {
+        val frames = frames.map { factory ->
+            factory.create().constrain {
                 width = 100.percent
                 height = 100.percent
                 color = CopyConstraintColor() boundTo this@SequenceAnimatedUIImage
             }.apply {
                 supply(AutoImageSize(this@SequenceAnimatedUIImage))
             }
-        })
+        }
         currentFrame.onSetValueAndNow {
             clearChildren()
             addChild(frames[it])
@@ -56,7 +54,7 @@ class SequenceAnimatedUIImage @LoadsResources("%pathPrefix%[0-9]+%pathSuffix%") 
                 stopTimer(activeTimer)
             activeTimer = startTimer(it, 0) {
                 currentFrame.set { current ->
-                    (1 + current + frameCount) % frameCount
+                    (1 + current + frames.size) % frames.size
                 }
             }
         }

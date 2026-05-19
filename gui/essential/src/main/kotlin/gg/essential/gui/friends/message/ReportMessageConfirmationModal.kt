@@ -110,9 +110,9 @@ class ReportMessageConfirmationModal(modalManager: ModalManager, val sender: UUI
         primaryButton("Done") { close() }
     }
 
-    private fun SocialStates.isFriend(uuid: UUID): Boolean = relationships.getObservableFriendList().contains(uuid)
+    private fun SocialStates.isFriend(uuid: UUID): Boolean = relationships.friends.getUntracked().contains(uuid)
 
-    private fun SocialStates.isBlocked(uuid: UUID): Boolean = relationships.getObservableBlockedList().contains(uuid)
+    private fun SocialStates.isBlocked(uuid: UUID): Boolean = relationships.blocked.getUntracked().contains(uuid)
 
     private fun SocialStates.findDM(uuid: UUID): Channel? =
         messages.getObservableChannelList().firstOrNull { channel -> channel.type == ChannelType.DIRECT_MESSAGE && uuid in channel.members }

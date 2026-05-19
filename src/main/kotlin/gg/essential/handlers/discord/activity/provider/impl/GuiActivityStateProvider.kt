@@ -9,13 +9,15 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
+
+
 package gg.essential.handlers.discord.activity.provider.impl
 
 import gg.essential.Essential
 import gg.essential.api.gui.EssentialGUI
 import gg.essential.handlers.discord.activity.ActivityState
 import gg.essential.handlers.discord.activity.provider.ActivityStateProvider
-import gg.essential.universal.UMinecraft
+import gg.essential.universal.UScreen
 import gg.essential.util.isMainMenu
 import gg.essential.vigilance.gui.SettingsGui
 import net.minecraft.client.gui.GuiMultiplayer
@@ -44,7 +46,7 @@ class GuiActivityStateProvider : ActivityStateProvider {
     }
 
     override fun provide(): ActivityState? {
-        val screen = UMinecraft.getMinecraft().currentScreen ?: return null
+        val screen = UScreen.currentScreen ?: return null
         return stateForScreen(screen)
     }
 
