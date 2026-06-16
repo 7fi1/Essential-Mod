@@ -11,6 +11,7 @@
  */
 package gg.essential.gui.proxies
 
+import gg.essential.config.EssentialConfig
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.Window
@@ -35,6 +36,12 @@ class ScreenWithProxiesHandler(
     private val access = screen as GuiScreenAccessor
 
     fun initGui() {
+        // FIXME this is a temporary workaround to fix the fancymenu buttons showing up when they shouldn't
+        if (buttonIds === mainMenuButtons || buttonIds === pauseMenuButtons) {
+            if (!EssentialConfig.essentialEnabled) return
+            if (EssentialConfig.essentialMenuLayout == EssentialConfig.EssentialMenuLayout.OFF) return
+        }
+
         val proxies = mutableListOf<EssentialProxyElement<*>>()
         buttonIds.mapTo(proxies) { MenuButtonProxy(it.key, it.value) }
         flagIds.mapTo(proxies) { NoticeFlagProxy(it.key, it.value) }
