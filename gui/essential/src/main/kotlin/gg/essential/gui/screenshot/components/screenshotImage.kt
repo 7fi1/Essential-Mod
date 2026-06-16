@@ -44,7 +44,7 @@ fun LayoutScope.screenshotImage(
         if_(isScreenshotErrored) {
             invalidScreenshotView()
         } `else` {
-            ScreenshotImage(texture.map { it?.identifier })(Modifier.fillParent())
+            ScreenshotImage(texture)(Modifier.fillParent())
 
             block()
         }

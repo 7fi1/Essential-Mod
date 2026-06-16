@@ -278,6 +278,8 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
     val showOwnNametag = property("Quality of Life.Nameplate.Show my nameplate in third-person", true)
 
+    val shareProfileLastOnline = mutableStateOf(/*state*/true to /*updateInfra*/false)
+
     val acknowledgedPermanentSuspension = property("Hidden.acknowledged_permanent_suspension", false)
 
     val collectOptionalTelemetryWithSource = mutableStateOf(/*state*/true to /*updateInfra*/false)
@@ -373,7 +375,7 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
             }
         },
         Migration { it.remove("general.general.essential_gui_scale") },
-    )
+    ) + listOf()
 
     val gui by lazyBuildGui("Essential Settings") {
         category("General") {
@@ -650,25 +652,17 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                     name = "Activity status on Discord"
                     description = "Display Essential as your current activity on Discord."
                 }
-                switch(discordAllowAskToJoinState) {
-                    name = "Join requests through Discord"
-                    description = "Allow Discord users to send you join requests in-game."
-                }
-                switch(discordShowUsernameAndAvatarState ) {
-                    name = "Show username and avatar on Discord"
-                    description = "Shows your username and avatar on your activity status."
-                }
-                switch(discordShowCurrentServerState) {
-                    name = "Show joined server on Discord"
-                    description = "Shows the server that you are connected to on your activity status."
-                }
             }
         }
         category("Privacy & Data") {
             subcategory("Privacy") {
                 switch(sendServerUpdatesState) {
-                    name = "Show game activity status to friends"
+                    name = "Share game activity with friends"
                     description = "Displays the server or world you are currently playing on to your friends in the social and multiplayer menu."
+                }
+                switch(shareProfileLastOnline.bimap({ it.first }, { it to true })) {
+                    name = "Share last online time with friends"
+                    description = "Displays the last time you were online to your friends in the social menu."
                 }
                 selector(friendRequestPrivacyState) {
                     name = "Friend request permission"

@@ -161,6 +161,7 @@ private suspend fun giftItemToFriends(item: Item.CosmeticOrEmote, uuids: Set<UUI
                         "TARGET_MUST_BE_FRIEND" -> "$username is not your friend!"
                         "ESSENTIAL_USER_NOT_FOUND" -> "$username is not an Essential user!"
                         "Cosmetic already unlocked." -> "$username already owns this item!"
+                        "PRODUCTS_NOT_FOUND" -> "${item.name} is no longer available to purchase."
                         else -> "Something went wrong gifting to $username, please try again."
                     }
                     showErrorToast(errorMessage)

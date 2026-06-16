@@ -24,8 +24,15 @@ import static gg.essential.universal.UMinecraft.isCallingFromMinecraftThread;
  * Adds a sanity check to the start of `openScreen` which will log a warning when called
  * from a thread other than the client thread (because that's not safe to do!).
  */
-// Extra low priority so we can log the issue before any other code potentially crashes the game
-@Mixin(value = Minecraft.class, priority = -50000)
+@Mixin(
+    //#if MC >= 26.2
+    //$$ value = net.minecraft.client.gui.Gui.class,
+    //#else
+    value = Minecraft.class,
+    //#endif
+    // Extra low priority so we can log the issue before any other code potentially crashes the game
+    priority = -50000
+)
 public class Mixin_CheckThreadSafetyOfOpenScreenMethod {
     @Inject(method = "displayGuiScreen", at = @At("HEAD"))
     private void checkThreadSafety(CallbackInfo ci) {

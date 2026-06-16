@@ -13,19 +13,16 @@ package gg.essential.gui.screenshot.image
 
 import gg.essential.elementa.UIComponent
 import gg.essential.gui.elementa.state.v2.State
-import gg.essential.gui.elementa.state.v2.stateOf
+import gg.essential.gui.screenshot.providers.RegisteredTexture
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
-import gg.essential.util.GuiEssentialPlatform.Companion.platform
-import gg.essential.util.UIdentifier
 import java.awt.Color
 
-open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
-
-    constructor(texture: UIdentifier? = null) : this(stateOf(texture))
+open class ScreenshotImage(val texture: State<RegisteredTexture?>) : UIComponent() {
 
     override fun draw(matrixStack: UMatrixStack) {
         beforeDrawCompat(matrixStack)
@@ -56,8 +53,7 @@ open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
         width: Double,
         height: Double
     ) {
-        val textureInstance = texture.getUntracked() ?: return
-        val textureId = platform.getGlId(textureInstance)
+        val textureView = texture.getUntracked()?.gpuTextureView ?: return
 
         val red = color.red.toFloat() / 255f
         val green = color.green.toFloat() / 255f
@@ -71,7 +67,7 @@ open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
         worldRenderer.pos(matrixStack, width, 0.0, 0.0).tex(1.0, 0.0).color(red, green, blue, alpha).endVertex()
         worldRenderer.pos(matrixStack, 0.0, 0.0, 0.0).tex(0.0, 0.0).color(red, green, blue, alpha).endVertex()
         worldRenderer.build()?.drawAndClose(PIPELINE) {
-            texture(0, textureId)
+            texture(0, textureView, SAMPLER)
         }
 
     }
@@ -84,5 +80,13 @@ open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
         ).apply {
             blendState = BlendState.ALPHA
         }.build()
+
+        private val SAMPLER = UGpuSampler(
+            UGpuSampler.AddressMode.CLAMP_TO_EDGE,
+            UGpuSampler.AddressMode.CLAMP_TO_EDGE,
+            UGpuSampler.FilterMode.LINEAR,
+            UGpuSampler.FilterMode.LINEAR,
+            true,
+        )
     }
 }

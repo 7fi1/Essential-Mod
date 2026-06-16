@@ -71,7 +71,7 @@ class FriendsTab(
             is PlayerActivity.SPSSession -> if (activity.isJoinable()) 0L else 1L
             is PlayerActivity.OnlineWithDescription -> 1L
             PlayerActivity.Online -> 2L
-            is PlayerActivity.Offline -> 3L
+            is PlayerActivity.Offline -> Long.MAX_VALUE - (activity.lastOnline ?: 0L)
         }
     }.thenBy { (it as BasicUserEntry).usernameState.get() }
 

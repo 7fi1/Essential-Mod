@@ -13,7 +13,6 @@ package gg.essential.mixins.transformers.feature.nameplate_icon;
 
 import gg.essential.handlers.OnlineIndicator;
 import gg.essential.mixins.impl.LabelCommandExt;
-import net.minecraft.client.render.command.OrderedRenderCommandQueueImpl;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -21,7 +20,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(OrderedRenderCommandQueueImpl.LabelCommand.class)
+//#if MC >= 26.2
+//$$ import net.minecraft.client.renderer.feature.NameTagFeatureRenderer.Submit;
+//#else
+import net.minecraft.client.render.command.OrderedRenderCommandQueueImpl.LabelCommand;
+//#endif
+
+@Mixin(LabelCommand.class)
 public class Mixin_NameplateIcon_LabelCommandExt implements LabelCommandExt {
     @Unique
     private CosmeticsRenderState cosmeticsRenderState;

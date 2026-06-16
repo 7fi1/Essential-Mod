@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap
 import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.*
 import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.Companion.NON_WHITE_TINT_PIPELINE
 import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.Companion.averageButtonColor
+import gg.essential.universal.render.UGpuSampler
+import gg.essential.util.NEAREST
 
 /**
  * Applies a tint value to a component area. This is done by snapshotting the framebuffer behind the component,
@@ -120,7 +122,7 @@ class TintVanillaButtonsEffect {
             buffer.pos(matrixStack, x + width, y, 0.0).tex(1.0, 1.0).color(color).endVertex()
             buffer.pos(matrixStack, x, y, 0.0).tex(0.0, 1.0).color(color).endVertex()
         }.build()?.drawAndClose(NON_WHITE_TINT_PIPELINE) {
-            texture("u_Button", resources.button.glId)
+            texture("u_Button", resources.button.ucView, UGpuSampler.NEAREST)
             uniform("u_AverageColor",
                 averageCol.red / 255F,
                 averageCol.green / 255F,

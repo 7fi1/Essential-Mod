@@ -229,8 +229,9 @@ abstract class EssentialProxyElement<T : UIComponent>(
     // draw behaviour common to all proxy types
     private fun drawBehaviourFromCurrentState(): ProxyDrawBehaviour {
 
-        // detect if another mod has recreated this button in a different screen, e.g. the fancy menu editor in v3+
-        if (essentialComponent == null && ScreenWithProxiesHandler.currentProxyScreenOrNull() == null) {
+        // for cases where essential has not attached to this proxy, we need to let the proxy do the drawing
+        // happens when a third-party mod uses this button in a different screen, e.g. the fancy menu editor in v3+
+        if (essentialContainer == null) {
             return ProxyDrawBehaviour.PROXY_DRAWS
         }
 

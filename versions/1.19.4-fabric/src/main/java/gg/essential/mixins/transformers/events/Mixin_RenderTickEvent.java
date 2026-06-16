@@ -60,7 +60,11 @@ public class Mixin_RenderTickEvent {
     }
 
     //#if MC >= 26.1
+    //#if MC >= 26.2
+    //$$ @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V"))
+    //#else
     //$$ @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V"))
+    //#endif
     //$$ private void renderTickPost(DeltaTracker tickDelta, boolean tick, CallbackInfo callbackInfo) {
     //$$     GuiGraphicsExtractor graphics = new GuiGraphicsExtractor(this.minecraft, this.gameRenderState.guiRenderState, 0, 0);
     //$$     UDrawContext drawContext = new UDrawContext(graphics, new UMatrixStack());

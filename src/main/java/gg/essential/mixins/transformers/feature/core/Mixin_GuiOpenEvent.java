@@ -22,7 +22,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC >= 26.2
+//$$ @Mixin(net.minecraft.client.gui.Gui.class)
+//#else
 @Mixin(Minecraft.class)
+//#endif
 public class Mixin_GuiOpenEvent {
     @Unique
     private GuiOpenEvent guiOpenEvent;

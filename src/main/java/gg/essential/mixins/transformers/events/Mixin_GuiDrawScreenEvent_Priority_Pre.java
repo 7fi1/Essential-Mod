@@ -19,7 +19,6 @@ import gg.essential.universal.UMatrixStack;
 import gg.essential.universal.UScreen;
 import gg.essential.util.UDrawContext;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.EntityRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -38,17 +37,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //$$ import org.spongepowered.asm.mixin.injection.Slice;
 //#endif
 
-@Mixin(EntityRenderer.class)
+//#if MC >= 26.2
+//$$ @Mixin(net.minecraft.client.gui.Gui.class)
+//#else
+@Mixin(net.minecraft.client.renderer.EntityRenderer.class)
+//#endif
 public abstract class Mixin_GuiDrawScreenEvent_Priority_Pre {
 
     @Inject(
-        //#if MC >= 26.1
+        //#if MC >= 26.2
+        //$$ method = "extractRenderState",
+        //#elseif MC >= 26.1
         //$$ method = "extractGui",
         //#else
         method = "updateCameraAndRender",
         //#endif
         //#if MC>=11600
+        //#if MC >= 26.2
+        //$$ at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/Gui;screen:Lnet/minecraft/client/gui/screens/Screen;", ordinal = 0),
+        //#else
         //$$ at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;currentScreen:Lnet/minecraft/client/gui/screen/Screen;", ordinal = 0),
+        //#endif
         //#if MC >= 26.1
         //$$ slice = @Slice(from = @At(value = "CONSTANT", args = "stringValue=Extracting overlay render state"))
         //#else

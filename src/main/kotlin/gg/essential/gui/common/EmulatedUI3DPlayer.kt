@@ -271,7 +271,12 @@ class EmulatedUI3DPlayer(
         withFakeClientFields {
             updateVisibleModelParts(it)
             //#if MC>=12109
-            //$$ mcClient.entityRenderDispatcher.configure(mcClient.gameRenderer.camera, null)
+            //#if MC >= 26.2
+            //$$ val camera = mcClient.gameRenderer.mainCamera()
+            //#else
+            //$$ val camera = mcClient.gameRenderer.camera
+            //#endif
+            //$$ mcClient.entityRenderDispatcher.configure(camera, null)
             //#elseif MC>=11400
             //$$ @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") // `entity` parameter inappropriately marked as non-null by Forge
             //$$ mcClient.renderManager.cacheActiveRenderInfo(FakeWorld.fakeWorld, mcClient.gameRenderer.activeRenderInfo, null)

@@ -466,6 +466,12 @@ class Wardrobe(
         private const val sidebarWidth = 90f
 
         @JvmStatic
-        fun getInstance(): Wardrobe? = GuiUtil.openedScreen() as? Wardrobe
+        fun getInstance(): Wardrobe? {
+            //#if MC >= 26.2
+            //$$ @Suppress("SENSELESS_COMPARISON")
+            //$$ if (net.minecraft.client.Minecraft.getInstance().gui == null) return null
+            //#endif
+            return GuiUtil.openedScreen() as? Wardrobe
+        }
     }
 }

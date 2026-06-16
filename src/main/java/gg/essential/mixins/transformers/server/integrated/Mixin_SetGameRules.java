@@ -14,6 +14,7 @@ package gg.essential.mixins.transformers.server.integrated;
 import gg.essential.mixins.ext.server.integrated.IntegratedServerExt;
 import gg.essential.sps.McIntegratedServerManager;
 import gg.essential.universal.UMinecraft;
+import gg.essential.util.UIdentifier;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.world.GameRules;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,6 +27,7 @@ import java.util.Collections;
 //#if MC >= 1.21.11
 //$$ import net.minecraft.world.rule.GameRule;
 //$$ import org.jetbrains.annotations.Nullable;
+//$$ import static gg.essential.util.UIdentifierKt.toU;
 //#endif
 
 //#if MC >= 1.16.2
@@ -54,11 +56,11 @@ public abstract class Mixin_SetGameRules {
         McIntegratedServerManager manager = ((IntegratedServerExt) server).getEssential$manager();
         if (manager.isGameRulesControlledByState()) {
             //#if MC >= 1.21.11
-            //$$ manager.updateServerGameRules(Collections.singletonMap(rule.getId().toString(), value.toString()));
+            //$$ manager.updateServerGameRules(Collections.singletonMap(toU(rule.getId()), value.toString()));
             //#elseif MC >= 1.16.2
             //$$ manager.updateServerGameRules();
             //#else
-            manager.updateServerGameRules(Collections.singletonMap(key, ruleValue));
+            manager.updateServerGameRules(Collections.singletonMap(UIdentifier.ofLegacy(key), ruleValue));
             //#endif
         }
     }

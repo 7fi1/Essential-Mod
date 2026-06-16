@@ -11,6 +11,7 @@
  */
 package gg.essential.mixins.transformers.client.gui;
 
+//#if MC<11600
 import gg.essential.sps.WindowTitleManager;
 import net.minecraft.client.gui.GuiShareToLan;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,10 +22,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GuiShareToLan.class)
 public class Mixin_UpdateWindowTitle_OpenToLan {
 
-    //#if MC<11600
     @Inject(method = "actionPerformed", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/integrated/IntegratedServer;shareToLAN(Lnet/minecraft/world/GameType;Z)Ljava/lang/String;", shift = At.Shift.AFTER))
     private void onActionPerformed(CallbackInfo ci) {
         WindowTitleManager.INSTANCE.updateTitle();
     }
-    //#endif
 }
+//#else
+//$$ @org.spongepowered.asm.mixin.Mixin(gg.essential.mixins.DummyTarget.class)
+//$$ public abstract class Mixin_UpdateWindowTitle_OpenToLan {
+//$$ }
+//#endif

@@ -18,6 +18,8 @@ import net.minecraft.server.MinecraftServer
 interface MinecraftServerExt {
     val `essential$dispatcher`: CoroutineDispatcher
     val `essential$coroutineScope`: CoroutineScope
+
+    fun `essential$updateServerStatus`()
 }
 
 val MinecraftServer.ext get() = this as MinecraftServerExt

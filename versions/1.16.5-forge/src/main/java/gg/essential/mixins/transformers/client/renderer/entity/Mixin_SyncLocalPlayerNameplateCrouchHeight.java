@@ -29,17 +29,24 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(EntityRenderer.class)
 public abstract class Mixin_SyncLocalPlayerNameplateCrouchHeight {
 
-    //#if MC>=12102
-    //$$ // now targets the entity render state setup
-    //$$ @ModifyExpressionValue(method = "updateRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getAttachments()Lnet/minecraft/entity/EntityAttachments;"))
-    //#elseif MC>=12006
-    //$$ @ModifyExpressionValue(method = "renderLabelIfPresent", at = @At(value = "FIELD", target = "Lnet/minecraft/util/math/Vec3d;y:D"))
-    //#elseif MC>=12000
-    //$$ @ModifyExpressionValue(method = "renderLabelIfPresent",at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getNameLabelHeight()F"))
-    //#else
-    @ModifyExpressionValue(method = "renderName",at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getHeight()F"))
-    //#endif
-
+    @ModifyExpressionValue(
+        //#if MC >= 26.2
+        //$$ method = "extractNameTags(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/entity/state/EntityRenderState;FDD)V",
+        //#elseif MC >= 1.21.2
+        //$$ method = "updateRenderState",
+        //#else
+        method = "renderName",
+        //#endif
+        //#if MC >= 1.21.2
+        //$$ at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getAttachments()Lnet/minecraft/entity/EntityAttachments;")
+        //#elseif MC >= 1.20.6
+        //$$ at = @At(value = "FIELD", target = "Lnet/minecraft/util/math/Vec3d;y:D")
+        //#elseif MC >= 1.20
+        //$$ at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getNameLabelHeight()F")
+        //#else
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getHeight()F")
+        //#endif
+    )
     //#if MC>=12102
     //$$ private <T extends Entity> EntityAttachments getHeight(final EntityAttachments original, @Local(argsOnly = true) T entity) { // only return changed
     //#elseif MC>=12006

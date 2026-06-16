@@ -54,8 +54,10 @@ import gg.essential.util.image.bitmap.bitmapState
 import gg.essential.util.image.bitmap.bitmapStateIf
 import gg.essential.util.image.bitmap.cropped
 import gg.essential.gui.util.pollingState
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.vertex.UBufferBuilder
+import gg.essential.util.NEAREST
 import gg.essential.vigilance.utils.onLeftClick
 import java.awt.Color
 
@@ -542,7 +544,7 @@ class MenuButton @JvmOverloads constructor(
             val shouldTint = !isDefaultOrHoveredBaseColor || alwaysTint
             val texture = ButtonTextureProvider.provide(image, baseColor.takeIf { shouldTint })
 
-            val textureId = texture.dynamicGlId
+            val textureView = texture.gpuTextureView
             UGraphics.color4f(1f, 1f, 1f, 1f)
 
             UBufferBuilder.create(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_TEXTURE_COLOR).apply {
@@ -593,7 +595,7 @@ class MenuButton @JvmOverloads constructor(
                 drawHalf(true)
                 drawHalf(false)
             }.build()?.drawAndClose(PIPELINE_TEXTURED) {
-                texture(0, textureId)
+                texture(0, textureView, UGpuSampler.NEAREST)
             }
         }
 

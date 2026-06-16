@@ -11,6 +11,7 @@
  */
 package gg.essential.gui.friends.message.v2
 
+import com.sparkuniverse.toolbox.chat.model.InviteMessageContent
 import gg.essential.config.EssentialConfig
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.components.UIContainer
@@ -139,6 +140,7 @@ abstract class MessageWrapper(
 
     protected val dropdownOpen = mutableStateOf(false)
     protected val actionButtonHovered = mutableStateOf(stateOf(false))
+    protected val showEditedLabel = message.content !is InviteMessageContent
 
     val appearHovered = memo { actionButtonHovered()() || dropdownOpen() }
 
@@ -237,6 +239,10 @@ abstract class ImageEmbed(
     abstract fun saveImageToScreenshotBrowser()
 
 }
+
+abstract class InviteEmbed(
+    wrapper: MessageWrapper,
+) : MessageBubble(wrapper)
 
 abstract class GiftEmbed(
     wrapper: MessageWrapper,

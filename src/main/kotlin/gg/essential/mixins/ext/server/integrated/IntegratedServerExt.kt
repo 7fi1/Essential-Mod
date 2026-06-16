@@ -13,10 +13,14 @@ package gg.essential.mixins.ext.server.integrated
 
 import gg.essential.sps.McIntegratedServerManager
 import net.minecraft.server.integrated.IntegratedServer
+import java.util.UUID
 
 interface IntegratedServerExt {
     val `essential$manager`: McIntegratedServerManager
+    fun `essential$undoLan`(host: UUID)
 }
 
 val IntegratedServer.ext get() = this as IntegratedServerExt
 val IntegratedServer.manager get() = ext.`essential$manager`
+
+fun IntegratedServer.undoLan(host: UUID) = ext.`essential$undoLan`(host)

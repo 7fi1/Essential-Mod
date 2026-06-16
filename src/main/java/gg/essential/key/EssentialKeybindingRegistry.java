@@ -159,7 +159,13 @@ public class EssentialKeybindingRegistry {
             .withRepeatedHold(() -> this.holdingChatPeek = true)
             .withRelease(() -> {
                 this.holdingChatPeek = false;
-                Minecraft.getMinecraft().ingameGUI.getChatGUI().resetScroll();
+                Minecraft.getMinecraft()
+                    //#if MC >= 26.2
+                    //$$ .gui
+                    //#endif
+                    .ingameGUI
+                    .getChatGUI()
+                    .resetScroll();
             });
 
         EssentialKeybinding invite = new EssentialKeybinding("INVITE_FRIENDS", CATEGORY, UKeyboard.KEY_NONE)

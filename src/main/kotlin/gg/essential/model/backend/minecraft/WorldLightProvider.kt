@@ -18,8 +18,10 @@ import gg.essential.model.light.LightProvider
 import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.util.math.BlockPos
 
-//#if MC>=11600
-//$$ import net.minecraft.client.renderer.WorldRenderer
+//#if MC >= 26.2
+//$$ import net.minecraft.util.LightCoordsUtil.getLightCoords
+//#elseif MC >= 1.16
+//$$ import net.minecraft.client.renderer.WorldRenderer.getCombinedLight
 //#endif
 
 class WorldLightProvider(private val world: WorldClient) : LightProvider {
@@ -29,7 +31,7 @@ class WorldLightProvider(private val world: WorldClient) : LightProvider {
             return Light.MIN_VALUE
         }
         //#if MC>=11600
-        //$$ return Light(WorldRenderer.getCombinedLight(world, block).toUInt())
+        //$$ return Light(getCombinedLight(world, block).toUInt())
         //#else
         return Light(world.getCombinedLight(block, 0).toUInt())
         //#endif

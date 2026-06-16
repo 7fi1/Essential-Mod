@@ -22,10 +22,11 @@ import gg.essential.elementa.effects.ScissorEffect
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
-import net.minecraft.client.texture.GlTexture
+import gg.essential.util.NEAREST
 import java.io.Closeable
 import java.lang.ref.PhantomReference
 import java.lang.ref.ReferenceQueue
@@ -33,7 +34,11 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 //#if MC >= 26.1
+//#if MC >= 26.2
+//$$ import org.joml.Matrix4f
+//#else
 //$$ import net.minecraft.client.renderer.Projection
+//#endif
 //$$ import net.minecraft.client.renderer.ProjectionMatrixBuffer
 //#else
 import net.minecraft.client.render.ProjectionMatrix2
@@ -83,8 +88,13 @@ class Mc12106ScissorHandler {
             this.resources = resources
         }
 
+        //#if MC >= 26.2
+        //$$ val clearColor = org.joml.Vector4f(0f)
+        //#else
+        val clearColor = 0
+        //#endif
         RenderSystem.getDevice().createCommandEncoder()
-            .clearColorAndDepthTextures(resources.texture, 0, resources.depthTexture, 1.0)
+            .clearColorAndDepthTextures(resources.texture, clearColor, resources.depthTexture, 1.0)
 
         orgOutputColorTextureOverride = RenderSystem.outputColorTextureOverride
         orgOutputDepthTextureOverride = RenderSystem.outputDepthTextureOverride
@@ -92,7 +102,16 @@ class Mc12106ScissorHandler {
         RenderSystem.outputDepthTextureOverride = resources.depthTextureView
 
         //#if MC >= 26.1
+        //#if MC >= 26.2
+        //$$ resources.projection.setOrtho(
+        //$$     0f, (width * scale).toFloat(),
+        //$$     (height * scale).toFloat(), 0f,
+        //$$     1000f, 21000f,
+        //$$     RenderSystem.getDevice().deviceInfo.isZZeroToOne,
+        //$$ )
+        //#else
         //$$ resources.projection.setupOrtho(1000f, 11000f, (width * scale).toFloat(), (height * scale).toFloat(), true)
+        //#endif
         //$$ val projectionMatrixBuffer = resources.projectionMatrix.getBuffer(resources.projection)
         //#else
         val projectionMatrixBuffer = resources.projectionMatrix.set((width * scale).toFloat(), (height * scale).toFloat())
@@ -135,7 +154,7 @@ class Mc12106ScissorHandler {
         buffer.pos(matrixStack, x + width, y, 0.0).tex(1.0, 1.0).endVertex()
         buffer.pos(matrixStack, x, y, 0.0).tex(0.0, 1.0).endVertex()
         buffer.build()?.drawAndClose(PIPELINE) {
-            texture(0, (resources?.texture as GlTexture).glId)
+            texture(0, UGraphics.getPlatformAdapter().textureView(resources!!.textureView), UGpuSampler.NEAREST)
         }
     }
 
@@ -173,7 +192,11 @@ class Mc12106ScissorHandler {
         var depthTextureView = gpuDevice.createTextureView(depthTexture)
 
         //#if MC >= 26.1
+        //#if MC >= 26.2
+        //$$ val projection = Matrix4f()
+        //#else
         //$$ val projection = Projection()
+        //#endif
         //$$ val projectionMatrix = ProjectionMatrixBuffer("scissored gui")
         //#else
         val projectionMatrix = ProjectionMatrix2("scissored gui", 1000f, 11000f, true)

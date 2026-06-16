@@ -48,6 +48,7 @@ interface EssentialConfig {
     /**
      * Display a notification modal after Essential has updated.
      */
+    @Deprecated("This setting no longer has any effect, will now always be true")
     var updateModal: Boolean
 
     /**

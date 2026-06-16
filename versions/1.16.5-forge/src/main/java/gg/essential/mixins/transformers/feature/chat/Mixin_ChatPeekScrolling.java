@@ -37,7 +37,13 @@ public class Mixin_ChatPeekScrolling {
             if (!UKeyboard.isShiftKeyDown()) {
                 scrollAmount *= 7;
             }
-            Minecraft.getInstance().ingameGUI.getChatGUI().addScrollPos(scrollAmount);
+            Minecraft.getInstance()
+                //#if MC >= 26.2
+                //$$ .gui
+                //#endif
+                .ingameGUI
+                .getChatGUI()
+                .addScrollPos(scrollAmount);
             ci.cancel();
         }
     }

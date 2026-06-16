@@ -4,6 +4,7 @@ net.minecraft.client.renderer.ItemRenderer renderArm() renderPlayerArm()
 net.minecraft.client.renderer.ItemRenderer renderArmFirstPerson() renderPlayerArms()
 net.minecraft.entity.Entity getDataManager() getDataWatcher()
 net.minecraft.server.MinecraftServer getPlayerList() getConfigurationManager()
+net.minecraft.server.MinecraftServer applyServerIconToResponse() addFaviconToStatusResponse()
 net.minecraft.network.NettyVarint21FrameDecoder net.minecraft.util.MessageDeserializer2
 net.minecraft.network.datasync.EntityDataManager net.minecraft.entity.DataWatcher
 net.minecraft.network.datasync.EntityDataManager set() updateObject()

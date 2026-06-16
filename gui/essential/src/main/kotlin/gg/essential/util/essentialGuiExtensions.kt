@@ -47,6 +47,7 @@ import gg.essential.gui.util.hoveredStateV2
 import gg.essential.gui.util.isComponentInParentChain
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMouse
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.vigilance.utils.onLeftClick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
@@ -552,3 +553,12 @@ suspend fun loadUIImage(image: BufferedImage): UIImage = suspendCoroutine { cont
         continuation.resume(uiImage)
     })
 }
+
+val UGpuSampler.Companion.NEAREST: UGpuSampler
+    get() = UGpuSampler(
+        UGpuSampler.AddressMode.CLAMP_TO_EDGE,
+        UGpuSampler.AddressMode.CLAMP_TO_EDGE,
+        UGpuSampler.FilterMode.NEAREST,
+        UGpuSampler.FilterMode.NEAREST,
+        false,
+    )

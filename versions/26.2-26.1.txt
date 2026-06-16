@@ -1,0 +1,10 @@
+com.mojang.blaze3d.GpuFormat com.mojang.blaze3d.textures.TextureFormat
+com.mojang.blaze3d.GpuFormat RGBA8_UNORM:Lcom.mojang.blaze3d.GpuFormat; RGBA8
+com.mojang.blaze3d.GpuFormat D32_FLOAT:Lcom.mojang.blaze3d.GpuFormat; DEPTH32
+net.minecraft.client.Screenshot lambda$grab$3() lambda$grab$1()
+net.minecraft.client.gui.Hud net.minecraft.client.gui.Gui
+net.minecraft.client.gui.Gui __new__
+net.minecraft.client.gui.Gui hud:Lnet/minecraft/client/gui/Hud; net.minecraft.client.Minecraft gui
+net.minecraft.client.renderer.feature.NameTagFeatureRenderer$Submit net.minecraft.client.renderer.SubmitNodeStorage$NameTagSubmit
+gg.essential.util.VertexConsumerProvider net.minecraft.client.renderer.MultiBufferSource
+net.minecraft.client.gui.screens.PauseScreen lambda$createPauseMenu$11() lambda$createPauseMenu$7()

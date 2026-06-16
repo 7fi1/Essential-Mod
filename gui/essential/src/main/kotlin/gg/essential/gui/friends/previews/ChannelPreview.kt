@@ -12,6 +12,7 @@
 package gg.essential.gui.friends.previews
 
 import com.sparkuniverse.toolbox.chat.model.Channel
+import com.sparkuniverse.toolbox.chat.model.InviteMessageContent
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Media
 import gg.essential.config.EssentialConfig
 import gg.essential.cosmetics.CosmeticId
@@ -20,6 +21,7 @@ import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.ContextOptionMenu
+import gg.essential.gui.common.EssentialTooltip
 import gg.essential.gui.common.shadow.ShadowEffect
 import gg.essential.gui.elementa.state.v2.Observer
 import gg.essential.gui.elementa.state.v2.State
@@ -49,6 +51,7 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.NodeRenderer
 import org.commonmark.renderer.text.TextContentNodeRendererContext
 import org.commonmark.renderer.text.TextContentRenderer
+import java.awt.Color
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -133,9 +136,24 @@ class ChannelPreview(
             row(Modifier.fillParent()) {
                 spacer(width = 6f)
                 box(Modifier.width(32f).heightAspect(1f)) {
-                    image(Modifier.width(24f).heightAspect(1f))
+                    image(Modifier.width(24f).heightAspect(1f).shadow(Color.BLACK))
+                    if_(isOnline) {
+                        // Online indicator and box cutout
+                        box(
+                            Modifier.width(8f).heightAspect(1f).then(color).alignBoth(Alignment.End)
+                                .hoverTooltip("Online", position = EssentialTooltip.Position.ABOVE, padding = 3f)
+                                .hoverScope()
+                        ) {
+                            // Fake shadows for image
+                            box(Modifier.width(5f).height(1f).color(Color.BLACK).alignBoth(Alignment.Start))
+                            box(Modifier.width(1f).height(5f).color(Color.BLACK).alignBoth(Alignment.Start))
+                            // Green indicator
+                            box(Modifier.color(EssentialPalette.UPDATE_AVAILABLE_GREEN).width(4f).heightAspect(1f)
+                                .shadow(Color.BLACK))
+                        }
+                    }
                 }
-                spacer(width = 3.5f)
+                spacer(width = 3f)
                 column(Modifier.fillRemainingWidth().fillHeight(), Arrangement.spacedBy(0f, FloatPosition.START), Alignment.Start) {
                     spacer(height = 10f)
                     row(Modifier.fillWidth()) {
@@ -281,6 +299,8 @@ class ChannelPreview(
                 Pair(null, textDescription(part))
             is ClientMessage.Part.Image ->
                 Pair(EssentialPalette.PICTURES_SHORT_9X7, State { pictureDescription(message) })
+            is ClientMessage.Part.InvitePart ->
+                Pair(EssentialPalette.ENVELOPE_9X7, inviteDescription(part.invite))
             is ClientMessage.Part.Skin ->
                 Pair(EssentialPalette.PERSON_4X6, stateOf("Shared a skin"))
             is ClientMessage.Part.Gift ->
@@ -316,6 +336,19 @@ class ChannelPreview(
             numberOfPictures += loopMessage.content.mediaIds.size
         }
         return "$numberOfPictures Picture" + (if (numberOfPictures == 1) "" else "s")
+    }
+
+    private fun inviteDescription(invite: InviteMessageContent): State<String> {
+        return memo {
+            when (invite) {
+                is InviteMessageContent.ISPSInvite -> invite.worldName ?: run {
+                    val username = UuidNameLookup.nameState(invite.host)()
+                    val formattedUsername = if (username.isNotBlank()) "$username's " else ""
+                    "${formattedUsername}World"
+                }
+                is InviteMessageContent.IServerInvite -> invite.address
+            }
+        }
     }
 
     private fun giftDescription(cosmeticId: CosmeticId): State<String> {

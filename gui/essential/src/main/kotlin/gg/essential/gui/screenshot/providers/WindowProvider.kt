@@ -13,7 +13,7 @@ package gg.essential.gui.screenshot.providers
 
 import gg.essential.gui.screenshot.ScreenshotId
 import gg.essential.gui.screenshot.downsampling.PixelBuffer
-import gg.essential.util.UIdentifier
+import gg.essential.universal.render.UGpuTextureView
 import kotlin.math.max
 import kotlin.math.min
 
@@ -69,7 +69,16 @@ interface WindowedProvider<out T> {
 typealias WindowedImageProvider = WindowedProvider<PixelBuffer>
 typealias WindowedTextureProvider = WindowedProvider<RegisteredTexture>
 
-data class RegisteredTexture(val identifier: UIdentifier, val imageWidth: Int, val imageHeight: Int, val error: Boolean)
+class RegisteredTexture(
+    val gpuTextureView: UGpuTextureView?,
+) {
+    val imageWidth: Int
+        get() = gpuTextureView?.texture?.width ?: 1
+    val imageHeight: Int
+        get() = gpuTextureView?.texture?.height ?: 1
+    val error: Boolean
+        get() = gpuTextureView == null
+}
 
 fun Int.toSingleWindowRequest(): List<WindowedProvider.Window> {
     return listOf(WindowedProvider.Window(IntRange(this, this), false))

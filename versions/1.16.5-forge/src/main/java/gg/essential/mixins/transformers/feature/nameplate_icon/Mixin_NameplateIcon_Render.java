@@ -11,20 +11,24 @@
  */
 package gg.essential.mixins.transformers.feature.nameplate_icon;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.handlers.OnlineIndicator;
+import gg.essential.model.ModelInstance;
 import gg.essential.universal.UMatrixStack;
 import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraft.util.text.ITextComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static gg.essential.universal.utils.TextUtilsKt.toFormattedString;
 
@@ -35,22 +39,52 @@ import static gg.essential.universal.utils.TextUtilsKt.toFormattedString;
 
 @Mixin(EntityRenderer.class)
 public class Mixin_NameplateIcon_Render<T extends Entity> {
-    @Inject(method = "renderName", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/matrix/MatrixStack;pop()V"))
-    private void renderEssentialIndicator(
-        //#if MC>=12102
-        //$$ EntityRenderState state,
+    //#if MC >= 1.21.6
+    //$$ private static final String FONT_DRAW = "Lnet/minecraft/client/font/TextRenderer;draw(Lnet/minecraft/text/Text;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/client/font/TextRenderer$TextLayerType;II)V";
+    //#elseif MC >= 1.19.4
+    //$$ private static final String FONT_DRAW = "Lnet/minecraft/client/font/TextRenderer;draw(Lnet/minecraft/text/Text;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/client/font/TextRenderer$TextLayerType;II)I";
+    //#else
+    private static final String FONT_DRAW = "Lnet/minecraft/client/gui/FontRenderer;func_243247_a(Lnet/minecraft/util/text/ITextComponent;FFIZLnet/minecraft/util/math/vector/Matrix4f;Lnet/minecraft/client/renderer/IRenderTypeBuffer;ZII)I";
+    //#endif
+
+    @WrapOperation(method = "renderName", at = @At(value = "INVOKE", target = FONT_DRAW))
+    private
+    //#if MC >= 1.21.6
+    //$$ void
+    //#else
+    int
+    //#endif
+    renderEssentialIndicator(
+        FontRenderer instance,
+        ITextComponent text,
+        float x,
+        float y,
+        int color,
+        boolean shadow,
+        Matrix4f matrix,
+        IRenderTypeBuffer buffer,
+        //#if MC >= 1.19.4
+        //$$ TextRenderer.TextLayerType layerType,
         //#else
-        T entity,
+        boolean layerType,
         //#endif
-        ITextComponent name,
-        MatrixStack vMatrixStack,
-        IRenderTypeBuffer bufferIn,
-        int packedLightIn,
-        //#if MC>=12005 && MC<12102
-        //$$ float timeDelta,
+        int backgroundColor,
+        int light,
+        Operation<Integer> operation,
+        //#if MC>=12102
+        //$$ @Local(argsOnly = true) EntityRenderState state,
+        //#else
+        @Local(argsOnly = true) T entity,
         //#endif
-        CallbackInfo ci
+        @Local(argsOnly = true) MatrixStack vMatrixStack
     ) {
+        //#if MC >= 1.19.4
+        //$$ boolean alwaysOnTop = layerType == TextRenderer.TextLayerType.SEE_THROUGH;
+        //#else
+        boolean alwaysOnTop = layerType;
+        //#endif
+
+        ModelInstance icon = null;
         if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
             //#if MC>=12102
             //$$ if (state instanceof PlayerEntityRenderStateExt) {
@@ -59,19 +93,16 @@ public class Mixin_NameplateIcon_Render<T extends Entity> {
             if (entity instanceof AbstractClientPlayerEntity) {
                 CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayerEntity) entity);
             //#endif
-                OnlineIndicator.drawNametagIndicator(new UMatrixStack(vMatrixStack), bufferIn, cState, toFormattedString(name), packedLightIn);
-                return;
+                icon = cState.nametagIcon();
             }
         }
 
-        //#if MC>=12102
-        //$$ boolean isSneaking = state.sneaking;
-        //#else
-        boolean isSneaking = entity.isSneaking();
-        //#endif
+        IconCosmeticRenderer.INSTANCE.drawNameTagIconAndVersionConsistentPadding(
+                new UMatrixStack(vMatrixStack), buffer, alwaysOnTop, color, backgroundColor, icon, toFormattedString(text), light);
 
-        // runs for non players and non-primary nameplates e.g. scoreboard
-        IconCosmeticRenderer.INSTANCE.drawStandaloneVersionConsistentPadding(
-                new UMatrixStack(vMatrixStack), bufferIn, isSneaking, toFormattedString(name), packedLightIn);
+        //#if MC < 1.21.6
+        return
+        //#endif
+        operation.call(instance, text, x, y, color, shadow, matrix, buffer, layerType, backgroundColor, light);
     }
 }

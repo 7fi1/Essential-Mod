@@ -246,15 +246,15 @@ class ParticleSystem(
         billboardRenderPasses.isNotEmpty()
 
     // Needed for java call in Mixin_RenderParticleSystemOfClientWorld & others, due to value class parameter 'lightOverride'
-    fun render(matrixStack: UMatrixStack, cameraPos: Vec3, cameraRot: Quaternion, particleVertexConsumerProvider: VertexConsumerProvider, cameraUuid: UUID, cameraFirstPerson: Boolean, hideParticlesInFirstPerson: Boolean, onlyRenderFromSource: UUID? = null) =
-        render(matrixStack, cameraPos, cameraRot, particleVertexConsumerProvider, cameraUuid, cameraFirstPerson,
+    fun render(matrixStack: UMatrixStack, cameraPos: Vec3, cameraRot: Quaternion, commandQueue: RenderBackend.CommandQueue, cameraUuid: UUID, cameraFirstPerson: Boolean, hideParticlesInFirstPerson: Boolean, onlyRenderFromSource: UUID? = null) =
+        render(matrixStack, cameraPos, cameraRot, commandQueue, cameraUuid, cameraFirstPerson,
             hideParticlesInFirstPerson, onlyRenderFromSource, null)
 
     fun render(
         matrixStack: UMatrixStack,
         cameraPos: Vec3,
         cameraRot: Quaternion,
-        particleVertexConsumerProvider: VertexConsumerProvider,
+        commandQueue: RenderBackend.CommandQueue,
         cameraUuid: UUID,
         cameraFirstPerson: Boolean,
         hideParticlesInFirstPerson: Boolean,
@@ -273,13 +273,14 @@ class ParticleSystem(
                 allParticles // never empty
             }
 
-            particleVertexConsumerProvider.provide(renderPass) { vertexConsumer ->
+            // TODO this allows control over when submitted passes are actually rendered, but isn't yet thread-safe
+            commandQueue.submit(renderPass) { vertexConsumer ->
                 if (!renderPass.material.needsSorting) {
                     for (particle in particles) {
                         particle.prepareBillboard(cameraPos, cameraRot)
                         particle.renderBillboard(matrixStack, vertexConsumer, cameraFacing, cameraUuid, cameraFirstPerson, hideParticlesInFirstPerson, lightOverride)
                     }
-                    return@provide
+                    return@submit
                 }
 
                 // prepare billboards for sorting
@@ -309,7 +310,7 @@ class ParticleSystem(
                     for (particle in particles.sortedByDescending { it.distance }) {
                         particle.renderBillboard(matrixStack, vertexConsumer, cameraFacing, cameraUuid, cameraFirstPerson, hideParticlesInFirstPerson, lightOverride)
                     }
-                    return@provide
+                    return@submit
                 }
 
                 // more complex translucency sorting is required
@@ -1463,10 +1464,6 @@ class ParticleSystem(
             override val isVisible: Boolean
                 get() = true
         }
-    }
-
-    interface VertexConsumerProvider {
-        fun provide(renderPass: ParticleEffect.RenderPass, block: (UVertexConsumer) -> Unit)
     }
 }
 

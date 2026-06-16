@@ -35,6 +35,7 @@ import gg.essential.mixins.transformers.server.integrated.LanConnectionsAccessor
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.NetworkedManager;
 import gg.essential.network.connectionmanager.StateCallbackManager;
+import gg.essential.network.connectionmanager.common.model.ModLoaderType;
 import gg.essential.network.connectionmanager.handler.upnp.ServerUPnPSessionInviteAddPacketHandler;
 import gg.essential.network.connectionmanager.handler.upnp.ServerUPnPSessionPopulatePacketHandler;
 import gg.essential.network.connectionmanager.handler.upnp.ServerUPnPSessionRemovePacketHandler;
@@ -75,6 +76,10 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+//#if MC >= 26.2
+//$$ import net.minecraft.server.MinecraftServer;
+//#endif
 
 //#if MC>=12111
 //$$ import net.minecraft.world.rule.GameRule;
@@ -147,6 +152,14 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
      * The maximum number of concurrent guests that connected during the session
      */
     private int maxConcurrentGuests = 0;
+
+    //#if FABRIC
+    //$$ private final ModLoaderType modLoader = ModLoaderType.FABRIC;
+    //#elseif NEOFORGE
+    //$$ private final ModLoaderType modLoader = ModLoaderType.NEOFORGE;
+    //#elseif FORGE
+    private final ModLoaderType modLoader = ModLoaderType.FORGE;
+    //#endif
 
     public SPSManager(@NotNull final ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
@@ -249,7 +262,8 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             invited,
             this.localSession.getCreatedAt(),
             MinecraftUtils.getCurrentProtocolVersion(),
-            MinecraftUtils.INSTANCE.getWorldName()
+            MinecraftUtils.INSTANCE.getWorldName(),
+            modLoader
         );
         Multithreading.runAsync(this::refreshWhitelist);
 
@@ -332,7 +346,15 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         // added as operator.
         //#if MC>=11400
         //$$ int port = net.minecraft.util.HTTPUtil.getSuitableLanPort();
-        //$$ if (!server.shareToLAN(currentGameMode, false, port)) {
+        //$$ boolean success = server.shareToLAN(
+            //#if MC >= 26.2
+            //$$ MinecraftServer.MultiplayerScope.LAN,
+            //#endif
+        //$$     currentGameMode,
+        //$$     false,
+        //$$     port
+        //$$ );
+        //$$ if (!success) {
         //$$     return;
         //$$ }
         //#else
@@ -393,11 +415,12 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             oldSession != null ? oldSession.getInvites() : Collections.emptySet(),
             oldSession != null ? oldSession.getCreatedAt() : new DateTime(),
             protocolVersion,
-            worldName
+            worldName,
+            modLoader
         );
 
         if (this.localSession == null) {
-            this.updateQueue.enqueue(new ClientUPnPSessionCreatePacket(ip, port, privacy, protocolVersion, worldName));
+            this.updateQueue.enqueue(new ClientUPnPSessionCreatePacket(ip, port, privacy, protocolVersion, worldName, modLoader));
         } else {
             this.updateQueue.enqueue(new ClientUPnPSessionUpdatePacket(ip, port, privacy));
         }
@@ -616,7 +639,8 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
                 session.getPort(),
                 session.getPrivacy(),
                 session.getProtocolVersion(),
-                session.getWorldName()
+                session.getWorldName(),
+                modLoader
             ));
             this.updateQueue.enqueue(new ClientUPnPSessionInvitesAddPacket(session.getInvites()));
             String serverStatusResponse = this.serverStatusResponse;

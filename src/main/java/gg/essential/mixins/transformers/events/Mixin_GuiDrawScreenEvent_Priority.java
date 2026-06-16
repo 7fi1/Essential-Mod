@@ -17,7 +17,6 @@ import gg.essential.event.gui.GuiDrawScreenEvent;
 import gg.essential.universal.UMatrixStack;
 import gg.essential.util.UDrawContext;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.EntityRenderer;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -35,9 +34,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //$$ import com.mojang.blaze3d.matrix.MatrixStack;
 //#endif
 
-@Mixin(value = EntityRenderer.class, priority = 1500)
+@Mixin(
+    //#if MC >= 26.2
+    //$$ value = net.minecraft.client.gui.Gui.class,
+    //#else
+    value = net.minecraft.client.renderer.EntityRenderer.class,
+    //#endif
+    priority = 1500
+)
 public abstract class Mixin_GuiDrawScreenEvent_Priority {
-    //#if MC >= 26.1
+    //#if MC >= 26.2
+    //$$ private static final String RENDER = "extractRenderState";
+    //#elseif MC >= 26.1
     //$$ private static final String RENDER = "extractGui";
     //#else
     private static final String RENDER = "updateCameraAndRender";

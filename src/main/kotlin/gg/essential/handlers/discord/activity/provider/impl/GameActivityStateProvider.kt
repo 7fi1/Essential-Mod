@@ -11,24 +11,13 @@
  */
 package gg.essential.handlers.discord.activity.provider.impl
 
-import gg.essential.handlers.discord.DiscordIntegration
 import gg.essential.handlers.discord.activity.ActivityState
 import gg.essential.handlers.discord.activity.provider.ActivityStateProvider
 import gg.essential.util.ServerType
-import gg.essential.util.UUIDUtil
 
 class GameActivityStateProvider : ActivityStateProvider {
     private var state: ServerType? = null
         set(value) {
-            val shouldRegenerateKey = when (val castedField = field) {
-                is ServerType.Multiplayer -> value !is ServerType.Multiplayer || castedField.address != value.address
-                is ServerType.SPS.Host -> value !is ServerType.SPS.Host
-                else -> false
-            }
-
-            if (shouldRegenerateKey) {
-                DiscordIntegration.regenerateSpsJoinKey()
-            }
 
             field = value
         }
@@ -36,23 +25,16 @@ class GameActivityStateProvider : ActivityStateProvider {
     override fun provide(): ActivityState? {
         this.state = ServerType.current()
 
-        return when (val state = this.state) {
-            is ServerType.Singleplayer -> ActivityState.Singleplayer
+        return when (this.state) {
+            is ServerType.Singleplayer -> null
 
-            is ServerType.Multiplayer -> ActivityState.Multiplayer(state.address)
+            is ServerType.Realms,
+            is ServerType.Multiplayer -> ActivityState.NewMultiplayer
 
-            is ServerType.Realms -> ActivityState.Realm
-
-            is ServerType.SPS.Guest -> {
-                val uuid = state.hostUuid
-                val username = UUIDUtil.getName(uuid).join()
-
-                ActivityState.SPSGuest(username)
-            }
-
+            is ServerType.SPS.Guest -> ActivityState.NewSPSGuest
             is ServerType.SPS.Host -> ActivityState.SPSHost
 
-            else -> null
+            null -> null
         }
     }
 }

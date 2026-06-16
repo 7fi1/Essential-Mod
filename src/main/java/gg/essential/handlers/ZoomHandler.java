@@ -168,7 +168,9 @@ public class ZoomHandler {
     }
 
     private void queueTerrainUpdate() {
+        //#if MC < 26.2
         UMinecraft.getMinecraft().renderGlobal.setDisplayListEntitiesDirty();
+        //#endif
     }
 
     private float calculateEasing(float progress) {

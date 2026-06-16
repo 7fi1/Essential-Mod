@@ -47,6 +47,7 @@ import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.spacer
 import gg.essential.gui.layoutdsl.then
 import gg.essential.gui.modals.updateAvailableModal
+import gg.essential.gui.proxies.ScreenWithProxiesHandler
 import gg.essential.gui.proxies.ScreenWithProxiesHandler.Companion.mountWithProxy
 import gg.essential.gui.screenshot.components.ScreenshotBrowser
 import gg.essential.gui.sps.WorldShareSettingsGui
@@ -64,6 +65,7 @@ import gg.essential.vigilance.utils.onLeftClick
 
 class RightSideBarNew(
     menuType: PauseMenuDisplay.MenuType,
+    private val proxyHandler: ScreenWithProxiesHandler?,
     private val isMinimal: State<Boolean>,
     private val accountManager: AccountManager,
 ) : UIContainer() {
@@ -147,7 +149,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.betaFlag() {
-        mountWithProxy("beta") {
+        mountWithProxy(proxyHandler, "beta") {
             if_({ VersionData.essentialBranch != "stable" }) {
                 TextFlag(
                     stateOf(MenuButton.LIGHT_RED),
@@ -164,7 +166,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.updateFlag() {
-        mountWithProxy("update") {
+        mountWithProxy(proxyHandler, "update") {
             if_(AutoUpdate.updateAvailable) {
                 IconFlag(stateOf(MenuButton.NOTICE_GREEN), EssentialPalette.DOWNLOAD_7X8).onLeftClick {
                     GuiUtil.launchModalFlow { updateAvailableModal() }
@@ -179,7 +181,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.worldSettingsButton() {
-        mountWithProxy("world_host",) {
+        mountWithProxy(proxyHandler, "world_host",) {
             if_({ worldSettingsVisible()}) {
                 MenuButton {
                     GuiUtil.openScreen { WorldShareSettingsGui() }
@@ -217,7 +219,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.inviteOrHostButton() {
-        mountWithProxy("invite_host") {
+        mountWithProxy(proxyHandler, "invite_host") {
             if_({ hostableOrHasInviteButton() && hasInviteButton() }) {
                 inviteButton()
             } `else` {
@@ -235,7 +237,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.socialButton() {
-        mountWithProxy("social") {
+        mountWithProxy(proxyHandler, "social") {
             MenuButton(BasicState("Social"), textAlignment = MenuButton.Alignment.LEFT) {
                 socialButtonPressed()
             }.constrain {
@@ -247,7 +249,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.messageFlag() {
-        mountWithProxy("message",) {
+        mountWithProxy(proxyHandler, "message",) {
             if_({ messageCount() != "0" }) {
                 TextFlag(
                     stateOf(MenuButton.LIGHT_RED),
@@ -261,7 +263,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.wardrobeButton() {
-        mountWithProxy("wardrobe") {
+        mountWithProxy(proxyHandler, "wardrobe") {
             MenuButton("Wardrobe", textAlignment = MenuButton.Alignment.LEFT) {
                 GuiUtil.openScreen { Wardrobe() }
             }.constrain {
@@ -273,7 +275,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.picturesButton() {
-        mountWithProxy("pictures") {
+        mountWithProxy(proxyHandler, "pictures") {
             MenuButton(BasicState("Pictures"), textAlignment = MenuButton.Alignment.LEFT) {
                 GuiUtil.openScreen { ScreenshotBrowser() }
             }.constrain {
@@ -285,7 +287,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.settingsButton() {
-        mountWithProxy("settings") {
+        mountWithProxy(proxyHandler, "settings") {
             MenuButton(BasicState("Settings"), textAlignment = MenuButton.Alignment.LEFT) {
                 GuiUtil.openScreen { McEssentialConfig.gui() }
             }.constrain {
@@ -297,7 +299,7 @@ class RightSideBarNew(
     }
 
     private fun LayoutScope.accountButton() {
-        mountWithProxy("account") {
+        mountWithProxy(proxyHandler, "account") {
             MenuButton("Account", textAlignment = MenuButton.Alignment.LEFT) {
                 GuiUtil.pushModal { AccountManagerModal(it, accountManager) }
             }.constrain {

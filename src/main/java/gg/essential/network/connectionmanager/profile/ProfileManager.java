@@ -20,6 +20,7 @@ import gg.essential.connectionmanager.common.enums.ProfileStatus;
 import gg.essential.connectionmanager.common.model.profile.ProfilePunishmentStatus;
 import gg.essential.connectionmanager.common.packet.profile.ClientProfileActivityPacket;
 import gg.essential.connectionmanager.common.packet.profile.ServerProfileActivityPacket;
+import gg.essential.connectionmanager.common.packet.profile.ServerProfileLastDisconnectVisibilityPacket;
 import gg.essential.connectionmanager.common.packet.profile.ServerProfileStatusPacket;
 import gg.essential.connectionmanager.common.packet.profile.trustedhosts.ServerProfileTrustedHostsClearPacket;
 import gg.essential.connectionmanager.common.packet.profile.trustedhosts.ServerProfileTrustedHostsPopulatePacket;
@@ -65,6 +66,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -98,6 +100,9 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
     private final State<Set<String>> userTrustedHostsState = new BasicState<>(new HashSet<>());
 
     @NotNull
+    private final Map<UUID, @Nullable Long> lastOnline = new HashMap<>();
+
+    @NotNull
     private final MutableState<MutableTrackedList<ProfileSuspension>> suspensions = mutableListStateOf();
 
     @NotNull
@@ -121,6 +126,10 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
         connectionManager.registerPacketHandler(ServerProfileTrustedHostsClearPacket.class, new ServerProfileTrustedHostsClearPacketHandler());
         connectionManager.registerPacketHandler(ServerProfileTrustedHostsPopulatePacket.class, new ServerProfileTrustedHostsPopulatePacketHandler());
         connectionManager.registerPacketHandler(ServerProfileTrustedHostsRemovePacket.class, new ServerProfileTrustedHostsRemovePacketHandler());
+        connectionManager.registerPacketHandler(ServerProfileLastDisconnectVisibilityPacket.class, packet -> {
+            EssentialConfig.INSTANCE.getShareProfileLastOnline().set(new Pair<>(packet.getState(), false));
+            return Unit.INSTANCE;
+        });
     }
 
     @NotNull
@@ -159,6 +168,11 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
     @NotNull
     public ProfileStatus getStatus(@NotNull final UUID uuid) {
         return this.getStatusIfLoaded(uuid).orElse(ProfileStatus.OFFLINE);
+    }
+
+    @Nullable
+    public Long getLastOnline(@NotNull final UUID uuid) {
+        return this.lastOnline.get(uuid);
     }
 
     @NotNull
@@ -236,6 +250,8 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
                         return Unit.INSTANCE;
                     }
             ), Multithreading.getPool());
+        } else if (status == ProfileStatus.OFFLINE) {
+            this.lastOnline.put(uuid, timestamp);
         }
 
         for (IStatusManager statusManager : getCallbacks()) {
@@ -329,6 +345,7 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
         this.trustedHosts.clear();
         this.activities.clear();
         this.statuses.clear();
+        this.lastOnline.clear();
         clear(this.suspensions);
         updateTrustedHostState();
     }

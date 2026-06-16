@@ -208,16 +208,18 @@ class MessageWrapperImpl(
     } childOf usernameTimestampBox
 
     init {
-        val editedText by EssentialUIText().bindText(isEditing.map { if (it) "editing" else "(edited)" }.toV1(this)).constrain {
-            x = SiblingConstraint(4f)
-            textScale = GuiScaleOffsetConstraint(getGuiScaleOffset())
-            color = isEditing.map { if (it) EssentialPalette.BANNER_BLUE else EssentialPalette.TEXT_DISABLED }.toConstraint()
-        }.bindParent(usernameTimestampBox, isEditing or isEdited).apply {
-            bindEssentialTooltip(
-                (hoveredState().toV2() and isEdited and !isEditing).toV1(this),
-                BasicState(Instant.ofEpochMilli(message.lastEditTime ?: 0L).formatter("$DATE_FORMAT, ${getTimeFormat(false)}")),
-                EssentialTooltip.Position.ABOVE,
-            )
+        if (showEditedLabel) {
+            val editedText by EssentialUIText().bindText(isEditing.map { if (it) "editing" else "(edited)" }.toV1(this)).constrain {
+                x = SiblingConstraint(4f)
+                textScale = GuiScaleOffsetConstraint(getGuiScaleOffset())
+                color = isEditing.map { if (it) EssentialPalette.BANNER_BLUE else EssentialPalette.TEXT_DISABLED }.toConstraint()
+            }.bindParent(usernameTimestampBox, isEditing or isEdited).apply {
+                bindEssentialTooltip(
+                    (hoveredState().toV2() and isEdited and !isEditing).toV1(this),
+                    BasicState(Instant.ofEpochMilli(message.lastEditTime ?: 0L).formatter("$DATE_FORMAT, ${getTimeFormat(false)}")),
+                    EssentialTooltip.Position.ABOVE,
+                )
+            }
         }
     }
 
@@ -429,6 +431,7 @@ class MessageWrapperImpl(
                 if (!sentByClient) options.add(ContextOptionMenu.Divider)
             }
 
+            is InviteEmbed -> {}
             is GiftEmbed -> {}
             is SkinEmbed -> {
                 options.add(ContextOptionMenu.Option("Copy Link", image = EssentialPalette.LINK_10X7) {
@@ -440,7 +443,9 @@ class MessageWrapperImpl(
 
         if (message.sent) {
             if (sentByClient) {
-                options.add(ContextOptionMenu.Divider)
+                if (options.isNotEmpty()) {
+                    options.add(ContextOptionMenu.Divider)
+                }
                 options.add(deleteOption)
             } else {
                 options.add(markUnreadOption)

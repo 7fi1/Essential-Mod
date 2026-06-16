@@ -26,6 +26,7 @@ import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.withSetter
 import gg.essential.mixins.ext.server.coroutineScope
 import gg.essential.mixins.ext.server.dispatcher
+import gg.essential.mixins.ext.server.integrated.undoLan
 import gg.essential.mixins.transformers.server.integrated.LanConnectionsAccessor
 import gg.essential.sps.IntegratedServerManager.Difficulty
 import gg.essential.sps.IntegratedServerManager.GameMode
@@ -35,6 +36,7 @@ import gg.essential.universal.wrappers.UPlayer
 import gg.essential.util.Client
 import gg.essential.util.ModLoaderUtil
 import gg.essential.util.TaskQueueWithResultOnFinish
+import gg.essential.util.UIdentifier
 import gg.essential.util.USession
 import gg.essential.util.UuidNameLookup
 import gg.essential.util.textTranslatable
@@ -62,7 +64,12 @@ import java.util.*
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 
+//#if MC >= 26.2
+//$$ import net.minecraft.server.MinecraftServer
+//#endif
+
 //#if MC >= 1.21.11
+//$$ import gg.essential.util.toU
 //$$ import net.minecraft.world.rule.GameRule;
 //#endif
 
@@ -119,7 +126,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     private val difficultySourceState = mutableStateOf<MutableState<Difficulty>?>(null)
     private val difficultyLockedSourceState = mutableStateOf<MutableState<Boolean>?>(null)
     private val defaultGameModeSourceState = mutableStateOf<MutableState<GameMode>?>(null)
-    private val gameRulesSourceState = mutableStateOf<SuspendingMutableState<Map<String, String>>?>(null)
+    private val gameRulesSourceState = mutableStateOf<SuspendingMutableState<Map<UIdentifier, String>>?>(null)
     private val cheatsEnabledSourceState = mutableStateOf<State<Boolean>?>(null)
     private var openToLanUpdateJob: Job? = null
     private var whitelistUpdateJob: Job? = null
@@ -137,18 +144,18 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
 
     var appliedOpenToLan: Boolean = false
 
-    private val gameRuleUpdateQueue = TaskQueueWithResultOnFinish(coroutineScope, server.coroutineScope) { gameRulesSourceAsMap: Map<String, String>? ->
+    private val gameRuleUpdateQueue = TaskQueueWithResultOnFinish(coroutineScope, server.coroutineScope) { gameRulesSourceAsMap: Map<UIdentifier, String>? ->
         if (gameRulesSourceAsMap == null) return@TaskQueueWithResultOnFinish
         isGameRulesControlledByState = false
         val serverGameRules = getServerGameRules()
         //#if MC >= 1.21.11
         //$$ serverGameRules.accept(object : net.minecraft.world.rule.GameRuleVisitor {
         //$$     override fun visitBoolean(rule: GameRule<Boolean>) {
-        //$$         val valueStr: String = gameRulesSourceAsMap[rule.getId().toString()] ?: return
+        //$$         val valueStr: String = gameRulesSourceAsMap[rule.getId().toU()] ?: return
         //$$         serverGameRules.setValue(rule, valueStr.toBoolean(), server)
         //$$     }
         //$$     override fun visitInt(rule: GameRule<Int>) {
-        //$$         val valueStr: String = gameRulesSourceAsMap[rule.getId().toString()] ?: return
+        //$$         val valueStr: String = gameRulesSourceAsMap[rule.getId().toU()] ?: return
         //$$         serverGameRules.setValue(rule, valueStr.toInt(), server)
         //$$     }
         //$$ })
@@ -163,7 +170,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         //$$        key: GameRules.RuleKey<T>,
         //$$        type: GameRules.RuleType<T>
         //$$    ) {
-        //$$        val valueStr = gameRulesSourceAsMap[key.name] ?: return
+        //$$        val valueStr = gameRulesSourceAsMap[UIdentifier.ofLegacy(key.name)] ?: return
         //$$        val value = serverGameRules.get(key)
         //$$
         //$$        if (value is GameRules.BooleanValue) {
@@ -182,7 +189,9 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         //$$    }
         //$$ })
         //#else
-        gameRulesSourceAsMap.forEach(serverGameRules::setOrCreateGameRule)
+        for ((key, value) in gameRulesSourceAsMap) {
+            serverGameRules.setOrCreateGameRule(key.toLegacyString(), value)
+        }
         //#endif
         isGameRulesControlledByState = true
     }
@@ -229,7 +238,15 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
                         //  behavior, see the comment in the defaultGameMode effect
                         //#if MC>=11400
                         //$$ val port = net.minecraft.util.HTTPUtil.getSuitableLanPort()
-                        //$$ if (!server.shareToLAN(GameMode.Adventure.toMc(), false, port)) {
+                        //$$ val success = server.shareToLAN(
+                            //#if MC >= 26.2
+                            //$$ MinecraftServer.MultiplayerScope.LAN,
+                            //#endif
+                        //$$     GameMode.Adventure.toMc(),
+                        //$$     false,
+                        //$$     port,
+                        //$$ )
+                        //$$ if (!success) {
                         //$$     return@runBlocking
                         //$$ }
                         //#else
@@ -259,6 +276,8 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
                         thirdPartyVoicePort.set(voicePort)
                         maxPlayers.set(server.maxPlayers)
                     }
+                } else if (!openToLan && server.public) {
+                    server.undoLan(hostUuid)
                 }
             }
         }
@@ -375,10 +394,11 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     override fun setDifficultySource(source: MutableState<Difficulty>) = difficultySourceState.set(source.memo().withSetter { source.set(it) })
     override fun setDifficultyLockedSource(source: MutableState<Boolean>) = difficultyLockedSourceState.set(source.memo().withSetter { source.set(it) })
     override fun setDefaultGameModeSource(source: MutableState<GameMode>) = defaultGameModeSourceState.set(source.memo().withSetter { source.set(it) })
-    override fun setGameRulesSource(source: SuspendingMutableState<Map<String, String>>) = gameRulesSourceState.set(source.memo().withSuspendingSetter { source.set(it) })
+    override fun setGameRulesSource(source: SuspendingMutableState<Map<UIdentifier, String>>) = gameRulesSourceState.set(source.memo().withSuspendingSetter { source.set(it) })
     override fun setCheatsEnabledSource(source: State<Boolean>) = cheatsEnabledSourceState.set(source.memo())
 
     override val whitelist: State<Set<UUID>?> = State { whitelistSourceState()?.invoke() }
+    override val openToLan: State<Boolean> = State { openToLanSourceState()?.invoke() == true }
 
     private suspend fun applyWhitelist(desiredWhitelist: Set<UUID>) {
         val whitelist = server.playerList.whitelistedPlayers
@@ -489,7 +509,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     var isGameRulesControlledByState: Boolean = false
 
     // NOTE: Called from server main thread!
-    fun updateServerGameRules(changes: Map<String, String>) {
+    fun updateServerGameRules(changes: Map<UIdentifier, String>) {
         gameRuleUpdateQueue.enqueue {
             gameRulesSourceState.getUntracked()?.set { it + changes }
             gameRulesSourceState.getUntracked()?.getUntracked()
@@ -501,15 +521,15 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     //#if MC >= 1.16 && MC < 1.21.11
     //$$ fun updateServerGameRules() {
     //$$     val serverGameRules = getServerGameRules()
-    //$$     val gameRulesToUpdate = mutableMapOf<String, String>()
+    //$$     val gameRulesToUpdate = mutableMapOf<UIdentifier, String>()
     //$$     (serverGameRules as MixinGameRulesAccessor).rules.forEach { (rule, value) ->
-    //$$         val stringRule = rule.toString()
+    //$$         val ruleId = UIdentifier.ofLegacy(rule.toString())
             //#if MC >= 1.17
             //$$ val stringValue = value.serialize()
             //#else
             //$$ val stringValue = value.stringValue()
             //#endif
-    //$$         gameRulesToUpdate[stringRule] = stringValue
+    //$$         gameRulesToUpdate[ruleId] = stringValue
     //$$     }
     //$$     updateServerGameRules(gameRulesToUpdate)
     //$$ }

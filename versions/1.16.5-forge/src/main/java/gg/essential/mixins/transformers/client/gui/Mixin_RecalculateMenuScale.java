@@ -24,7 +24,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC >= 26.2
+//$$ @Mixin(net.minecraft.client.gui.Gui.class)
+//#else
 @Mixin(Minecraft.class)
+//#endif
 public class Mixin_RecalculateMenuScale {
 
     @Unique
@@ -37,7 +41,11 @@ public class Mixin_RecalculateMenuScale {
 
     @Inject(method = "displayGuiScreen", at = @At(
             value = "FIELD",
+            //#if MC >= 26.2
+            //$$ target = "Lnet/minecraft/client/gui/Gui;screen:Lnet/minecraft/client/gui/screens/Screen;",
+            //#else
             target = "Lnet/minecraft/client/Minecraft;currentScreen:Lnet/minecraft/client/gui/screen/Screen;",
+            //#endif
             shift = At.Shift.AFTER,
             opcode = Opcodes.PUTFIELD
     ))

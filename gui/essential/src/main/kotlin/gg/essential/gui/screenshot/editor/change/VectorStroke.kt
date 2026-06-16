@@ -12,7 +12,7 @@
 package gg.essential.gui.screenshot.editor.change
 
 import gg.essential.gui.screenshot.editor.ScreenshotCanvas
-import gg.essential.util.lwjgl3.api.nanovg.NanoVG
+import gg.essential.universal.UMatrixStack
 
 /**
  * Vector stroke
@@ -22,5 +22,5 @@ abstract class VectorStroke(val editableScreenshot: ScreenshotCanvas, val color:
     /**
      * Renders this VectorStroke
      */
-    abstract fun render(vg: NanoVG, width: Float, height: Float, scale: Float)
+    abstract fun render(matrixStack: UMatrixStack, imageX: Float, imageY: Float, imageWidth: Float, imageHeight: Float, scale: Float)
 }

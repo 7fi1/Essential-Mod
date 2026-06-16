@@ -85,7 +85,12 @@ object EssentialSoundManager {
         val mc = Minecraft.getMinecraft()
 
         //#if MC>=11600
-        //$$ val listener = with(mc.gameRenderer.activeRenderInfo.projectedView) { vec3(x.toFloat(), y.toFloat(), z.toFloat()) }
+        //#if MC >= 26.2
+        //$$ val camera = mc.gameRenderer.mainCamera()
+        //#else
+        //$$ val camera = mc.gameRenderer.activeRenderInfo
+        //#endif
+        //$$ val listener = with(camera.projectedView) { vec3(x.toFloat(), y.toFloat(), z.toFloat()) }
         //#else
         @Suppress("UNNECESSARY_SAFE_CALL") // player field inappropriately marked as non-null by Forge
         val listener = mc.player?.let { vec3(it.posX.toFloat(), it.posY.toFloat(), it.posZ.toFloat()) }

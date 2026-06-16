@@ -14,12 +14,15 @@ package gg.essential.mixins.transformers.client.gui;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import gg.essential.mixins.impl.client.gui.EssentialScreenMayAllowPlayerInput;
 import gg.essential.universal.UScreen;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(Minecraft.class)
+//#if MC >= 26.2
+//$$ @Mixin(net.minecraft.client.gui.Gui.class)
+//#else
+@Mixin(net.minecraft.client.Minecraft.class)
+//#endif
 public class Mixin_FixKeybindUnpressedInScreensThatAllowPlayerMovement {
 
     //#if MC>=11202

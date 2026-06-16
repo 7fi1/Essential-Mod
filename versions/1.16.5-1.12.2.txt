@@ -1,6 +1,9 @@
 com.mojang.blaze3d.systems.RenderSystem enableAlphaTest() net.minecraft.client.renderer.GlStateManager enableAlpha()
 com.mojang.blaze3d.systems.RenderSystem disableAlphaTest() net.minecraft.client.renderer.GlStateManager disableAlpha()
 com.mojang.blaze3d.systems.RenderSystem net.minecraft.client.renderer.GlStateManager
+com.mojang.blaze3d.systems.RenderSystem enableDepthTest() enableDepth()
+com.mojang.blaze3d.systems.RenderSystem disableDepthTest() disableDepth()
+com.mojang.blaze3d.systems.RenderSystem translatef() translate()
 com.mojang.datafixers.DataFixer net.minecraft.util.datafix.DataFixer
 net.minecraft.client.Minecraft getResourcePackList() getResourcePackRepository()
 net.minecraft.client.entity.player.RemoteClientPlayerEntity net.minecraft.client.entity.EntityOtherPlayerMP

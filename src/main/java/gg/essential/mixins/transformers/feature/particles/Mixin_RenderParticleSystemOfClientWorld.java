@@ -230,18 +230,11 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
 
         //#if MC>=12109
         //$$ batch.add((queue, camera) -> {
-        //$$     ParticleSystem.VertexConsumerProvider particleVertexConsumer = (renderPass, block) -> {
-        //$$         queue.getBatchingQueue(renderPass.getMaterial().getNeedsSorting() ? 0 : 1)
-        //$$             .submitCustom(new MatrixStack(), MinecraftRenderBackend.INSTANCE.getParticleLayer(renderPass), (_matrixEntry, vertexConsumer) ->
-        //$$                 new MinecraftRenderBackend.ParticleVertexConsumerProvider(_layer -> vertexConsumer)
-        //$$                     .provide(renderPass, block));
-        //$$     };
-        //$$
         //$$     particleSystem.render(
         //$$         stack,
         //$$         cameraPos,
         //$$         cameraRot,
-        //$$         particleVertexConsumer,
+        //$$         new MinecraftRenderBackend.MinecraftCommandQueue(queue),
         //$$         cameraUuid,
         //$$         isFirstPerson,
         //$$         hideCosmeticParticlesInFirstPerson,
@@ -249,22 +242,24 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
         //$$     );
         //$$ });
         //#else
-        ParticleSystem.VertexConsumerProvider particleVertexConsumer = new MinecraftRenderBackend.ParticleVertexConsumerProvider(
-            //#if MC>=12104
-            //$$ bufferIn
-            //#endif
-        );
+        MinecraftRenderBackend.CommandQueue commandQueue = new MinecraftRenderBackend.CommandQueue();
 
         particleSystem.render(
                 stack,
                 cameraPos,
                 cameraRot,
-                particleVertexConsumer,
+                commandQueue,
                 cameraUuid,
                 isFirstPerson,
                 hideCosmeticParticlesInFirstPerson,
                 null
         );
+
+        commandQueue.render(new MinecraftRenderBackend.ParticleVertexConsumerProvider(
+            //#if MC>=12104
+            //$$ bufferIn
+            //#endif
+        ));
         //#endif
 
         profiler.endSection();

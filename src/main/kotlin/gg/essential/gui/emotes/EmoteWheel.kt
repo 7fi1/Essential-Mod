@@ -472,7 +472,9 @@ class EmoteWheel : WindowScreen(
 
                     UKeyboard.getKeyName(UMinecraft.getSettings().keyBindSneak)?.let { keybind ->
                         val text = textLiteral("Press $keybind to Stop Emote")
-                        //#if MC >= 26.1
+                        //#if MC >= 26.2
+                        //$$ UMinecraft.getMinecraft().gui.hud.setOverlayMessage(text, true)
+                        //#elseif MC >= 26.1
                         //$$ UMinecraft.getMinecraft().gui.setOverlayMessage(text, true)
                         //#elseif MC>=11202
                         player?.sendStatusMessage(text, true)

@@ -343,7 +343,7 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
             eagerMessageResolver.messageReceived(message);
         }
 
-        if (!isFromHistoryRequest) {
+        if (!isFromHistoryRequest && !previousMessageExisted) {
             if ((channel.getLastReadMessageId() == null || channel.getLastReadMessageId() < message.getId())
                     && !message.getSender().equals(USession.Companion.activeNow().getUuid())
             ) {

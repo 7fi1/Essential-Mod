@@ -23,7 +23,11 @@ import org.spongepowered.asm.mixin.injection.Slice;
 public abstract class Mixin_AllowMovementDuringScreens_HandleKeys {
     @ModifyExpressionValue(
         method = "onKey",
+        //#if MC >= 26.2
+        //$$ at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;screen()Lnet/minecraft/client/gui/screens/Screen;", ordinal = 0),
+        //#else
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/MinecraftClient;currentScreen:Lnet/minecraft/client/gui/screen/Screen;", ordinal = 0),
+        //#endif
         //#if MC>=12109
         //$$ slice = @Slice(from = @At(value = "CONSTANT", args = "stringValue=keyPressed event handler"))
         //#elseif MC>=12102

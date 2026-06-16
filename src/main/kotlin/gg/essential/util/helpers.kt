@@ -348,7 +348,9 @@ fun setPerspective(perspective: Int) {
     //#else
     UMinecraft.getSettings().thirdPersonView = perspective
     //#endif
+    //#if MC < 26.2
     UMinecraft.getMinecraft().renderGlobal.setDisplayListEntitiesDirty()
+    //#endif
 }
 
 val screenshotFolder: File by lazy {

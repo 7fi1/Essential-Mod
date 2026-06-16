@@ -23,7 +23,9 @@ object EssentialConfigApiImpl : EssentialConfigApi {
     override var messageReceivedNotifications: Boolean by EssentialConfig::messageReceivedNotifications
     override var groupMessageReceivedNotifications: Boolean by EssentialConfig::groupMessageReceivedNotifications
     override var messageSound: Boolean by EssentialConfig::messageSound
-    override var updateModal: Boolean by EssentialConfig::updateModal
+    override var updateModal: Boolean
+        get() = true
+        set(value) {}
     override var showEssentialIndicatorOnTab: Boolean by EssentialConfig::showEssentialIndicatorOnTab
     override var showEssentialIndicatorOnNametag: Boolean by EssentialConfig::showEssentialIndicatorOnNametag
     override var sendServerUpdates: Boolean by EssentialConfig::sendServerUpdates

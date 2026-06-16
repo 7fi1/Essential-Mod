@@ -11,8 +11,47 @@
  */
 package gg.essential.util
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+
+@Serializable(with = UIdentifier.Serializer::class)
 data class UIdentifier(val namespace: String, val path: String) {
     override fun toString(): String {
         return "$namespace:$path"
+    }
+
+    fun toLegacyString(): String {
+        return if (namespace.isNotEmpty()) "$namespace:$path" else path
+    }
+
+    companion object {
+        @JvmStatic
+        fun of(str: String): UIdentifier {
+            val (namespace, path) = str.split(':', limit = 2)
+            return UIdentifier(namespace, path)
+        }
+
+        @JvmStatic
+        fun ofLegacy(str: String): UIdentifier {
+            return if (":" in str) of(str) else UIdentifier("", str)
+        }
+    }
+
+    object Serializer : KSerializer<UIdentifier> {
+        private val inner = String.serializer()
+        override val descriptor: SerialDescriptor
+            get() = inner.descriptor
+
+        override fun serialize(encoder: Encoder, value: UIdentifier) {
+            encoder.encodeSerializableValue(inner, value.toLegacyString())
+        }
+
+        override fun deserialize(decoder: Decoder): UIdentifier {
+            return ofLegacy(decoder.decodeSerializableValue(inner))
+        }
     }
 }

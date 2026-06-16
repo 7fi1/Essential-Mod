@@ -12,13 +12,14 @@
 package gg.essential.render
 
 import gg.essential.model.light.Light
+import gg.essential.model.util.Color
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.vertex.UVertexConsumer
+import gg.essential.util.identifier
 import net.minecraft.util.ResourceLocation
 
 //#if MC>=11600
-//$$ import gg.essential.util.identifier
 //#if MC>=12111
 //$$ import net.minecraft.client.render.RenderLayers
 //#else
@@ -29,18 +30,14 @@ import net.minecraft.util.ResourceLocation
 //#endif
 
 /**
- * Using [create] on 1.16 and lower, [tex] and [light] will not do anything. This is because it is backed by [UGraphics] on
- * these versions (using [UGraphics.CommonVertexFormats.POSITION_COLOR]). Using [createWithTexture] on these versions,
- * [tex] and [light] are passed through, as the vertex format is [UGraphics.CommonVertexFormats.POSITION_COLOR_TEXTURE_LIGHT].
- *
  * On 1.16+, this uses [net.minecraft.client.renderer.RenderType.getText]. If [createWithTexture] is used, the specified
  * texture is used, otherwise a white texture is used (effectively acting as if there is no texture).
  */
-class TextRenderTypeVertexConsumer(private val vertexConsumer: UVertexConsumer, private val passTexLight: Boolean): UVertexConsumer {
+class TextRenderTypeVertexConsumer(private val vertexConsumer: UVertexConsumer): UVertexConsumer {
     companion object {
+        private val WHITE_TEXTURE = identifier("essential", "textures/white.png")
+
         //#if MC>=11600
-        //$$ private val WHITE_TEXTURE = identifier("essential", "textures/white.png")
-        //$$
         //$$ @JvmStatic
         //$$ @JvmOverloads
         //$$ fun create(provider: IRenderTypeBuffer, seeThrough: Boolean = false): TextRenderTypeVertexConsumer {
@@ -57,14 +54,12 @@ class TextRenderTypeVertexConsumer(private val vertexConsumer: UVertexConsumer, 
             //#endif
         //$$     val consumer = UVertexConsumer.of(provider.getBuffer(type))
         //$$
-        //$$     return TextRenderTypeVertexConsumer(consumer, true)
+        //$$     return TextRenderTypeVertexConsumer(consumer)
         //$$ }
         //#else
         @JvmStatic
         fun create(buffer: UGraphics): TextRenderTypeVertexConsumer {
-            @Suppress("DEPRECATION")
-            buffer.beginWithDefaultShader(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_COLOR)
-            return TextRenderTypeVertexConsumer(buffer.asUVertexConsumer(), false)
+            return createWithTexture(buffer, WHITE_TEXTURE)
         }
 
         @JvmStatic
@@ -72,7 +67,7 @@ class TextRenderTypeVertexConsumer(private val vertexConsumer: UVertexConsumer, 
             UGraphics.bindTexture(0, texture)
             @Suppress("DEPRECATION")
             buffer.beginWithDefaultShader(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_COLOR_TEXTURE_LIGHT)
-            return TextRenderTypeVertexConsumer(buffer.asUVertexConsumer(), true)
+            return TextRenderTypeVertexConsumer(buffer.asUVertexConsumer())
         }
         //#endif
     }
@@ -95,13 +90,11 @@ class TextRenderTypeVertexConsumer(private val vertexConsumer: UVertexConsumer, 
     }
 
     override fun tex(u: Double, v: Double) = apply {
-        if (passTexLight)
-            vertexConsumer.tex(u, v)
+        vertexConsumer.tex(u, v)
     }
 
     override fun light(u: Int, v: Int) = apply {
-        if (passTexLight)
-            vertexConsumer.light(u, v)
+        vertexConsumer.light(u, v)
     }
 
     override fun pos(stack: UMatrixStack, x: Double, y: Double, z: Double) = apply {
@@ -114,6 +107,10 @@ class TextRenderTypeVertexConsumer(private val vertexConsumer: UVertexConsumer, 
 
     override fun overlay(u: Int, v: Int) = apply {
         vertexConsumer.overlay(u, v)
+    }
+
+    fun color(color: Color) = apply {
+        color(color.r.toInt(), color.g.toInt(), color.b.toInt(), color.a.toInt())
     }
 
     override fun color(red: Int, green: Int, blue: Int, alpha: Int) = apply {

@@ -194,7 +194,11 @@ class DividerServerListEntry(
     //#if MC>=12109
     //$$ override fun connect() {}
     //$$ // this appears to be an "equals"-kind of function, used to keep selection on the same entry on refresh
+    //#if MC >= 26.2
+    //$$ override
+    //#else
     //$$ @Suppress("unused") // method, which is required, is package private, so we can't actually `override` it
+    //#endif
     //$$ fun isOfSameType(entry: MultiplayerServerListWidget.Entry) = false
     //#endif
 

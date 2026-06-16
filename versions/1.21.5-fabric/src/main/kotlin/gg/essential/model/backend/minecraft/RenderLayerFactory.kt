@@ -65,15 +65,21 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
                 else withShaderDefine(key, value.toInt())
             }
             pipeline.shaderDefines.flags.forEach { withShaderDefine(it) }
+            //#if MC >= 26.2
+            //$$ pipeline.bindGroupLayouts.forEach { withBindGroupLayout(it) }
+            //#else
             pipeline.samplers.forEach { sampler ->
                 withSampler(sampler)
             }
             pipeline.uniforms.forEach { uniform ->
                 withUniform(uniform.name(), uniform.type())
             }
+            //#endif
             withPolygonMode(pipeline.polygonMode)
             withCull(pipeline.isCull)
-            //#if MC >= 26.1
+            //#if MC >= 26.2
+            //$$ pipeline.colorTargetStates.forEachIndexed { i, it -> if (it != null) withColorTargetState(i, it) }
+            //#elseif MC >= 26.1
             //$$ withColorTargetState(pipeline.colorTargetState)
             //#else
             if (pipeline.blendFunction.isPresent) {
@@ -93,7 +99,12 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
             //#if MC < 26.1
             withColorLogic(pipeline.colorLogic)
             //#endif
+            //#if MC >= 26.2
+            //$$ withPrimitiveTopology(pipeline.primitiveTopology)
+            //$$ pipeline.vertexFormatBindings.forEachIndexed { i, it -> if (it != null) withVertexBinding(i, it) }
+            //#else
             withVertexFormat(pipeline.vertexFormat, pipeline.vertexFormatMode)
+            //#endif
         }
         //#endif
 
@@ -181,7 +192,11 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
         //$$ private val PARTICLES_TARGET = Target("particles") {
         //#endif
         //$$     val mc = net.minecraft.client.MinecraftClient.getInstance()
-        //$$     mc.worldRenderer.particlesFramebuffer ?: mc.framebuffer
+            //#if MC >= 26.2
+            //$$ mc.levelRenderer.particlesTarget() ?: mc.gameRenderer.mainRenderTarget()
+            //#else
+            //$$ mc.worldRenderer.particlesFramebuffer ?: mc.framebuffer
+            //#endif
         //$$ }
         //#endif
 
@@ -197,7 +212,6 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
             //$$ val builder = RenderSetup.builder(pipeline)
             //$$     .texture("Sampler0", texture)
             //$$     .useLightmap()
-            //$$     .outputTarget(PARTICLES_TARGET)
             //$$
             //$$ if (renderPass.material != Cutout) builder.outputTarget(PARTICLES_TARGET)
             //#else

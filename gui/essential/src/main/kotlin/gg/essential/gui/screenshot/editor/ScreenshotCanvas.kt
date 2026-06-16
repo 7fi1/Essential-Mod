@@ -11,6 +11,7 @@
  */
 package gg.essential.gui.screenshot.editor
 
+import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.components.Window
@@ -18,11 +19,9 @@ import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.effects.ScissorEffect
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.UINanoVG
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableStateOf
-import gg.essential.gui.elementa.state.v2.onChange
 import gg.essential.gui.screenshot.LocalScreenshot
 import gg.essential.gui.screenshot.RemoteScreenshot
 import gg.essential.gui.screenshot.ScreenshotId
@@ -30,22 +29,18 @@ import gg.essential.gui.screenshot.editor.change.CropChange
 import gg.essential.gui.screenshot.editor.change.EditHistory
 import gg.essential.gui.screenshot.editor.change.VectorStroke
 import gg.essential.gui.screenshot.image.ScreenshotImage
+import gg.essential.gui.screenshot.providers.RegisteredTexture
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
 import gg.essential.network.connectionmanager.media.IScreenshotManager
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
-import gg.essential.util.UIdentifier
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.animateColor
-import gg.essential.util.lwjgl3.api.nanovg.NanoVG
 import gg.essential.vigilance.gui.VigilancePalette
 import kotlinx.coroutines.Dispatchers
-import org.lwjgl.BufferUtils
-import org.lwjgl.opengl.GL11
-import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
-import java.util.*
 import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 import kotlin.coroutines.EmptyCoroutineContext
@@ -54,7 +49,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * Can be improved by abstracting cropping functions to a cropping [Tool] class
  */
 class ScreenshotCanvas(
-    val screenshot: State<UIdentifier?>,
+    val screenshot: State<RegisteredTexture?>,
     val editHistory: EditHistory,
 ) : UIContainer() {
     var onDraw: UIContainer.(Float, Float, Int) -> Unit = { _, _, _ -> }
@@ -117,12 +112,12 @@ class ScreenshotCanvas(
 
     // anything drawn is displayed via this component
     // tools such as [PenTool] mutate its image and update it
-    val vectorEditingOverlay: VectorEditingOverlay = VectorEditingOverlay(screenshot).constrain {
+    val vectorEditingOverlay: VectorEditingOverlay = VectorEditingOverlay().constrain {
         x = 0.pixels boundTo screenshotDisplay
         y = 0.pixels boundTo screenshotDisplay
         height = 100.percent() boundTo screenshotDisplay
         width = 100.percent() boundTo screenshotDisplay
-    } childOf retainedImage
+    } childOf retainedImage effect ScissorEffect()
 
 
     init {
@@ -133,32 +128,28 @@ class ScreenshotCanvas(
 
 
     /**
-     * NanoVG based editing overlay which handles drawing all edits as well as drawing the parts of the screenshot retained from cropping. [UINanoVG]
+     * Editing overlay which handles drawing all edits as well as drawing the parts of the screenshot retained from cropping.
      */
-    open inner class VectorEditingOverlay(val image: State<UIdentifier?>) : UINanoVG() {
-        private val screenshotImage = ScreenshotImage(image)
-        var scale = 1f
+    open inner class VectorEditingOverlay : UIContainer() {
+        // FIXME the image really shouldn't be inside of the overlay to begin with
+        //  the whole component layout in this file is quite a mess
+        val screenshotImage = ScreenshotImage(screenshot).constrain {
+            width = 100.percent
+            height = 100.percent
+        } childOf this
 
-        init {
-            image.onChange(this) { markDirty() }
-            editHistory.history.onChange(this) { markDirty() }
-        }
-
-        constructor(veo: VectorEditingOverlay) : this(veo.image)
-
-        override fun draw(matrixStack: UMatrixStack) {
-            matrixStack.push()
-            matrixStack.translate(getLeft(), getTop(), 0f)
-            screenshotImage.renderImage(matrixStack, Color.WHITE, getWidth().toDouble(), getHeight().toDouble())
-            matrixStack.pop()
-            super.draw(matrixStack)
-        }
-
-        override fun renderVG(matrixStack: UMatrixStack, vg: NanoVG, width: Float, height: Float) {
-            editHistory.history.getUntracked().filterIsInstance<VectorStroke>().forEach { vs ->
-                vs.render(vg, width, height, scale)
+        val overlay = object : UIComponent() {
+            override fun draw(matrixStack: UMatrixStack) {
+                beforeDraw(matrixStack)
+                editHistory.history.getUntracked().filterIsInstance<VectorStroke>().forEach { vs ->
+                    vs.render(matrixStack, getLeft(), getTop(), getWidth(), getHeight(), 1f)
+                }
+                super.draw(matrixStack)
             }
-        }
+        }.constrain {
+            width = 100.percent
+            height = 100.percent
+        } childOf this
     }
 
     /**
@@ -188,42 +179,29 @@ class ScreenshotCanvas(
             }
         }
 
+        val guiScale = UResolution.scaleFactor.toFloat()
         val fullWidth = screenshot.width
         val fullHeight = screenshot.height
-        val drawableWidth = screenshotDisplay.getWidth().toInt() * UResolution.scaleFactor.toInt()
+        val scaledFullWidth = fullWidth / guiScale
+        val scaledFullHeight = fullHeight / guiScale
+        val scale = scaledFullWidth / screenshotDisplay.getWidth()
 
-        val buffer = BufferUtils.createFloatBuffer(fullWidth * fullHeight * 4)
-        val veoCopy = object : VectorEditingOverlay(vectorEditingOverlay) {
-            override fun render(matrixStack: UMatrixStack, width: Float, height: Float) {
-                super.render(matrixStack, width, height)
-
-                GL11.glReadPixels(
-                    0,
-                    0,
-                    width.toInt(),
-                    height.toInt(),
-                    GL11.GL_RGBA,
-                    GL11.GL_FLOAT,
-                    buffer
-                )
+        val texture = platform.renderToTexture(fullWidth, fullHeight) { matrixStack ->
+            editHistory.history.getUntracked().filterIsInstance<VectorStroke>().forEach { vs ->
+                vs.render(matrixStack, 0f, 0f, scaledFullWidth, scaledFullHeight, scale)
             }
         }
-        veoCopy.scale = fullWidth / drawableWidth.toFloat()
-        veoCopy.drawFrameBuffer(fullWidth / UResolution.scaleFactor, fullHeight / UResolution.scaleFactor)
-        veoCopy.delete()
+        val buffer = texture.readPixelColors(0, 0, fullWidth, fullHeight)
+        texture.close()
         // Fork as soon as we can to avoid freezing the main thread
         Dispatchers.IO.dispatch(EmptyCoroutineContext) {
-            buffer.rewind()
-            val imgData = (0 until buffer.limit()).map { i ->
-                (buffer.get(i) * 255f).toInt()
-            }.chunked(fullWidth * 4) { chunk ->
-                chunk.chunked(4) { list ->
-                    (((list[3] and 0xFF) shl 24) or
-                        ((list[0] and 0xFF) shl 16) or
-                        ((list[1] and 0xFF) shl 8) or
-                        (list[2] and 0xFF))
+            val imgData = IntArray(fullWidth * fullHeight)
+            var i = 0
+            for (y in (0 until buffer.height).reversed()) {
+                for (x in 0 until buffer.width) {
+                    imgData[i++] = buffer[x, y].argb.toInt()
                 }
-            }.reversed().flatten().toIntArray()
+            }
             val image = BufferedImage(
                 fullWidth,
                 fullHeight,

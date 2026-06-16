@@ -23,13 +23,13 @@ import dev.folomeev.kotgl.matrix.vectors.vecZero
 import gg.essential.Essential
 import gg.essential.api.profile.WrappedGameProfile
 import gg.essential.api.profile.wrapped
+import gg.essential.cosmetics.CosmeticId
 import gg.essential.cosmetics.CosmeticsState
 import gg.essential.cosmetics.EquippedCosmetic
 import gg.essential.cosmetics.WearablesManager
 import gg.essential.cosmetics.events.AnimationEventType
 import gg.essential.cosmetics.events.CosmeticEventDispatcher.dispatchEvents
-import gg.essential.cosmetics.renderForHoverOutline
-import gg.essential.cosmetics.renderCapeForHoverOutline
+import gg.essential.cosmetics.renderCosmeticsForOutlines
 import gg.essential.cosmetics.skinmask.MaskedSkinProvider
 import gg.essential.elementa.dsl.pixels
 import gg.essential.elementa.state.BasicState
@@ -74,6 +74,7 @@ import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
 import gg.essential.util.Client
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.ModLoaderUtil
 import gg.essential.util.getPerspective;
 import gg.essential.util.identifier
@@ -102,6 +103,10 @@ import kotlin.math.min
 import kotlin.math.PI
 import kotlin.random.Random
 import java.util.*
+
+//#if MC >= 26.2
+//$$ import net.minecraft.client.renderer.SubmitNodeStorage
+//#endif
 
 //#if MC>=12109
 //$$ import net.minecraft.client.render.state.CameraRenderState
@@ -310,6 +315,11 @@ open class UI3DPlayer(
     }
 
     private fun drawWithOrthographicProjection(stack: UMatrixStack) {
+        if (platform.usesReversedZ) {
+            clearDepthTexture()
+            stack.scale(1f, 1f, -1f)
+        }
+
         // Center player within component
         stack.translate(getLeft() + getWidth() / 2, getTop() + getHeight() / 2, 450f)
 
@@ -343,23 +353,38 @@ open class UI3DPlayer(
         //#endif
     }
 
-    private fun drawWithPerspectiveProjection(stack: UMatrixStack, camera: PerspectiveCamera) {
+    private fun clearDepthTexture() {
         // Perspective depth values are incredibly close to 1 (while orthographic are about [0.2; 0.5]),
         // so they will naturally always end up behind anything which was already rendered there and therefore won't be
         // visible if we do not clear the depth buffer first.
+        // As of 26.2, MC uses reversed Z (while Elementa still uses regular Z), so even with orthographic rendering
+        // we'd fail the depth test if we don't clear the depth buffer first.
         //#if MC>=12105
+        //#if MC >= 26.2
+        //$$ val mcDepthTexture = Minecraft.getInstance().gameRenderer.mainRenderTarget().depthTexture
+        //#else
         //$$ val mcDepthTexture = MinecraftClient.getInstance().framebuffer.depthAttachment
+        //#endif
         //#if MC>=12106
         //$$ val depthTexture = RenderSystem.outputDepthTextureOverride?.texture() ?: mcDepthTexture
         //#else
         //$$ val depthTexture = mcDepthTexture
         //#endif
         //$$ if (depthTexture != null) {
-        //$$     RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 1.0)
+            //#if MC >= 26.2
+            //$$ val clearDepth = 0.0
+            //#else
+            //$$ val clearDepth = 1.0
+            //#endif
+        //$$     RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, clearDepth)
         //$$ }
         //#else
         GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT)
         //#endif
+    }
+
+    private fun drawWithPerspectiveProjection(stack: UMatrixStack, camera: PerspectiveCamera) {
+        clearDepthTexture()
 
         val (left, top) = stack.transform(getLeft(), getTop())
         val (right, bottom) = stack.transform(getRight(), getBottom())
@@ -382,7 +407,9 @@ open class UI3DPlayer(
         )
         projectionMatrix.scale(scaleX, scaleY, 1f)
         // For older versions, we use gluPerspective on the OpenGL stack itself
-        //#if MC>=11903
+        //#if MC >= 26.2
+        //$$ projectionMatrix.peek().model.mul(Matrix4f().perspective(Math.toRadians(camera.fov.toDouble()).toFloat(), getWidth() / getHeight(), 20f, 0.5f, RenderSystem.getDevice().deviceInfo.isZZeroToOne))
+        //#elseif MC>=11903
         //$$ projectionMatrix.peek().model.mul(Matrix4f().perspective(Math.toRadians(camera.fov.toDouble()).toFloat(), getWidth() / getHeight(), 0.5f, 20f))
         //#elseif MC>=11400
         //$$ projectionMatrix.peek().model.mul(Matrix4f.perspective(camera.fov.toDouble(), getWidth() / getHeight(), 0.5f, 20f))
@@ -609,7 +636,13 @@ open class UI3DPlayer(
             //#if MC>=12109
             //$$ state.light = MAX_LIGHT.value.toInt()
             //$$ state.shadowPieces.clear()
+            //#if MC >= 26.2
+            //$$ val entityRenderPass = Minecraft.getInstance().gameRenderer.featureRenderDispatcher()
+            //$$ val submitNodeStorage = SubmitNodeStorage()
+            //#else
             //$$ val entityRenderPass = MinecraftClient.getInstance().gameRenderer.entityRenderDispatcher
+            //$$ val submitNodeStorage = entityRenderPass.queue
+            //#endif
             //$$ val cameraState = CameraRenderState().also { cameraState ->
             //#if MC>=12111
             //$$     cameraState.initialized = true
@@ -623,8 +656,12 @@ open class UI3DPlayer(
             //$$     cameraState.orientation = Quaternionf(camera.rotation)
             //#endif
             //$$ }
-            //$$ renderManager.render(state, cameraState, 0.0, 0.0, 0.0, stack.toMC(), entityRenderPass.queue)
+            //$$ renderManager.render(state, cameraState, 0.0, 0.0, 0.0, stack.toMC(), submitNodeStorage)
+            //#if MC >= 26.2
+            //$$ entityRenderPass.renderAllFeatures(submitNodeStorage)
+            //#else
             //$$ entityRenderPass.render()
+            //#endif
             //#else
             //$$ val vertexConsumers = MinecraftClient.getInstance().bufferBuilders.entityVertexConsumers
             //$$ dispatcher.setRenderShadows(false)
@@ -766,14 +803,6 @@ open class UI3DPlayer(
     }
 
     private fun doDrawFallbackPlayer() {
-        //#if MC>=11400
-        //$$ val immediate = Minecraft.getInstance().renderTypeBuffers.bufferSource
-        //$$ val vertexConsumerProvider = MinecraftRenderBackend.VertexConsumerProvider(immediate, MAX_LIGHT.value.toInt())
-        //#else
-        val vertexConsumerProvider = MinecraftRenderBackend.VertexConsumerProvider()
-        UGraphics.enableDepth()
-        //#endif
-
         val restoreLighting = setupPlayerLight()
 
         val stack = camera.createModelViewMatrix()
@@ -784,31 +813,25 @@ open class UI3DPlayer(
         // See RenderPlayer.preRenderCallback
         stack.scale(0.9375f)
 
-        val queue = MinecraftRenderBackend.CommandQueue()
+        val playerQueue = MinecraftRenderBackend.CommandQueue()
+        val cosmeticQueues = mutableMapOf<CosmeticId, MinecraftRenderBackend.CommandQueue>()
+        val cosmeticQueuesProvider = WearablesManager.CommandQueueProvider { cosmetic ->
+            cosmeticQueues.getOrPut(cosmetic) { MinecraftRenderBackend.CommandQueue() }
+        }
 
-        fallbackPlayer.value.render(stack, queue, vertexConsumerProvider)
+        fallbackPlayer.value.render(stack, playerQueue, cosmeticQueuesProvider)
 
-        queue.render(vertexConsumerProvider)
+        CosmeticHoverOutlineEffect.active?.renderCosmeticsForOutlines(cosmeticQueues)
 
-        //#if MC>=11400
-        //$$ immediate.finish()
-        //#else
-        UGraphics.disableDepth()
-        //#endif
+        val combinedQueue = playerQueue
+        cosmeticQueues.values.forEach { it.copyTo(combinedQueue) }
+        combinedQueue.renderImmediate()
 
         restoreLighting()
     }
 
     private fun doDrawParticles(particleSystem: ParticleSystem) {
-        //#if MC>=12104
-        //$$ val immediate = MinecraftClient.getInstance().bufferBuilders.entityVertexConsumers
-        //$$ val vertexConsumerProvider = MinecraftRenderBackend.ParticleVertexConsumerProvider(immediate)
-        //#else
-        val vertexConsumerProvider = MinecraftRenderBackend.ParticleVertexConsumerProvider()
-        //#endif
-        UGraphics.enableDepth()
-
-        bindWhiteLightMapTexture()
+        val commandQueue = MinecraftRenderBackend.CommandQueue()
 
         val stack = camera.createModelViewMatrix()
 
@@ -828,7 +851,7 @@ open class UI3DPlayer(
             stack,
             cameraPos,
             realRotation * camera.rotation,
-            vertexConsumerProvider,
+            commandQueue,
             UUID(0, 0),
             false,
             false,
@@ -836,11 +859,9 @@ open class UI3DPlayer(
             MAX_LIGHT,
         )
 
-        //#if MC>=12104
-        //$$ immediate.draw()
-        //#endif
+        bindWhiteLightMapTexture()
 
-        UGraphics.disableDepth()
+        commandQueue.renderImmediate()
     }
 
     // Older versions of MC do not always have a proper lightmap texture bound.
@@ -1001,7 +1022,7 @@ open class UI3DPlayer(
             }
         }
 
-        fun render(stack: CMatrixStack, queue: RenderBackend.CommandQueue, vertexConsumerProvider: RenderBackend.VertexConsumerProvider) {
+        fun render(stack: CMatrixStack, playerQueue: RenderBackend.CommandQueue, cosmeticQueues: WearablesManager.CommandQueueProvider) {
             checkForUpdates()
 
             val state = cosmeticsState
@@ -1040,24 +1061,24 @@ open class UI3DPlayer(
                 pose = pose.copy(cape = PlayerPose.Part.MISSING)
             }
 
+            val light = MAX_LIGHT
             val renderMetadata =
                 RenderMetadata(
                     pose,
                     skin,
-                    0,
+                    light,
                     null,
                     emptySet(),
                     Vector3(),
                     EnumPart.values().toSet(),
                 )
 
-            playerModel.render(stack, queue, playerModel.model.defaultRenderGeometry, renderMetadata)
+            playerModel.render(stack, playerQueue, playerModel.model.defaultRenderGeometry, renderMetadata)
             if (cape != null) {
-                renderCape(stack, queue, vertexConsumerProvider, renderMetadata, selectedCape, cape, capeEmissive)
+                renderCape(stack, cosmeticQueues, renderMetadata, selectedCape, cape, capeEmissive)
             }
 
-            wearablesManager.render(stack, queue, pose, skin)
-            wearablesManager.renderForHoverOutline(stack, vertexConsumerProvider, pose, skin)
+            wearablesManager.render(stack, cosmeticQueues, light, pose, skin)
 
             wearablesManager.updateLocators(pose)
             wearablesManager.collectEvents { event ->
@@ -1093,20 +1114,17 @@ open class UI3DPlayer(
 
         private fun renderCape(
             stack: CMatrixStack,
-            queue: RenderBackend.CommandQueue,
-            vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
+            queues: WearablesManager.CommandQueueProvider,
             renderMetadata: RenderMetadata,
             cape: Cosmetic?, // may be null in case of third-party capes
             texture: RenderBackend.Texture,
             emissiveTexture: RenderBackend.Texture?,
         ) {
+            val queue = queues.forCosmetic(cape?.id ?: CAPE_DISABLED_COSMETIC_ID)
             val model = CapeModel.get(texture.height)
             model.texture = texture
             model.emissiveTexture = emissiveTexture
             model.render(stack, queue, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
-            renderCapeForHoverOutline(vertexConsumerProvider, cape) { queue ->
-                model.render(stack, queue, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
-            }
             model.texture = null
             model.emissiveTexture = null
         }

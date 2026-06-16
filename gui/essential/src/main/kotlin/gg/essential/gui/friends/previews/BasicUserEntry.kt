@@ -18,6 +18,7 @@ import gg.essential.elementa.dsl.*
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.IconButton
 import gg.essential.gui.common.shadow.EssentialUIText
+import gg.essential.gui.common.shadow.ShadowEffect
 import gg.essential.gui.elementa.state.v2.onChange
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.image.ImageFactory
@@ -41,6 +42,7 @@ abstract class BasicUserEntry(
         width = 24.pixels
         height = AspectConstraint()
     }.apply {
+        effect(ShadowEffect(Color.BLACK))
     } childOf this
 
     protected val textContainer by UIContainer().constrain {

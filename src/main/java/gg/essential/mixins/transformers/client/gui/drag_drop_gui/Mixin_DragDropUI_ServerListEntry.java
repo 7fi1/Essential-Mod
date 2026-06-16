@@ -210,6 +210,9 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
         return isSelected;
     }
 
+    //#if MC >= 26.2
+    //$$ // Touchscreen mode has been removed in 26.2-snapshot-5
+    //#else
     /**
      * disables the hover visuals while dragging entries
      */
@@ -226,5 +229,6 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
         }
         return touchscreen;
     }
+    //#endif
 
 }

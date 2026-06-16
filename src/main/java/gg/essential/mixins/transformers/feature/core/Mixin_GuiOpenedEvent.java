@@ -20,7 +20,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC >= 26.2
+//$$ @Mixin(net.minecraft.client.gui.Gui.class)
+//#else
 @Mixin(Minecraft.class)
+//#endif
 public class Mixin_GuiOpenedEvent {
     @Inject(method = "displayGuiScreen", at = @At("TAIL"))
     public void essential$fireGuiOpenedEvent(GuiScreen screen, CallbackInfo info) {

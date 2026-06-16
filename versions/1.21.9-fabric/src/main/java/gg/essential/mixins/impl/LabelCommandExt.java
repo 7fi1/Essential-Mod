@@ -12,12 +12,17 @@
 package gg.essential.mixins.impl;
 
 import gg.essential.cosmetics.CosmeticsRenderState;
-import net.minecraft.client.render.command.OrderedRenderCommandQueueImpl;
+
+//#if MC >= 26.2
+//$$ import net.minecraft.client.renderer.feature.NameTagFeatureRenderer.Submit;
+//#else
+import net.minecraft.client.render.command.OrderedRenderCommandQueueImpl.LabelCommand;
+//#endif
 
 public interface LabelCommandExt {
     CosmeticsRenderState essential$getCosmeticsRenderState();
 
-    static LabelCommandExt of(OrderedRenderCommandQueueImpl.LabelCommand command) {
+    static LabelCommandExt of(LabelCommand command) {
         return (LabelCommandExt) (Object) command;
     }
 }

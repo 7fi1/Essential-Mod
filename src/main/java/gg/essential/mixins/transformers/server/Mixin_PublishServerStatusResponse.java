@@ -12,6 +12,7 @@
 package gg.essential.mixins.transformers.server;
 
 import gg.essential.Essential;
+import gg.essential.mixins.ext.server.MinecraftServerExt;
 import gg.essential.mixins.ext.server.integrated.IntegratedServerExt;
 import gg.essential.network.connectionmanager.sps.SPSManager;
 import gg.essential.sps.McIntegratedServerManager;
@@ -28,7 +29,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MinecraftServer.class)
-public class Mixin_PublishServerStatusResponse {
+public abstract class Mixin_PublishServerStatusResponse implements MinecraftServerExt {
     @Shadow
     //#if MC<11904
     @Final
@@ -52,6 +53,11 @@ public class Mixin_PublishServerStatusResponse {
         )
     )
     private void publishUpdatedStatus(CallbackInfo ci) {
+        essential$updateServerStatus();
+    }
+
+    @Override
+    public void essential$updateServerStatus() {
         McIntegratedServerManager manager =
             this instanceof IntegratedServerExt ? ((IntegratedServerExt) this).getEssential$manager() : null;
         SPSManager spsManager = Essential.getInstance().getConnectionManager().getSpsManager();

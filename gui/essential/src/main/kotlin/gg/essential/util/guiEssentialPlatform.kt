@@ -43,8 +43,12 @@ import gg.essential.network.connectionmanager.media.IScreenshotManager
 import gg.essential.network.connectionmanager.notices.INoticesManager
 import gg.essential.network.connectionmanager.skins.SkinsManager
 import gg.essential.network.connectionmanager.suspension.SuspensionManager
+import gg.essential.universal.UGraphics
 import gg.essential.universal.UImage
+import gg.essential.universal.UMatrixStack
+import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.utils.ReleasedDynamicTexture
+import gg.essential.universal.vertex.UBufferBuilder
 import gg.essential.util.image.GpuTexture
 import gg.essential.util.image.bitmap.MutableBitmap
 import gg.essential.util.lwjgl3.Lwjgl3Loader
@@ -169,6 +173,23 @@ interface GuiEssentialPlatform {
     val outputColorTextureOverride: GpuTexture?
     val outputDepthTextureOverride: GpuTexture?
 
+    /**
+     * Whether MC uses "reversed Z" when storing depth.
+     * Meaning the depth value of the far plane is 0 instead of 1.
+     * See https://developer.nvidia.com/blog/visualizing-depth-precision/.
+     *
+     * Note that Elementa uses regular Z on all versions.
+     */
+    val usesReversedZ: Boolean get() = mcVersion >= 26_02_00
+
+    /**
+     * Whether clip space is [-1, 1] (like conventional OpenGL) or [0, 1] (like Vulkan).
+     *
+     * Note however that this is not just a `isVulkan` check!
+     * As of Minecraft 26.2, OpenGL will be configured to use [0, 1] as well, when GL_ARB_clip_space is supported.
+     */
+    val isZZeroToOne: Boolean
+
     fun newWindowedTextureProvider(inner: WindowedImageProvider): WindowedTextureProvider
 
     fun newUIPlayer(
@@ -207,6 +228,16 @@ interface GuiEssentialPlatform {
     val modalPrerequisites: ModalPrerequisites
 
     val suspensionManager: SuspensionManager
+
+    fun newPenToolBufferBuilder(drawMode: UGraphics.DrawMode): UBufferBuilder
+    fun newPenToolRenderPipelineBuilder(
+        id: String,
+        drawMode: UGraphics.DrawMode,
+        vertSource: String,
+        fragSource: String,
+    ): URenderPipeline.Builder
+
+    fun renderToTexture(width: Int, height: Int, block: (UMatrixStack) -> Unit): GpuTexture
 
     interface Keybind {
         val isBound: Boolean

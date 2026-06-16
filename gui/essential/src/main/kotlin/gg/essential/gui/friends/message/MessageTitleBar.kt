@@ -21,9 +21,13 @@ import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.constraints.CenterPixelConstraint
 import gg.essential.gui.common.shadow.EssentialUIText
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.color.toConstraint
 import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.combinators.not
 import gg.essential.gui.elementa.state.v2.mapList
 import gg.essential.gui.elementa.state.v2.memo
+import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.friends.state.SocialStates
 import gg.essential.gui.layoutdsl.Arrangement
@@ -36,6 +40,7 @@ import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.util.hoveredState
+import gg.essential.gui.util.hoveredStateV2
 import gg.essential.universal.USound
 import gg.essential.util.*
 import gg.essential.vigilance.utils.onLeftClick
@@ -151,7 +156,7 @@ class MessageTitleBar(
 
             if (ServerType.current()?.supportsInvites == true) {
 
-                val invited = BasicState(false)
+                val invited = mutableStateOf(false)
 
                 val textState = BasicState("Invite to Game")
 
@@ -159,30 +164,36 @@ class MessageTitleBar(
 
                 imageIcon = EssentialPalette.ENVELOPE_9X7
 
-                val button by IconButton(imageIcon, textState).constrain {
+                // FIXME: In EM-3682, we add a cooldown to this button but this whole section should probably
+                //  be converted to LayoutDSL to use the newer buttons
+                val button by IconButton(imageIcon, textState, (!invited).toV1(this)).constrain {
                     x = SiblingConstraint(3f, alignOpposite = true)
                     y = CenterPixelConstraint()
                 } childOf this
                 button.onLeftClick {
-                    if (!invited.get()) {
+                    if (!invited.getUntracked()) {
                         USound.playButtonPress()
                         invited.set(true)
                         socialMenuActions.invitePlayers(preview.channel.members, preview.titleState.getUntracked())
+                        button.delay(5000L) { invited.set(false) }
                     }
                 }
-                button.onMouseLeave {
-                    invited.set(false)
-                }
 
+                val buttonHoveredState = button.hoveredStateV2()
+                val textAndIconColor = State { if(invited()) EssentialPalette.TEXT_DISABLED else EssentialPalette.TEXT_HIGHLIGHT }.toV1(this)
                 button
                     .setLayout(IconButton.Layout.ICON_FIRST)
-                    .rebindIconColor(EssentialPalette.TEXT_HIGHLIGHT.state())
-                    .rebindTextColor(EssentialPalette.TEXT_HIGHLIGHT.state())
+                    .rebindIconColor(textAndIconColor)
+                    .rebindTextColor(textAndIconColor)
                     .setDimension(IconButton.Dimension.FitWithPadding(18f, 10f))
                     .setColor(
-                        button.hoveredState()
-                            .map { if (it) EssentialPalette.BLUE_BUTTON_HOVER else EssentialPalette.BLUE_BUTTON }
-                            .toConstraint()
+                        State {
+                            when {
+                                invited() -> EssentialPalette.BLUE_BUTTON_DISABLED
+                                buttonHoveredState() -> EssentialPalette.BLUE_BUTTON_HOVER
+                                else -> EssentialPalette.BLUE_BUTTON
+                            }
+                        }.toConstraint()
                     )
 
             }

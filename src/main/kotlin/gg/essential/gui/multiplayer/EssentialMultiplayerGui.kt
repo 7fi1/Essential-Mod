@@ -50,6 +50,7 @@ import gg.essential.universal.UScreen
 import gg.essential.util.GuiUtil
 import gg.essential.util.UDrawContext
 import gg.essential.util.createEssentialTooltip
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiMultiplayer
 import net.minecraft.client.gui.ServerSelectionList
@@ -506,6 +507,10 @@ class EssentialMultiplayerGui {
 
         @JvmStatic
         fun getInstance(): EssentialMultiplayerGui? {
+            //#if MC >= 26.2
+            //$$ @Suppress("SENSELESS_COMPARISON")
+            //$$ if (net.minecraft.client.Minecraft.getInstance().gui == null) return null
+            //#endif
             return (GuiUtil.openedScreen() as? GuiMultiplayer)?.ext?.essential
         }
     }

@@ -11,6 +11,7 @@
  */
 package gg.essential.model
 
+import gg.essential.model.light.Light
 import gg.essential.model.util.UMatrixStack
 import gg.essential.model.util.UVertexConsumer
 
@@ -160,7 +161,7 @@ class Cube {
     fun render(
         matrixStack: UMatrixStack,
         renderer: UVertexConsumer,
-        light: Int,
+        light: Light,
         verticalUVOffset: Float
     ) {
         for (texturedquad in quadList) {

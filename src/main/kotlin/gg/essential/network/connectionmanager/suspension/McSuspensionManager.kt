@@ -32,6 +32,10 @@ class McSuspensionManager(connectionManager: ConnectionManager) : SuspensionMana
     }
 
     override fun isSuspensionShowable(): Boolean {
+        //#if MC >= 26.2
+        //$$ @Suppress("SENSELESS_COMPARISON")
+        //$$ if (net.minecraft.client.Minecraft.getInstance().gui == null) return false
+        //#endif
         val openedScreen = GuiUtil.openedScreen()
         return openedScreen is InternalEssentialGUI || openedScreen.isMainMenu || openedScreen is GuiIngameMenu
     }

@@ -11,14 +11,21 @@
  */
 package gg.essential.util
 
+import gg.essential.universal.render.UGpuTexture
+import gg.essential.universal.render.UGpuTextureView
 import gg.essential.util.image.GpuTexture
 
 class UnownedGlGpuTexture(
     format: GpuTexture.Format,
-    override val glId: Int,
-    override val width: Int,
-    override val height: Int
+    override val ucView: UGpuTextureView,
 ) : GlGpuTexture(format) {
+    override val uc: UGpuTexture
+        get() = ucView.texture
+    override val width: Int
+        get() = uc.width
+    override val height: Int
+        get() = uc.height
+
     override fun close() {
         throw UnsupportedOperationException()
     }

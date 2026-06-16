@@ -100,13 +100,13 @@ class ConnectionManagerErrorModal(
         val genericAuthenticationFailure = StatusContent(
             "Account authentication failed",
             """
-                Something went wrong while trying to
-                authenticate your Microsoft account.
-                Try again, or contact our support.
+                We couldn't authenticate your
+                Microsoft account. Try again later or
+                get help with our wiki.
             """.trimIndent(),
         ) {
             cancelButton("Ignore")
-            linkButton("Get help", URI.create("https://essential.gg/discord"))
+            linkButton("Get help", URI.create("https://essential.gg/wiki/other-error-messages#account-authentication-failed-error"))
         }
 
         val genericFailure = StatusContent(

@@ -11,35 +11,37 @@
  */
 package gg.essential.gui.common
 
+import gg.essential.cosmetics.CosmeticId
 import gg.essential.elementa.effects.Effect
 import gg.essential.elementa.effects.ScissorEffect
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.model.util.ResourceCleaner
-import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMinecraft
 import gg.essential.universal.UMouse
 import gg.essential.universal.UResolution
 import gg.essential.universal.render.DrawCallBuilder
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
 import gg.essential.util.GlFrameBuffer
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
+import gg.essential.util.NEAREST
 import gg.essential.util.image.GpuTexture
 import kotlin.math.roundToInt
 
 class CosmeticHoverOutlineEffect(
-    private val outlineCosmetic: State<List<Cosmetic>>,
+    private val outlineCosmetic: State<List<CosmeticId>>,
 ) : Effect() {
 
     private var previousScissorEffectState: ScissorEffect.ScissorState? = null
     private var previousFrameBuffer: () -> Unit = {}
 
-    private val mutableHoveredCosmetic = mutableStateOf<Cosmetic?>(null)
-    val hoveredCosmetic: State<Cosmetic?> = mutableHoveredCosmetic
+    private val mutableHoveredCosmetic = mutableStateOf<CosmeticId?>(null)
+    val hoveredCosmetic: State<CosmeticId?> = mutableHoveredCosmetic
 
     private lateinit var resources: Resources
     private val renderTargetColor: GpuTexture
@@ -50,7 +52,7 @@ class CosmeticHoverOutlineEffect(
         get() = resources.mainTextureCopy
     private val compositeRenderResult: RenderResult
         get() = resources.compositeRenderResult
-    private val renderResults: MutableMap<Cosmetic, RenderResult>
+    private val renderResults: MutableMap<CosmeticId, RenderResult>
         get() = resources.renderResults
 
     override fun beforeDraw(matrixStack: UMatrixStack) {
@@ -93,8 +95,8 @@ class CosmeticHoverOutlineEffect(
         ScissorEffect.currentScissorState = previousScissorEffectState
 
         renderFullScreenQuad(COMPOSITE_PIPELINE) {
-            texture("ColorSampler", compositeRenderResult.color.glId)
-            texture("DepthSampler", compositeRenderResult.depth.glId)
+            texture("ColorSampler", compositeRenderResult.color.ucView, UGpuSampler.NEAREST)
+            texture("DepthSampler", compositeRenderResult.depth.ucView, UGpuSampler.NEAREST)
         }
 
         mutableHoveredCosmetic.set(computeHoveredCosmetic())
@@ -111,7 +113,7 @@ class CosmeticHoverOutlineEffect(
         active = null
     }
 
-    fun beginOutlineRender(cosmetic: Cosmetic) {
+    fun beginOutlineRender(cosmetic: CosmeticId) {
         compositeRenderResult.color.copyFrom(renderTargetColor)
         compositeRenderResult.depth.copyFrom(renderTargetDepth)
 
@@ -125,7 +127,7 @@ class CosmeticHoverOutlineEffect(
         }
     }
 
-    fun endOutlineRender(cosmetic: Cosmetic) {
+    fun endOutlineRender(cosmetic: CosmeticId) {
         val renderResult = renderResults[cosmetic] ?: resources.createRenderResult()
         renderResult.color.copyFrom(renderTargetColor)
         renderResult.depth.copyFrom(renderTargetDepth)
@@ -135,7 +137,7 @@ class CosmeticHoverOutlineEffect(
         renderTargetDepth.copyFrom(compositeRenderResult.depth)
     }
 
-    private fun computeHoveredCosmetic(): Cosmetic? {
+    private fun computeHoveredCosmetic(): CosmeticId? {
         val scissor = ScissorEffect.currentScissorState
         if (scissor != null && !scissor.contains(UMouse.Scaled.x, UMouse.Scaled.y)) {
             return null
@@ -155,8 +157,8 @@ class CosmeticHoverOutlineEffect(
 
     private fun doDrawOutline(renderResult: RenderResult) {
         renderFullScreenQuad(OUTLINE_PIPELINE) {
-            texture("CompositeSampler", compositeRenderResult.depth.glId)
-            texture("TargetSampler", renderResult.depth.glId)
+            texture("CompositeSampler", compositeRenderResult.depth.ucView, UGpuSampler.NEAREST)
+            texture("TargetSampler", renderResult.depth.ucView, UGpuSampler.NEAREST)
             uniform("OneTexel", 1f / renderResult.color.width, 1f / renderResult.color.height)
             uniform("OutlineWidth", UMinecraft.guiScale * 2)
         }
@@ -191,7 +193,7 @@ class CosmeticHoverOutlineEffect(
     private class Resources(val viewportWidth: Int, val viewportHeight: Int) : AutoCloseable {
         val mainTextureCopy = GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.RGBA8)
         val compositeRenderResult = RenderResult(viewportWidth, viewportHeight)
-        val renderResults = mutableMapOf<Cosmetic, RenderResult>()
+        val renderResults = mutableMapOf<CosmeticId, RenderResult>()
         val unusedRenderResults = mutableListOf<RenderResult>()
 
         val fallbackFrameBuffer: GlFrameBuffer? =
@@ -226,7 +228,7 @@ class CosmeticHoverOutlineEffect(
         private fun GpuTexture.readHoveredDepth(): Float = readPixelDepth(
             (UMouse.Scaled.x * UResolution.scaleFactor).toInt(),
             UResolution.viewportHeight - (UMouse.Scaled.y * UResolution.scaleFactor).toInt(),
-        )
+        ).let { if (platform.usesReversedZ) 1 - it else it }
 
         private val vertexShaderSource = """
             #version 120
@@ -260,7 +262,7 @@ class CosmeticHoverOutlineEffect(
             compositeFragmentShaderSource,
         ).apply {
             blendState = BlendState.PREMULTIPLIED_ALPHA
-            depthTest = URenderPipeline.DepthTest.LessOrEqual
+            depthTest = if (platform.usesReversedZ) URenderPipeline.DepthTest.GreaterOrEqual else URenderPipeline.DepthTest.LessOrEqual
         }.build()
 
         private val outlineFragmentShaderSource = """
@@ -271,9 +273,13 @@ class CosmeticHoverOutlineEffect(
             uniform int OutlineWidth;
             varying vec2 texCoord;
             
+            float depth2D(sampler2D s, vec2 coord) {
+                return ${if (platform.usesReversedZ) "1 -" else ""} texture2D(s, coord).r;
+            }
+            
             vec4 query(vec2 offset) {
-                float composite = texture2D(CompositeSampler, texCoord + offset).r;
-                float depth = texture2D(TargetSampler, texCoord + offset).r;
+                float composite = depth2D(CompositeSampler, texCoord + offset);
+                float depth = depth2D(TargetSampler, texCoord + offset);
                 if (depth > 0.99 || composite < depth) {
                     return vec4(0, 0, 0, 0);
                 } else {
@@ -306,11 +312,11 @@ class CosmeticHoverOutlineEffect(
                 
                 float fragDepth;
                 {
-                    float center = texture2D(TargetSampler, texCoord).r;
-                    float left = texture2D(TargetSampler, texCoord - vec2(OneTexel.x, 0.0)).r;
-                    float right = texture2D(TargetSampler, texCoord + vec2(OneTexel.x, 0.0)).r;
-                    float up = texture2D(TargetSampler, texCoord - vec2(0.0, OneTexel.y)).r;
-                    float down = texture2D(TargetSampler, texCoord + vec2(0.0, OneTexel.y)).r;
+                    float center = depth2D(TargetSampler, texCoord);
+                    float left = depth2D(TargetSampler, texCoord - vec2(OneTexel.x, 0.0));
+                    float right = depth2D(TargetSampler, texCoord + vec2(OneTexel.x, 0.0));
+                    float up = depth2D(TargetSampler, texCoord - vec2(0.0, OneTexel.y));
+                    float down = depth2D(TargetSampler, texCoord + vec2(0.0, OneTexel.y));
                     fragDepth = min(center, min(min(left, right), min(up, down)));
                 }
                 

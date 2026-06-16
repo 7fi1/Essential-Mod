@@ -37,6 +37,10 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiScreen
 import org.slf4j.LoggerFactory
 
+//#if MC >= 26.2
+//$$ import net.minecraft.client.gui.screens.friends.FriendsOverlayScreen
+//#endif
+
 //#if MC>=12109
 //$$ import net.minecraft.client.gui.Click
 //$$ import net.minecraft.client.input.MouseInput
@@ -142,6 +146,7 @@ object OverlayManagerImpl : OverlayManager {
         } else {
             layersAndSpecials.toSet()
         }
+            .filter { it.priority != LayerPriority.BehindVanillaFriendsOverlayScreen }.toSet()
     }
 
     /**
@@ -170,7 +175,11 @@ object OverlayManagerImpl : OverlayManager {
         handleDraw(drawContext, priority..priority)
 
     private fun handleDraw(drawContext: UDrawContext, priority: ClosedRange<LayerPriority>) {
+        //#if MC >= 26.2
+        //$$ val hideGui = mc.gui.hud.isHidden && UScreen.currentScreen == null
+        //#else
         val hideGui = mc.gameSettings.hideGUI && UScreen.currentScreen == null
+        //#endif
 
         fun drawLayer(matrixStack: UMatrixStack, layer: Layer) {
             val layerMatrixStack =
@@ -300,6 +309,7 @@ object OverlayManagerImpl : OverlayManager {
     }
 
     private fun Layer.isAnythingHovered(mouseX: Float, mouseY: Float): Boolean {
+        if (priority == LayerPriority.BehindVanillaFriendsOverlayScreen) return false
         val hovered =
             window.hoveredFloatingComponent?.hitTest(mouseX, mouseY)
                 ?: window.hitTest(mouseX, mouseY)
@@ -476,6 +486,13 @@ object OverlayManagerImpl : OverlayManager {
 
         @Subscribe
         fun handleDraw(event: GuiDrawScreenEvent) {
+            //#if MC >= 26.2
+            //$$ if (UScreen.currentScreen is FriendsOverlayScreen && event.screen !is FriendsOverlayScreen && !event.isPre) {
+            //$$     handleDraw(event.drawContext, LayerPriority.BehindVanillaFriendsOverlayScreen)
+            //$$     return
+            //$$ }
+            //#endif
+
             if (!event.screen.isReal()) return
 
             flushVanillaBuffers(event.drawContext)

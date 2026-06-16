@@ -14,7 +14,6 @@ package gg.essential.model.backend.minecraft
 import dev.folomeev.kotgl.matrix.vectors.mutables.mutableVec3
 import dev.folomeev.kotgl.matrix.vectors.mutables.mutableVec4
 import gg.essential.model.ParticleEffect
-import gg.essential.model.ParticleSystem
 import gg.essential.model.backend.RenderBackend
 import gg.essential.model.file.ParticlesFile.Material.*
 import gg.essential.model.light.Light
@@ -23,6 +22,7 @@ import gg.essential.model.util.timesSelf
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMinecraft.getMinecraft
+import gg.essential.universal.render.UGpuFormat
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.utils.ReleasedDynamicTexture
 import gg.essential.universal.vertex.UVertexConsumer
@@ -37,6 +37,11 @@ import org.lwjgl.opengl.GL11
 import java.io.ByteArrayInputStream
 import gg.essential.model.util.UMatrixStack as CMatrixStack
 import gg.essential.model.util.UVertexConsumer as CVertexConsumer
+
+//#if MC >= 26.2
+//$$ import net.minecraft.client.Minecraft
+//$$ import net.minecraft.client.renderer.SubmitNodeStorage
+//#endif
 
 //#if MC>=12111
 //$$ import net.minecraft.client.render.RenderLayers
@@ -58,7 +63,6 @@ import gg.essential.model.util.UVertexConsumer as CVertexConsumer
 //$$ import net.minecraft.client.renderer.RenderType
 //$$ import net.minecraft.client.renderer.texture.OverlayTexture
 //#else
-import net.minecraft.client.renderer.OpenGlHelper
 import net.minecraft.client.renderer.vertex.VertexFormat
 import org.lwjgl.BufferUtils
 //#endif
@@ -86,14 +90,20 @@ object MinecraftRenderBackend : RenderBackend {
 
     override fun blitTexture(dst: RenderBackend.Texture, ops: Iterable<RenderBackend.BlitOp>) {
         val textureManager = getMinecraft().textureManager
-        fun RenderBackend.Texture.glId() =
-            //#if MC>=12105
-            //$$ (textureManager.getTexture((this as MinecraftTexture).identifier).glTexture as GlTexture).glId
+        fun RenderBackend.Texture.gpuTexture(): UnownedGlGpuTexture {
+            val mcTexture = textureManager.getTexture((this as MinecraftTexture).identifier)!!
+            //#if MC >= 1.21.6
+            //$$ val textureView = UGraphics.getPlatformAdapter().textureView(mcTexture.glTextureView)
             //#else
-            textureManager.getTexture((this as MinecraftTexture).identifier)!!.glTextureId
+            //#if MC >= 1.21.5
+            //$$ val texture = UGraphics.getPlatformAdapter().texture(mcTexture.glTexture)
+            //#else
+            val texture = UGraphics.getPlatformAdapter().texture(mcTexture.glTextureId, UGpuFormat.DEFAULT_RGBA, width, height, 1)
             //#endif
-        fun RenderBackend.Texture.gpuTexture() =
-            UnownedGlGpuTexture(GpuTexture.Format.RGBA8, glId(), width, height)
+            val textureView = UGraphics.getDevice().createTextureView(texture)
+            //#endif
+            return UnownedGlGpuTexture(GpuTexture.Format.RGBA8, textureView)
+        }
 
         dst.gpuTexture().copyFrom(ops.map { GpuTexture.CopyOp(it.src.gpuTexture(), it.srcX, it.srcY, it.destX, it.destY, it.width, it.height) })
     }
@@ -390,6 +400,11 @@ object MinecraftRenderBackend : RenderBackend {
         }
 
         private val queue = mutableMapOf<Key, MutableList<(CVertexConsumer) -> Unit>>()
+        // TODO could add batching and sorting to this queue as well
+        //  but ParticleSystem already does both internally, so not really worth it right now
+        // TODO could merge particles and cosmetics into one queue, so we can render opaque particles before translucent
+        //  cosmetics, but probably not worth it until we have a cosmetics combination where the issue is more obvious
+        private val particleQueue = mutableListOf<Pair<ParticleEffect.RenderPass, (CVertexConsumer) -> Unit>>()
 
         override fun submit(
             texture: RenderBackend.Texture,
@@ -400,6 +415,10 @@ object MinecraftRenderBackend : RenderBackend {
             require(texture is MinecraftTexture)
             queue.getOrPut(Key(texture, translucent, emissive), ::mutableListOf)
                 .add(render)
+        }
+
+        override fun submit(renderPass: ParticleEffect.RenderPass, render: (CVertexConsumer) -> Unit) {
+            particleQueue.add(Pair(renderPass, render))
         }
 
         fun render(vertexConsumerProvider: RenderBackend.VertexConsumerProvider) {
@@ -413,12 +432,57 @@ object MinecraftRenderBackend : RenderBackend {
                 }
             }
         }
+
+        fun render(vertexConsumerProvider: ParticleVertexConsumerProvider) {
+            for ((renderPass, command) in particleQueue) {
+                vertexConsumerProvider.provide(renderPass, command)
+            }
+        }
+
+        fun copyTo(other: RenderBackend.CommandQueue) {
+            for ((key, commands) in queue.entries.sortedBy { it.key }) {
+                for (command in commands) {
+                    other.submit(key.texture, key.translucent, key.emissive, command)
+                }
+            }
+            for ((renderPass, command) in particleQueue) {
+                other.submit(renderPass, command)
+            }
+        }
+
+        fun renderImmediate() {
+            //#if MC >= 26.2
+            //$$ val dispatcher = Minecraft.getInstance().gameRenderer.featureRenderDispatcher()
+            //$$ val submitNodeStorage = SubmitNodeStorage()
+            //$$ copyTo(MinecraftCommandQueue(submitNodeStorage))
+            //$$ dispatcher.renderAllFeatures(submitNodeStorage)
+            //#else
+            //#if MC >= 1.14
+            //$$ val immediate = net.minecraft.client.Minecraft.getInstance().renderTypeBuffers.bufferSource
+            //#endif
+
+            //#if MC >= 1.14
+            //$$ render(VertexConsumerProvider(immediate))
+            //#else
+            render(VertexConsumerProvider())
+            //#endif
+
+            //#if MC >= 1.21.4
+            //$$ render(ParticleVertexConsumerProvider(immediate))
+            //#else
+            render(ParticleVertexConsumerProvider())
+            //#endif
+
+            //#if MC >= 1.14
+            //$$ immediate.finish()
+            //#endif
+            //#endif
+        }
     }
 
     //#if MC>=12109
     //$$ class MinecraftCommandQueue(
     //$$     private val mcQueue: OrderedRenderCommandQueue,
-    //$$     private val light: Int,
     //$$ ) : RenderBackend.CommandQueue {
     //$$     override fun submit(
     //$$         texture: RenderBackend.Texture,
@@ -436,15 +500,37 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             else -> 0
     //$$         }
     //$$         mcQueue.getBatchingQueue(order).submitCustom(net.minecraft.client.util.math.MatrixStack(), layer) { _, vertexConsumer ->
-    //$$             VertexConsumerProvider({ vertexConsumer }, light)
+                //#if MC >= 26.2
+                //$$ VertexConsumerProvider(vertexConsumer)
+                //#else
+                //$$ VertexConsumerProvider { vertexConsumer }
+                //#endif
     //$$                 .provide(texture, emissive, render)
+    //$$         }
+    //$$     }
+    //$$
+    //$$     override fun submit(renderPass: ParticleEffect.RenderPass, render: (CVertexConsumer) -> Unit) {
+    //$$         val layer = getParticleLayer(renderPass)
+    //$$         val order = when {
+    //$$             renderPass.material.needsSorting -> 0
+    //$$             else -> 1
+    //$$         }
+    //$$         mcQueue.getBatchingQueue(order).submitCustom(net.minecraft.client.util.math.MatrixStack(), layer) { _, vertexConsumer ->
+                //#if MC >= 26.2
+                //$$ ParticleVertexConsumerProvider(vertexConsumer)
+                //#else
+                //$$ ParticleVertexConsumerProvider { vertexConsumer }
+                //#endif
+    //$$                 .provide(renderPass, render)
     //$$         }
     //$$     }
     //$$ }
     //#endif
 
-    //#if MC>=11600
-    //$$ class VertexConsumerProvider(val provider: net.minecraft.client.renderer.IRenderTypeBuffer, val light: Int) : RenderBackend.VertexConsumerProvider {
+    //#if MC >= 26.2
+    //$$ class VertexConsumerProvider(val vertexConsumer: VertexConsumer) : RenderBackend.VertexConsumerProvider {
+    //#elseif MC >= 1.16
+    //$$ class VertexConsumerProvider(val provider: net.minecraft.client.renderer.IRenderTypeBuffer) : RenderBackend.VertexConsumerProvider {
     //#else
     class VertexConsumerProvider : RenderBackend.VertexConsumerProvider {
     //#endif
@@ -465,10 +551,6 @@ object MinecraftRenderBackend : RenderBackend {
                     inner.tex(u, v)
                     //#if MC>=11600
                     //$$ inner.overlay(OverlayTexture.getU(0f), OverlayTexture.getV(false))
-                    //$$ inner.light(light and 0xffff, (light shr 16) and 0xffff)
-                    //#else
-                    // Note: X and Y are flipped because `BufferBuilder.lightmap` flips them in the SHORT case
-                    inner.light(OpenGlHelper.lastBrightnessY.toInt(), OpenGlHelper.lastBrightnessX.toInt())
                     //#endif
                 }
                 override fun norm(stack: CMatrixStack, x: Float, y: Float, z: Float) = apply {
@@ -477,20 +559,31 @@ object MinecraftRenderBackend : RenderBackend {
                     inner.norm(UMatrixStack.UNIT, vec.x, vec.y, vec.z)
                 }
                 override fun color(color: Color): CVertexConsumer = this
-                override fun light(light: Light): CVertexConsumer = this
+                override fun light(light: Light): CVertexConsumer = apply {
+                    //#if MC>=11600
+                    //$$ inner.light(light.blockLight.toInt(), light.skyLight.toInt())
+                    //#else
+                    // Note: X and Y are flipped because `BufferBuilder.lightmap` flips them in the SHORT case
+                    inner.light(light.skyLight.toInt(), light.blockLight.toInt())
+                    //#endif
+                }
                 override fun endVertex() = apply { inner.endVertex() }
             }
-            //#if MC>=11600
+            //#if MC >= 26.2
+            //$$ block(VertexConsumerAdapter(UVertexConsumer.of(vertexConsumer)))
+            //#elseif MC >= 1.16
             //$$ val buffer = provider.getBuffer(
             //$$     if (emissive) getEmissiveLayer(texture.identifier)
             //$$     else getEntityTranslucentCullLayer(texture.identifier)
             //$$ )
             //$$ block(VertexConsumerAdapter(UVertexConsumer.of(buffer)))
             //#else
+            val prevDepthTest = GL11.glGetBoolean(GL11.GL_DEPTH_TEST)
             val prevCull = GL11.glGetBoolean(GL11.GL_CULL_FACE)
             val prevAlphaTest = GL11.glGetBoolean(GL11.GL_ALPHA_TEST)
             val prevBlend = BlendState.active()
 
+            if (!prevDepthTest) GlStateManager.enableDepth()
             if (!prevCull) GlStateManager.enableCull()
             if (!prevAlphaTest) UGraphics.enableAlpha()
             if (prevBlend != BlendState.ALPHA) UGraphics.Globals.blendState(BlendState.ALPHA)
@@ -513,6 +606,7 @@ object MinecraftRenderBackend : RenderBackend {
             if (prevBlend != BlendState.ALPHA) UGraphics.Globals.blendState(prevBlend)
             if (!prevAlphaTest) UGraphics.disableAlpha()
             if (!prevCull) GlStateManager.disableCull()
+            if (!prevDepthTest) GlStateManager.disableDepth()
             //#endif
         }
 
@@ -529,12 +623,14 @@ object MinecraftRenderBackend : RenderBackend {
         //#endif
     }
 
-    //#if MC>=12104
-    //$$ class ParticleVertexConsumerProvider(val provider: net.minecraft.client.render.VertexConsumerProvider) : ParticleSystem.VertexConsumerProvider {
+    //#if MC >= 26.2
+    //$$ class ParticleVertexConsumerProvider(val vertexConsumer: VertexConsumer) {
+    //#elseif MC >= 1.21.4
+    //$$ class ParticleVertexConsumerProvider(val provider: net.minecraft.client.render.VertexConsumerProvider) {
     //#else
-    class ParticleVertexConsumerProvider : ParticleSystem.VertexConsumerProvider {
+    class ParticleVertexConsumerProvider {
     //#endif
-        override fun provide(renderPass: ParticleEffect.RenderPass, block: (CVertexConsumer) -> Unit) {
+        fun provide(renderPass: ParticleEffect.RenderPass, block: (CVertexConsumer) -> Unit) {
             val texture = renderPass.texture
             require(texture is MinecraftTexture)
 
@@ -559,7 +655,9 @@ object MinecraftRenderBackend : RenderBackend {
                 override fun endVertex() = apply { inner.endVertex() }
             }
 
-            //#if MC>=12104
+            //#if MC >= 26.2
+            //$$ block(VertexConsumerAdapter(UVertexConsumer.of(vertexConsumer)))
+            //#elseif MC >= 1.21.4
             //$$ val buffer = provider.getBuffer(getParticleLayer(renderPass))
             //$$ block(VertexConsumerAdapter(UVertexConsumer.of(buffer)))
             //#else
@@ -571,6 +669,7 @@ object MinecraftRenderBackend : RenderBackend {
             val prevBlend = BlendState.active()
             val prevTextureId = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)
             val prevCull = GL11.glIsEnabled(GL11.GL_CULL_FACE)
+            val prevDepthTest = GL11.glGetBoolean(GL11.GL_DEPTH_TEST)
 
             @Suppress("DEPRECATION")
             when (renderPass.material) {
@@ -584,6 +683,7 @@ object MinecraftRenderBackend : RenderBackend {
             //#endif
             UGraphics.bindTexture(0, texture.identifier)
             if (!prevCull) GlStateManager.enableCull()
+            if (!prevDepthTest) GlStateManager.enableDepth()
 
             val renderer = UGraphics.getFromTessellator()
             @Suppress("DEPRECATION")
@@ -591,6 +691,7 @@ object MinecraftRenderBackend : RenderBackend {
             block(VertexConsumerAdapter(renderer.asUVertexConsumer()))
             renderer.drawDirect()
 
+            if (!prevDepthTest) GlStateManager.disableDepth()
             if (!prevCull) GlStateManager.disableCull()
             UGraphics.bindTexture(0, prevTextureId)
             @Suppress("DEPRECATION")

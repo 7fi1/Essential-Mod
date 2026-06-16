@@ -928,7 +928,10 @@ object EssentialPalette {
     val WORLD_8X: ImageFactory = ResourceImageFactory("/assets/essential/textures/menu/world_8x8.png")
 
     @JvmField
-    val PACK_128X: ImageFactory = ResourceImageFactory("/assets/essential/textures/pack_128x128.png")
+    val PACK_128X: ImageFactory = ResourceImageFactory("/assets/essential/textures/pack_128x128.png") // Greyscale
+
+    @JvmField
+    val PACK_COLOR_128X: ImageFactory = ResourceImageFactory("/assets/essential/textures/pack_color_128x128.png")
 
     @JvmField
     val ROUND_WARNING_7X: ImageFactory = ResourceImageFactory("/assets/essential/textures/round_warning.png")
@@ -1091,6 +1094,9 @@ object EssentialPalette {
 
     @JvmField
     val SIGN_OUT_8X7: ImageFactory = ResourceImageFactory("/assets/essential/textures/account/sign_out_8x7.png")
+
+    @JvmField
+    val DEFAULT_WORLD_ICON_64X: ImageFactory = ResourceImageFactory("/assets/essential/textures/sps/default_world_icon.png")
 
     val LOADING_ANIMATION = AnimatedResourceImageFactory("/assets/essential/textures/loading/loading_", ".png", 12, 80)
 

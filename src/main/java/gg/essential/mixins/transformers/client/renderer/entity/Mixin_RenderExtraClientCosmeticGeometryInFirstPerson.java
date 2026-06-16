@@ -53,11 +53,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //$$ import net.minecraft.client.renderer.entity.EntityRendererManager;
 //#else
 import net.minecraftforge.client.MinecraftForgeClient;
-//#endif
-
-//#if MC<11202
-//$$ import net.minecraft.client.renderer.OpenGlHelper;
-//$$ import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.Unique;
 //#endif
 
 import java.util.EnumSet;
@@ -123,7 +119,11 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
 
         //#if MC>=12109
         //$$ // FIXME there might be a better place to do this now
+        //#if MC >= 26.2
+        //$$ Entity viewEntity = Minecraft.getInstance().gameRenderer.mainCamera().entity();
+        //#else
         //$$ Entity viewEntity = MinecraftClient.getInstance().gameRenderer.getCamera().getFocusedEntity();
+        //#endif
         //#elseif MC>=11600
         //$$ Entity viewEntity = activeRenderInfo.getRenderViewEntity();
         //#endif
@@ -194,21 +194,21 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
             //$$ partialTicks
             //#endif
         //$$ );
-        //#endif
-        //#if MC==10809
-        //$$ setBrightness(viewEntity, partialTicks);
+        //#elseif MC >= 1.12
+        int light = viewEntity.getBrightnessForRender();
+        //#else
+        //$$ int light = viewEntity.getBrightnessForRender(partialTicks);
         //#endif
 
         EssentialModelRenderer modelRenderer = ((PlayerEntityRendererExt) renderer).essential$getEssentialModelRenderer();
         CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) viewEntity);
         //#if MC>=12109
-        //$$ RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue, light);
+        //$$ RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue);
         //#else
         RenderBackend.VertexConsumerProvider vertexConsumerProvider =
                 new MinecraftRenderBackend.VertexConsumerProvider(
                         //#if MC>=11600
-                        //$$ irendertypebuffer$impl,
-                        //$$ light
+                        //$$ irendertypebuffer$impl
                         //#endif
                 );
         //#endif
@@ -217,10 +217,10 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
         EnumSet<EnumPart> parts = EnumSet.of(EnumPart.ROOT);
 
         //#if MC>=11600
-        //$$ modelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, parts, false);
+        //$$ modelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, light, parts, false);
         //#else
         matrixStack.runWithGlobalState(() -> {
-            modelRenderer.render(new UMatrixStack(), vertexConsumerProvider, null, cState, parts, false);
+            modelRenderer.render(new UMatrixStack(), vertexConsumerProvider, null, cState, light, parts, false);
         });
         //#endif
 
@@ -231,16 +231,6 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
     //$$ @Unique private float partialTicks;
     //$$ private void capturePartialTicks(CallbackInfo ci, @Local(argsOnly = true) RenderTickCounter tickCounter) {
     //$$     partialTicks = tickCounter.getTickProgress(true);
-    //$$ }
-    //#endif
-
-    //#if MC==10809
-    //$$ @Unique
-    //$$ private void setBrightness(Entity entity, float partialTicks) {
-    //$$     int i = entity.getBrightnessForRender(partialTicks);
-    //$$     int j = i % 65536;
-    //$$     int k = i / 65536;
-    //$$     OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, (float) j, (float) k);
     //$$ }
     //#endif
 }

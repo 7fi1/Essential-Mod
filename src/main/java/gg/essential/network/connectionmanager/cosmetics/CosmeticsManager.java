@@ -293,7 +293,11 @@ public class CosmeticsManager implements NetworkedManager, ICosmeticsManager {
         // Show a notification about cosmetics not working on offline-mode servers on the first join of an offline-mode server.
         if (!EssentialConfig.INSTANCE.getDisableCosmetics() && !shownOfflineModeWarning) {
             NetHandlerPlayClient handler = UMinecraft.getMinecraft().getConnection();
+            //#if MC >= 26.2
+            //$$ if (handler != null && !handler.onlineMode()) {
+            //#else
             if (handler != null && !handler.getNetworkManager().isEncrypted() && !Minecraft.getMinecraft().isIntegratedServerRunning()) {
+            //#endif
                 gg.essential.gui.notification.ExtensionsKt.warning(
                     Notifications.INSTANCE,
                     "Wardrobe items unavailable",

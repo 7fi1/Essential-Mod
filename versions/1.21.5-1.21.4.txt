@@ -1,1 +1,6 @@
 com.mojang.blaze3d.opengl.GlStateManager com.mojang.blaze3d.platform.GlStateManager
+com.mojang.blaze3d.vertex.VertexFormat net.minecraft.client.render.VertexFormat
+com.mojang.blaze3d.vertex.VertexFormatElement net.minecraft.client.render.VertexFormatElement
+com.mojang.blaze3d.vertex.VertexFormatElement UV0 UV_0
+com.mojang.blaze3d.vertex.VertexFormatElement UV1 UV_1
+com.mojang.blaze3d.vertex.VertexFormatElement UV2 UV_2

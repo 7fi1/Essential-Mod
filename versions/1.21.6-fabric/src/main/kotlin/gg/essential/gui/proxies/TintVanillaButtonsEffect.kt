@@ -11,8 +11,6 @@
  */
 package gg.essential.gui.proxies
 
-import gg.essential.Essential
-import gg.essential.event.gui.GuiDrawScreenEvent
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
@@ -23,7 +21,6 @@ import net.minecraft.client.gui.render.state.GuiRenderState
 import gg.essential.universal.UMinecraft
 import gg.essential.util.AdvancedDrawContext
 import gg.essential.util.renderGuiRenderStateToTexture
-import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gl.RenderPipelines
 import net.minecraft.client.gui.DrawContext
@@ -32,6 +29,8 @@ import net.minecraft.util.Identifier
 import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.*
 import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.Companion.NON_WHITE_TINT_PIPELINE
 import gg.essential.gui.proxies.TintVanillaButtonsEffectShared.Companion.averageButtonColor
+import gg.essential.universal.render.UGpuSampler
+import gg.essential.util.NEAREST
 
 /**
  * 1.21.6+ implementation of tinting our vanilla proxy buttons.
@@ -67,7 +66,7 @@ class TintVanillaButtonsEffect {
      * The page texture is handled like a sprite sheet, with logic to fit the draws into the first available space, with
      * additional pages created as space is needed, which is handled automatically by the initial page.
      */
-    private class Page(
+    class Page(
         private val pageWidth: Int = UResolution.viewportWidth,
         private val pageHeight: Int = UResolution.viewportHeight,
     ) {
@@ -129,7 +128,7 @@ class TintVanillaButtonsEffect {
                         buffer.pos(stack, x, y, 0.0).tex(u, v2).color(rect.color).endVertex()
                     }
                 }.build()?.drawAndClose(NON_WHITE_TINT_PIPELINE) {
-                    texture("u_Button", drawnPageTexture.glId)
+                    texture("u_Button", drawnPageTexture.ucView, UGpuSampler.NEAREST)
                     uniform("u_AverageColor", averageCol.red / 255F, averageCol.green / 255F, averageCol.blue / 255F)
                 }
             }
@@ -270,25 +269,17 @@ class TintVanillaButtonsEffect {
         companion object {
 
             private var rootPage: Page? = null
-                set(value) {
-                    // register or unregister the event listener based on whether we are transitioning from null to not-null and vice versa
-                    if (field == null && value != null) Essential.EVENT_BUS.register(this)
-                    if (field != null && value == null) Essential.EVENT_BUS.unregister(this)
-
-                    field = value
-                }
-
-            @Subscribe
-            fun runTint(event: GuiDrawScreenEvent) {
-                if (event.isPre) return
-
-                rootPage?.finalizeAndTintPage()
-                rootPage = null
-            }
 
             fun drawToPage(vanillaContext: UDrawContext, area: AreaToBeTinted, color: Color): Pair<UDrawContext, Runnable>? {
                 val page = rootPage ?: Page().also { rootPage = it }
                 return page.drawVanillaToPage(vanillaContext, area, color)
+            }
+
+            @JvmStatic
+            fun renderAll() {
+                val page = rootPage ?: return
+                rootPage = null
+                page.finalizeAndTintPage()
             }
         }
     }

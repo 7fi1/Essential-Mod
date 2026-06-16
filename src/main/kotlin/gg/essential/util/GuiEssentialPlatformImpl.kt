@@ -11,6 +11,7 @@
  */
 package gg.essential.util
 
+import com.google.common.collect.ImmutableMap
 import com.google.common.net.HostAndPort
 import com.google.common.net.InetAddresses
 import com.mojang.authlib.GameProfile
@@ -84,10 +85,16 @@ import gg.essential.network.connectionmanager.suspension.SuspensionManager
 import gg.essential.sps.SpsAddress
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UImage
+import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMinecraft
+import gg.essential.universal.UResolution
 import gg.essential.universal.UScreen
 import gg.essential.universal.USound
+import gg.essential.universal.render.UGpuFormat
+import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.utils.ReleasedDynamicTexture
+import gg.essential.universal.vertex.UBufferBuilder
+import gg.essential.universal.vertex.UVertexConsumer
 import gg.essential.util.image.GpuTexture
 import gg.essential.util.image.bitmap.Bitmap
 import gg.essential.util.image.bitmap.MutableBitmap
@@ -97,6 +104,8 @@ import io.netty.buffer.ByteBuf
 import kotlinx.coroutines.CoroutineDispatcher
 import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.vertex.VertexFormat
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
@@ -110,8 +119,11 @@ import javax.imageio.ImageIO
 import kotlin.io.path.isRegularFile
 import kotlin.jvm.Throws
 
-//#if MC>=12106
-//$$ import com.mojang.blaze3d.systems.RenderSystem
+//#if MC >= 26.2
+//$$ import com.mojang.blaze3d.GpuFormat
+//#else
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats
+import net.minecraft.client.renderer.vertex.VertexFormatElement
 //#endif
 
 //#if MC>=12105
@@ -119,10 +131,27 @@ import kotlin.jvm.Throws
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
 //#endif
 
+//#if MC == 1.21.5
+//$$ import gg.essential.mixins.impl.client.MinecraftExt
+//$$ import net.minecraft.client.gl.Framebuffer;
+//#endif
+
+//#if MC >= 1.21.2
+//$$ import com.mojang.blaze3d.systems.ProjectionType
+//#elseif MC >= 1.20
+//$$ import com.mojang.blaze3d.systems.VertexSorter
+//#endif
+
 //#if MC>=11200
 import net.minecraft.init.SoundEvents
 //#else
 //$$ import net.minecraft.util.ResourceLocation
+//#endif
+
+//#if MC >= 1.17
+//$$ import net.minecraft.util.math.Matrix4f
+//#else
+import org.lwjgl.opengl.GL11
 //#endif
 
 @AccessedViaReflection("GuiEssentialPlatform")
@@ -392,24 +421,51 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         OwnedGlGpuTexture(width, height, format)
 
     override val mcFrameBufferColorTexture: GpuTexture
-        get() = Minecraft.getMinecraft().framebuffer.let { fb ->
-            UnownedGlGpuTexture(
-                GpuTexture.Format.RGBA8,
-                //#if MC>=12105
-                //$$ (fb.colorAttachment as GlTexture).glId,
-                //#elseif MC>=11600
+        get() {
+            //#if MC >= 26.2
+            //$$ val fb = Minecraft.getInstance().gameRenderer.mainRenderTarget()
+            //#else
+            val fb = Minecraft.getMinecraft().framebuffer
+            //#endif
+            //#if MC >= 1.21.6
+            //$$ val textureView = UGraphics.getPlatformAdapter().textureView(fb.colorAttachmentView!!)
+            //#else
+            val texture = UGraphics.getPlatformAdapter().texture(
+                //#if MC >= 1.21.5
+                //$$ fb.colorAttachment!!,
+                //#else
+                //#if MC>=11600
                 //$$ fb.func_242996_f(),
                 //#else
                 fb.framebufferTexture,
                 //#endif
+                UGpuFormat.DEFAULT_RGBA,
                 fb.framebufferTextureWidth,
                 fb.framebufferTextureHeight,
+                1,
+                //#endif
             )
+            val textureView = UGraphics.getDevice().createTextureView(texture)
+            //#endif
+            return UnownedGlGpuTexture(GpuTexture.Format.RGBA8, textureView)
         }
 
     override val mcFrameBufferDepthTexture: GpuTexture?
         //#if MC>=12105
-        //$$ get() = MinecraftClient.getInstance().framebuffer.let { UnownedGlGpuTexture(GpuTexture.Format.DEPTH32, (it.depthAttachment as GlTexture).glId, it.textureWidth, it.textureHeight) }
+        //$$ get() {
+            //#if MC >= 26.2
+            //$$ val fb = Minecraft.getInstance().gameRenderer.mainRenderTarget()
+            //#else
+            //$$ val fb = MinecraftClient.getInstance().framebuffer
+            //#endif
+            //#if MC >= 1.21.6
+            //$$ val textureView = UGraphics.getPlatformAdapter().textureView(fb.depthAttachmentView!!)
+            //#else
+            //$$ val texture = UGraphics.getPlatformAdapter().texture(fb.depthAttachment!!)
+            //$$ val textureView = UGraphics.getDevice().createTextureView(texture)
+            //#endif
+        //$$     return UnownedGlGpuTexture(GpuTexture.Format.DEPTH32, textureView)
+        //$$ }
         //#else
         get() = null
         //#endif
@@ -417,17 +473,24 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
     //#if MC>=12106
     //$$ override val outputColorTextureOverride: GpuTexture?
     //$$     get() = RenderSystem.outputColorTextureOverride?.let { tex ->
-    //$$         UnownedGlGpuTexture(GpuTexture.Format.RGBA8, (tex.texture() as GlTexture).glId, tex.getWidth(0), tex.getHeight(0))
+    //$$         UnownedGlGpuTexture(GpuTexture.Format.RGBA8, UGraphics.getPlatformAdapter().textureView(tex))
     //$$     }
     //$$
     //$$ override val outputDepthTextureOverride: GpuTexture?
     //$$     get() = RenderSystem.outputDepthTextureOverride?.let { tex ->
-    //$$         UnownedGlGpuTexture(GpuTexture.Format.DEPTH32, (tex.texture() as GlTexture).glId, tex.getWidth(0), tex.getHeight(0))
+    //$$         UnownedGlGpuTexture(GpuTexture.Format.DEPTH32, UGraphics.getPlatformAdapter().textureView(tex))
     //$$     }
     //#else
     override val outputColorTextureOverride: GpuTexture? get() = null
     override val outputDepthTextureOverride: GpuTexture? get() = null
     //#endif
+
+    override val isZZeroToOne: Boolean
+        //#if MC >= 26.2
+        //$$ get() = RenderSystem.getDevice().deviceInfo.isZZeroToOne
+        //#else
+        get() = false
+        //#endif
 
     override fun newWindowedTextureProvider(inner: WindowedImageProvider): WindowedTextureProvider =
         MinecraftWindowedTextureProvider(inner)
@@ -503,7 +566,11 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         // values may be set by NanoVG (and even if it did not set them, MC's state tracker will be back in sync).
         //#if MC>=12105
         //$$ GlStateManager._blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        //#if MC >= 26.2
+        //$$ GlStateManager._enableBlend(0)
+        //#else
         //$$ GlStateManager._enableBlend()
+        //#endif
         //$$ GlStateManager._disableDepthTest()
         //#else
         @Suppress("DEPRECATION")
@@ -552,4 +619,135 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
 
     override val suspensionManager: SuspensionManager
         get() = Essential.getInstance().connectionManager.suspensionManager
+
+    //#if MC >= 26.2
+    //$$ private val penToolVertexFormat: VertexFormat = VertexFormat.builder(0)
+    //$$     .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+    //$$     .addAttribute("Color", GpuFormat.RGBA8_UNORM)
+    //$$     .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+    //$$     .addAttribute("UV1", GpuFormat.RG16_SINT)
+    //$$     .addAttribute("UV2", GpuFormat.RG16_SINT)
+    //$$     .build()
+    //#else
+    private val penToolVertexFormat: VertexFormat = ImmutableMap.builder<String, VertexFormatElement>()
+        //#if MC >= 1.21.1
+        //$$ .put("Position", VertexFormatElement.POSITION)
+        //$$ .put("Color", VertexFormatElement.COLOR)
+        //$$ .put("UV0", VertexFormatElement.UV_0)
+        //$$ .put("UV1", VertexFormatElement.UV_1)
+        //$$ .put("UV2", VertexFormatElement.UV_2)
+        //#else
+        .put("Position", DefaultVertexFormats.POSITION_3F)
+        .put("Color", DefaultVertexFormats.COLOR_4UB)
+        .put("UV0", VertexFormatElement(0, VertexFormatElement.EnumType.FLOAT, VertexFormatElement.EnumUsage.UV, 2))
+        .put("UV1", VertexFormatElement(1, VertexFormatElement.EnumType.SHORT, VertexFormatElement.EnumUsage.UV, 2))
+        .put("UV2", VertexFormatElement(2, VertexFormatElement.EnumType.SHORT, VertexFormatElement.EnumUsage.UV, 2))
+        //#endif
+        .build()
+        .let { elements ->
+            //#if MC >= 1.21.1
+            //$$ VertexFormat.builder().also { builder -> elements.forEach { builder.add(it.key, it.value) }}.build()
+            //#elseif MC >= 1.17
+            //$$ VertexFormat(elements)
+            //#elseif MC >= 1.16
+            //$$ VertexFormat(com.google.common.collect.ImmutableList.copyOf(elements.values))
+            //#else
+            VertexFormat().also { format -> elements.forEach { format.addElement(it.value) } }
+            //#endif
+        }
+    //#endif
+    override fun newPenToolBufferBuilder(drawMode: UGraphics.DrawMode): UBufferBuilder =
+        //#if MC >= 1.17
+        //$$ UBufferBuilder.create(drawMode, penToolVertexFormat)
+        //#else
+        UBufferBuilder.create(drawMode, penToolVertexFormat).let { inner ->
+            object : UBufferBuilder by inner {
+                //#if MC < 1.16
+                // MC has u/v flipped for SHORT types
+                override fun overlay(u: Int, v: Int): UVertexConsumer = inner.overlay(v, u)
+                override fun light(u: Int, v: Int): UVertexConsumer = inner.light(v, u)
+                //#endif
+            }
+        }
+        //#endif
+
+    override fun newPenToolRenderPipelineBuilder(id: String, drawMode: UGraphics.DrawMode, vertSource: String, fragSource: String): URenderPipeline.Builder =
+        URenderPipeline.builderWithLegacyShader(id, drawMode, penToolVertexFormat, vertSource, fragSource)
+
+    override fun renderToTexture(width: Int, height: Int, block: (UMatrixStack) -> Unit): GpuTexture {
+        //#if MC >= 1.21.6
+        //$$ val texture = TemporaryTextureAllocator.TextureAllocation(width, height)
+        //$$ val device = RenderSystem.getDevice()
+        //#if MC >= 26.2
+        //$$ val clearColor = org.joml.Vector4f(0f)
+        //#else
+        //$$ val clearColor = 0
+        //#endif
+        //$$ device.createCommandEncoder().clearColorAndDepthTextures(texture.texture, clearColor, texture.depthTexture, 1.0)
+        //$$ AdvancedDrawContext.drawToTexture(texture, block)
+        //$$ val uGpuTextureView = UGraphics.getPlatformAdapter().textureView(texture.textureView)
+        //$$ return object : GpuTexture by UnownedGlGpuTexture(GpuTexture.Format.RGBA8, uGpuTextureView) {
+        //$$     override fun close() {
+        //$$         texture.close()
+        //$$     }
+        //$$ }
+        //#else
+        val framebuffer = GlFrameBuffer(width, height)
+        framebuffer.clear()
+        framebuffer.useAsRenderTarget { _, _, _ ->
+            //#if MC == 1.21.5
+            //$$ val mc = MinecraftClient.getInstance() as MinecraftExt
+            //$$ mc.`essential$setFramebufferOverride`(object : Framebuffer(null, true) {
+            //$$     init {
+            //$$         colorAttachment = UGraphics.getPlatformAdapter().texture(framebuffer.texture.uc)
+            //$$         depthAttachment = UGraphics.getPlatformAdapter().texture(framebuffer.depthStencil.uc)
+            //$$     }
+            //$$ })
+            //#endif
+            //#if MC >= 1.17
+            //$$ val guiScale = UResolution.scaleFactor.toFloat()
+            //#if MC >= 1.19.3
+            //$$ val projMatrix = Matrix4f().ortho(0f, width / guiScale, height / guiScale, 0f, 1000f, 3000f)
+            //#else
+            //$$ val projMatrix = Matrix4f.projectionMatrix(0f, width / guiScale, 0f, height / guiScale, 1000f, 3000f)
+            //#endif
+            //#if MC >= 1.21.2
+            //$$ RenderSystem.setProjectionMatrix(projMatrix, ProjectionType.ORTHOGRAPHIC)
+            //#elseif MC >= 1.20
+            //$$ RenderSystem.setProjectionMatrix(projMatrix, VertexSorter.BY_Z)
+            //#else
+            //$$ RenderSystem.setProjectionMatrix(projMatrix)
+            //#endif
+            //$$ val modelViewStack = RenderSystem.getModelViewStack()
+            //#if MC >= 1.20.5
+            //$$ modelViewStack.identity()
+            //$$ modelViewStack.translate(0f, 0f, -2000f)
+            //#else
+            //$$ modelViewStack.loadIdentity()
+            //$$ modelViewStack.translate(0.0, 0.0, -2000.0)
+            //#endif
+            //#if MC < 1.21.2
+            //$$ RenderSystem.applyModelViewMatrix()
+            //#endif
+            //#else
+            val guiScale = UResolution.scaleFactor
+            GlStateManager.matrixMode(GL11.GL_PROJECTION)
+            GlStateManager.loadIdentity()
+            GlStateManager.ortho(0.0, width / guiScale, height / guiScale, 0.0, 1000.0, 3000.0)
+            GlStateManager.matrixMode(GL11.GL_MODELVIEW)
+            GlStateManager.loadIdentity()
+            GlStateManager.translate(0f, 0f, -2000f)
+            //#endif
+            block(UMatrixStack())
+            //#if MC == 1.21.5
+            //$$ mc.`essential$setFramebufferOverride`(null)
+            //#endif
+        }
+        return object : GpuTexture by framebuffer.texture {
+            override fun close() {
+                framebuffer.close()
+            }
+        }
+        //#endif
+    }
 }

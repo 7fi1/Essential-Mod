@@ -19,6 +19,7 @@ import gg.essential.lib.gson.JsonSerializationContext;
 import gg.essential.lib.gson.JsonSerializer;
 import gg.essential.lib.gson.annotations.JsonAdapter;
 import gg.essential.lib.gson.annotations.SerializedName;
+import gg.essential.network.connectionmanager.common.model.ModLoaderType;
 import gg.essential.skins.SkinModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.util.Set;
+import java.util.UUID;
 
 @JsonAdapter(MessageContent.Serializer.class)
 public class MessageContent {
@@ -79,6 +81,78 @@ public class MessageContent {
         }
     }
 
+    public static final class SPSInvite extends MessageContent implements InviteMessageContent.ISPSInvite {
+        private final @NotNull UUID host;
+        private final boolean expired;
+
+        @SerializedName("world_name")
+        private final @Nullable String worldName;
+
+        @SerializedName("mod_loader")
+        private final @Nullable String modLoader;
+
+        public SPSInvite(
+                final @NotNull UUID host,
+                final boolean expired,
+                final @Nullable String worldName,
+                final @Nullable ModLoaderType modLoader
+        ) {
+            super(MessageContentType.SPS_INVITE);
+
+            this.host = host;
+            this.expired = expired;
+            this.worldName = worldName;
+            if (modLoader == null) {
+                this.modLoader = null;
+            } else {
+                this.modLoader = modLoader.name();
+            }
+        }
+
+        @Override
+        public @NotNull UUID getHost() {
+            return host;
+        }
+
+        @Override
+        public boolean getExpired() {
+            return expired;
+        }
+
+        @Override
+        public @Nullable String getWorldName() {
+            return worldName;
+        }
+
+        @Override
+        public @Nullable ModLoaderType getModLoader() {
+            try {
+                if (this.modLoader == null) {
+                    return null;
+                } else {
+                    return ModLoaderType.valueOf(this.modLoader);
+                }
+            } catch (final IllegalArgumentException e) {
+                return null;
+            }
+        }
+    }
+
+    public static final class ServerInvite extends MessageContent implements InviteMessageContent.IServerInvite {
+        private final @NotNull String address;
+
+        public ServerInvite(final @NotNull String address) {
+            super(MessageContentType.SERVER_INVITE);
+
+            this.address = address;
+        }
+
+        @Override
+        public @NotNull String getAddress() {
+            return address;
+        }
+    }
+
     public static final class CosmeticGift extends MessageContent {
         @SerializedName("cosmetic_id")
         private final @NotNull String cosmeticId;
@@ -123,6 +197,8 @@ public class MessageContent {
     public enum MessageContentType {
         PLAIN(Plain.class),
         MEDIA(Media.class),
+        SPS_INVITE(SPSInvite.class),
+        SERVER_INVITE(ServerInvite.class),
         COSMETIC_GIFT(CosmeticGift.class),
         SKIN(Skin.class),
         UNKNOWN(Unknown.class);

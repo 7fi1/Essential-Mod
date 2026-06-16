@@ -35,6 +35,9 @@ class EssentialAnimationSystem(
     private val ongoingAnimations = mutableSetOf<AnimationEvent>()
     private val animationStates = AnimationEffectStates()
 
+    private var lastActiveAnimationState: ModelAnimationState.AnimationState? = null
+    private var lastActiveAnimationStateLoop = 0
+
     private val pendingAnimationsForOtherModels = mutableSetOf<String>()
 
     fun triggerPendingAnimationsForOtherModels(models : Collection<ModelInstance>) {
@@ -63,7 +66,7 @@ class EssentialAnimationSystem(
         ongoingAnimations.removeAll { ongoingAnimation: AnimationEvent ->
             for (animationState in animationState.active) {
                 if (animationState.animation.name == ongoingAnimation.name && ongoingAnimation.loops > 0) {
-                    val remove = animationState.animTime > animationState.animation.animationLength * ongoingAnimation.loops
+                    val remove = animationState.animTime >= animationState.animation.animationLength * ongoingAnimation.loops
                     if (remove && ongoingAnimation.onComplete != null) {
                         onComplete.add(ongoingAnimation.onComplete)
                     }
@@ -79,13 +82,19 @@ class EssentialAnimationSystem(
             val animationByName = getAnimationByName(animationState.animation.name)
             animationByName == null || animationByName !== highestPriority
         }
-        if (animationState.active.isEmpty() && highestPriority != null) {
+        if (highestPriority != null) {
             val animation = bedrockModel.getAnimationByName(highestPriority.name)
             if (animation != null) {
-                if (highestPriority.triggerInOtherCosmetic.isNotEmpty()) {
+                if (animationState.active.isEmpty()) {
+                    animationState.startAnimation(animation)
+                }
+
+                val state = animationState.active.find { it.animation == animation }
+                if (state != null && (state != lastActiveAnimationState || state.loop != lastActiveAnimationStateLoop)) {
+                    lastActiveAnimationState = state
+                    lastActiveAnimationStateLoop = state.loop
                     pendingAnimationsForOtherModels.addAll(highestPriority.triggerInOtherCosmetic)
                 }
-                animationState.startAnimation(animation)
             }
         }
     }

@@ -80,7 +80,11 @@ public abstract class MixinRendererLivingEntity<T extends EntityLivingBase> exte
                 //#else
                 && entity == this.renderManager.renderViewEntity
                 //#endif
+                //#if MC >= 26.2
+                //$$ && !Minecraft.getInstance().gui.hud.isHidden()
+                //#else
                 && Minecraft.isGuiEnabled()
+                //#endif
                 && !GuiInventoryExt.isInventoryEntityRendering.getUntracked()
         ) {
             // return if we have a team that hides their own nametag

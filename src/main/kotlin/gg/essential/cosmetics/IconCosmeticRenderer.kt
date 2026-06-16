@@ -18,6 +18,7 @@ import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.model.ModelInstance
 import gg.essential.model.backend.minecraft.MinecraftRenderBackend
 import gg.essential.model.light.Light
+import gg.essential.model.util.Color
 import gg.essential.network.connectionmanager.cosmetics.EquippedOutfitsManager
 import gg.essential.render.TextRenderTypeVertexConsumer
 import gg.essential.universal.UGraphics
@@ -48,13 +49,6 @@ object IconCosmeticRenderer {
     private const val SIZE = 7f
 
     private const val WHITE = 0xFFFFFFFFu
-
-    // Constant from vanilla
-    //#if MC>=12102
-    //$$ private const val SNEAKING_COLOR = 0x80FFFFFFu
-    //#else
-    private const val SNEAKING_COLOR = 0x20FFFFFFu
-    //#endif
 
     // 1/3 intensity on rgb channels
     private const val TAB_SHADOW_COLOR = 0xFF555555u
@@ -102,9 +96,12 @@ object IconCosmeticRenderer {
         buffer: UGraphics,
         //#endif
         light: Light,
+        color: Color,
         vanillaX: Float,
         stringWidth: Int,
-        @Suppress("UNUSED_PARAMETER") alwaysOnTop: Boolean, // only unused for MC<11600
+        //#if MC >= 1.16
+        //$$ alwaysOnTop: Boolean,
+        //#endif
         extraLeftSidePadding: Int,
     ){
         // Desired nameplate padding, for all versions:
@@ -113,8 +110,6 @@ object IconCosmeticRenderer {
         // - 1px up from text               (matches vanilla)
         // - 2px down from text baseline    (handled here in <=1.12.2, is 1px in those versions) (also handled in icon rendering)
         // - 2px left from icon             (handled in icon rendering)
-
-        val backgroundOpacity = OnlineIndicator.getTextBackgroundOpacity()
 
         //#if MC>=12102
         //$$ val z = -0.01
@@ -131,10 +126,10 @@ object IconCosmeticRenderer {
             //#endif
         ).run {
             fun drawPadding(x1: Double, x2: Double, y1: Double, y2: Double) {
-                pos(matrixStack, x1, y1, z).color(0, 0, 0, backgroundOpacity).tex(0.0, 0.0).light(light).endVertex()
-                pos(matrixStack, x1, y2, z).color(0, 0, 0, backgroundOpacity).tex(0.0, 0.0).light(light).endVertex()
-                pos(matrixStack, x2, y2, z).color(0, 0, 0, backgroundOpacity).tex(0.0, 0.0).light(light).endVertex()
-                pos(matrixStack, x2, y1, z).color(0, 0, 0, backgroundOpacity).tex(0.0, 0.0).light(light).endVertex()
+                pos(matrixStack, x1, y1, z).color(color).tex(0.0, 0.0).light(light).endVertex()
+                pos(matrixStack, x1, y2, z).color(color).tex(0.0, 0.0).light(light).endVertex()
+                pos(matrixStack, x2, y2, z).color(color).tex(0.0, 0.0).light(light).endVertex()
+                pos(matrixStack, x2, y1, z).color(color).tex(0.0, 0.0).light(light).endVertex()
             }
 
             val vanillaTop = -1.0
@@ -179,80 +174,22 @@ object IconCosmeticRenderer {
         }
     }
 
-    fun drawStandaloneVersionConsistentPadding(
-        matrixStack: UMatrixStack,
-        //#if MC>=11600
-        //$$ buffer: IRenderTypeBuffer,
-        //#endif
-        isSneaking: Boolean,
-        str: String,
-        light: Int
-    ) {
-        // FIXME kotlin mangles the function name if an inline class is used (despite the function resolving fine in intellij)
-        val light = Light(light.toUInt())
-
-        val alwaysOnTop = !isSneaking
-
-        val stringWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(str)
-        //#if MC>=12102
-        //$$ val vanillaX = (-stringWidth).toFloat() / 2f
-        //#else
-        val vanillaX = -(stringWidth / 2).toFloat()
-        //#endif
-
-        //#if MC<11600
-        UGraphics.enableAlpha()
-        UGraphics.disableLighting()
-        @Suppress("DEPRECATION")
-        UGraphics.depthMask(false)
-        //#endif
-
-        //#if MC<11600
-        if (alwaysOnTop) {
-            @Suppress("DEPRECATION")
-            UGraphics.disableDepth()
-        }
-        //#endif
-
-        //#if MC<12105
-        @Suppress("DEPRECATION")
-        BlendState.NORMAL.activate()
-        //#endif
-
-        //#if MC<11600
-        val buffer = UGraphics.getFromTessellator()
-        //#endif
-
-        drawVersionConsistentNameplatePadding(matrixStack, buffer, light, vanillaX, stringWidth, alwaysOnTop, 0)
-
-        //#if MC<=11202
-        if (alwaysOnTop) {
-            @Suppress("DEPRECATION")
-            UGraphics.enableDepth()
-        }
-        @Suppress("DEPRECATION")
-        UGraphics.depthMask(true)
-        //#endif
-
-        //#if MC<11600
-        UGraphics.enableLighting()
-        //#endif
-    }
-
-
     fun drawNameTagIconAndVersionConsistentPadding(
         matrixStack: UMatrixStack,
         //#if MC>=11600
         //$$ buffer: IRenderTypeBuffer,
+        //$$ alwaysOnTop: Boolean,
         //#endif
-        cState: CosmeticsRenderState,
+        color: Int,
+        backgroundColor: Int,
+        icon: ModelInstance?,
         str: String,
         light: Int
     ) {
         // FIXME kotlin mangles the function name if an inline class is used (despite the function resolving fine in intellij)
         val light = Light(light.toUInt())
-
-        val alwaysOnTop = !cState.isSneaking()
+        val color = Color.argb(color.toUInt())
+        val backgroundColor = Color.argb(backgroundColor.toUInt())
 
         val stringWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(str)
         //#if MC>=12102
@@ -262,41 +199,27 @@ object IconCosmeticRenderer {
         //#endif
 
         //#if MC<11600
-        UGraphics.enableAlpha()
-        UGraphics.disableLighting()
-        @Suppress("DEPRECATION")
-        UGraphics.depthMask(false)
-        //#endif
-
-        //#if MC<11600
-        if (alwaysOnTop) {
-            @Suppress("DEPRECATION")
-            UGraphics.disableDepth()
-        }
-        //#endif
-
-        //#if MC<12105
-        @Suppress("DEPRECATION")
-        BlendState.NORMAL.activate()
-        //#endif
-
-        //#if MC<11600
         val buffer = UGraphics.getFromTessellator()
         //#endif
 
-        val model: ModelInstance? = cState.nametagIcon()
-
         // draw version consisted nameplate padding independently of whether there is an icon to render
-        drawVersionConsistentNameplatePadding(matrixStack, buffer, light, vanillaX, stringWidth, alwaysOnTop,
-            // if there is an icon cosmetic though, we need to add 9px padding to the left side of the nameplate
-            if (model == null) 0 else 9)
+        if (backgroundColor.a > 0u) {
+            drawVersionConsistentNameplatePadding(
+                matrixStack, buffer, light, backgroundColor, vanillaX, stringWidth,
+                //#if MC >= 1.16
+                //$$ alwaysOnTop,
+                //#endif
+                // if there is an icon cosmetic though, we need to add 9px padding to the left side of the nameplate
+                if (icon == null) 0 else 9,
+            )
+        }
 
         // draw the icon cosmetic itself if it exists
-        if (model != null) {
+        if (icon != null && color.a > 0u) {
             val centreY = 3.5f
             val centreX = vanillaX - 5.5f
 
-            val texture = (model.model.texture as MinecraftRenderBackend.MinecraftTexture).identifier
+            val texture = (icon.model.texture as MinecraftRenderBackend.MinecraftTexture).identifier
 
             TextRenderTypeVertexConsumer.createWithTexture(
                 buffer, texture,
@@ -304,50 +227,13 @@ object IconCosmeticRenderer {
                 //$$ alwaysOnTop
                 //#endif
             ).run {
-                drawIcon(matrixStack, this, SIZE, SIZE, centreX, centreY, 0f, SNEAKING_COLOR, light)
+                drawIcon(matrixStack, this, SIZE, SIZE, centreX, centreY, 0f, color.argb, light)
 
                 //#if MC<11600
                 buffer.drawDirect()
                 //#endif
             }
-
-            //#if MC<=11202
-            if (alwaysOnTop) {
-                @Suppress("DEPRECATION")
-                UGraphics.enableDepth()
-            }
-            @Suppress("DEPRECATION")
-            UGraphics.depthMask(true)
-            //#endif
-
-            if (alwaysOnTop) {
-                val vertexConsumer = TextRenderTypeVertexConsumer.createWithTexture(buffer, texture)
-                drawIcon(matrixStack, vertexConsumer, SIZE, SIZE, centreX, centreY, 0f, WHITE,
-                    //#if MC>=12102
-                    //$$ light.withMinimumLight(2) // same behaviour as the non-sneaking nameplate text in 1.21.2+
-                    //#else
-                    light
-                    //#endif
-                )
-
-                //#if MC<11600
-                buffer.drawDirect()
-                //#endif
-            }
-        } else {
-            //#if MC<=11202
-            if (alwaysOnTop) {
-                @Suppress("DEPRECATION")
-                UGraphics.enableDepth()
-            }
-            @Suppress("DEPRECATION")
-            UGraphics.depthMask(true)
-            //#endif
         }
-
-        //#if MC<11600
-        UGraphics.enableLighting()
-        //#endif
     }
 
     fun drawTextureInTabList(

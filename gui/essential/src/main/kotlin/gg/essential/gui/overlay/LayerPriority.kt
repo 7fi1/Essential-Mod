@@ -12,6 +12,9 @@
 package gg.essential.gui.overlay
 
 enum class LayerPriority {
+    // TODO we'll want a proper solution for augmenting layered vanilla screens, this is just temporary
+    BehindVanillaFriendsOverlayScreen,
+
     /**
      * Layer which is logically positioned below the currently active screen.
      *

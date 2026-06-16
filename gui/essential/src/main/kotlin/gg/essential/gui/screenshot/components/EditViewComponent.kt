@@ -73,13 +73,9 @@ class EditViewComponent(
         height = AspectPreservingFillConstraint(aspectConstraint)
     } childOf imageSizeContainer
 
-    private val canvas by ScreenshotCanvas(textureState.map { it?.identifier }, editHistory).centered().constrain {
+    private val canvas by ScreenshotCanvas(textureState, editHistory).centered().constrain {
         width = (100.percent boundTo imageSize) + 4.pixels // Crop handles are 2px on each side
         height = (100.percent boundTo imageSize) + 4.pixels // Crop handles are 2px on each side
-    }.apply {
-        effect(this) {
-            if (!isScreenOpen()) vectorEditingOverlay.delete()
-        }
     } childOf this
 
     private val toolbar by EditorToolbar(isScreenOpen, canvas, editHistory, active.toV1(this)).constrain {

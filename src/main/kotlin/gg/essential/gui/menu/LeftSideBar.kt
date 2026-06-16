@@ -32,6 +32,7 @@ import gg.essential.gui.layoutdsl.BasicXModifier
 import gg.essential.gui.layoutdsl.BasicYModifier
 import gg.essential.gui.layoutdsl.box
 import gg.essential.gui.layoutdsl.layout
+import gg.essential.gui.proxies.ScreenWithProxiesHandler
 import gg.essential.gui.proxies.ScreenWithProxiesHandler.Companion.mountWithProxy
 import gg.essential.gui.wardrobe.Wardrobe
 import gg.essential.gui.wardrobe.WardrobeCategory
@@ -45,6 +46,7 @@ import gg.essential.vigilance.utils.onLeftClick
 
 class LeftSideBar(
     window: Window,
+    private val proxyHandler: ScreenWithProxiesHandler?,
     private val topButtonAndMultiplayer: UIContainer,
     private val bottomButton: UIContainer,
     rightSideBar: UIContainer,
@@ -111,10 +113,10 @@ class LeftSideBar(
         val wardrobeContainer: UIComponent
 
         playerWardrobeContainer.layout {
-            mountWithProxy("player") { player() }
+            mountWithProxy(proxyHandler, "player") { player() }
 
             wardrobeContainer = box(wardrobeButtonContainerModifier) {
-                mountWithProxy("wardrobe_2") { wardrobeButton() }
+                mountWithProxy(proxyHandler, "wardrobe_2") { wardrobeButton() }
             }
         }
 

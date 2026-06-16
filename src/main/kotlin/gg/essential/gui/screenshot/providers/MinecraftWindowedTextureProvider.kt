@@ -13,17 +13,13 @@ package gg.essential.gui.screenshot.providers
 
 import gg.essential.Essential
 import gg.essential.gui.screenshot.ScreenshotId
-import gg.essential.gui.screenshot.downsampling.ErrorImage
 import gg.essential.gui.screenshot.downsampling.PixelBuffer
 import gg.essential.gui.screenshot.image.PixelBufferTexture
 import gg.essential.universal.UMinecraft
 import gg.essential.util.OperatingSystem
 import gg.essential.util.RefCounted
-import gg.essential.util.UIdentifier
 import gg.essential.util.executor
 import gg.essential.util.os
-import gg.essential.util.toMC
-import net.minecraft.client.Minecraft
 import org.lwjgl.opengl.GL11
 
 import java.util.concurrent.Executors
@@ -126,33 +122,21 @@ class MinecraftWindowedTextureProvider(
     }
 
     private fun AsyncTextureManager.createResource(path: ScreenshotId, image: PixelBuffer) {
-        val nextResourceLocation = nextResourceLocation()
-        val texture = PixelBufferTexture(nextResourceLocation.toString(), image)
-        loading[path] = RegisteredTexture(nextResourceLocation, image.getWidth(), image.getHeight(), image is ErrorImage)
+        val texture = PixelBufferTexture(path.toString(), image)
+        loading[path] = RegisteredTexture(texture.uGpuTextureView)
         image.retain()
         upload(path) {
             texture.upload(image)
             image.release()
-            texture to nextResourceLocation
+            texture
         }
     }
 
 
     private fun onRemoval(texture: RegisteredTexture) {
         UMinecraft.getMinecraft().executor.execute {
-            Minecraft.getMinecraft().textureManager.deleteTexture(texture.identifier.toMC())
-        }
-    }
-
-    companion object {
-
-        //In companion object so that multiple instances of this class do not conflict resource location
-        //One example where this may happen is if we have different down-sampled resolutions of the same screenshot
-        private var nextUniqueId = 0
-
-        @Synchronized
-        private fun nextResourceLocation(): UIdentifier {
-            return UIdentifier("essential", "screenshots/${nextUniqueId++}")
+            texture.gpuTextureView?.texture?.close()
+            texture.gpuTextureView?.close()
         }
     }
 }
@@ -170,6 +154,14 @@ var asyncErrored = false
 //#endif
 
 private fun makeUploadBackend(): UploadBackend {
+    //#if MC >= 26.2
+    //$$ // B3D doesn't provide any way to do async texture uploads, so for now we'll have to do uploads
+    //$$ // from the main thread when using Vulkan.
+    //$$ if (com.mojang.blaze3d.systems.RenderSystem.getDevice().deviceInfo.backendName == "Vulkan") {
+    //$$     return NotAsyncUploadBackend()
+    //$$ }
+    //#endif
+
     val supported =
         //#if MC <= 1.12.2
         // Disable this flag due to a LWJGL2 (<= 1.12.2) + MacOS threading bug
@@ -368,25 +360,22 @@ class AsyncTextureManager {
      * Set of screenshot paths that have been uploaded since
      * the last call to [getFinished]
      */
-    private val complete = mutableMapOf<ScreenshotId, UIdentifier>()
+    private val complete = mutableMapOf<ScreenshotId, PixelBufferTexture>()
 
     /**
      * Schedules the [texture] function to be called on a worker thread.
-     * The texture object is then loaded by the Minecraft texture manager on the main thread
      */
-    fun upload(path: ScreenshotId, texture: () -> Pair<PixelBufferTexture, UIdentifier>) {
+    fun upload(path: ScreenshotId, texture: () -> PixelBufferTexture) {
         uploadBackend.submit {
-            val (pixelBufferTexture, resourceLocation) = texture()
+            val pixelBufferTexture = texture()
 
-            GL11.glFlush()
+            if (uploadBackend is AsyncUploadBackend) {
+                GL11.glFlush()
+            }
 
             UMinecraft.getMinecraft().executor.execute {
-                Minecraft.getMinecraft().textureManager.loadTexture(
-                    resourceLocation.toMC(),
-                    pixelBufferTexture
-                )
                 synchronized(complete) {
-                    complete[path] = resourceLocation
+                    complete[path] = pixelBufferTexture
                 }
             }
         }
@@ -412,8 +401,8 @@ class AsyncTextureManager {
             UMinecraft.getMinecraft().executor.execute {
                 // and then we can clean up any unclaimed results
                 synchronized(complete) {
-                    complete.forEach { (_, resourceLocation) ->
-                        Minecraft.getMinecraft().textureManager.deleteTexture(resourceLocation.toMC())
+                    complete.forEach { (_, texture) ->
+                        texture.close()
                     }
                     complete.clear()
                 }

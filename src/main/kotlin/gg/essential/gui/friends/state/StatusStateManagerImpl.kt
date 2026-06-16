@@ -52,7 +52,7 @@ class StatusStateManagerImpl(
         val activity = profileManager.getActivity(uuid).orElse(null)
         return when (status) {
             ProfileStatus.OFFLINE -> PlayerActivity.Offline(
-                null
+                profileManager.getLastOnline(uuid)
             )
             ProfileStatus.ONLINE -> when (activity) {
                 null -> {

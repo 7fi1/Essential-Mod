@@ -12,13 +12,14 @@
 package gg.essential.mixins.transformers.client.gui;
 
 import com.llamalad7.mixinextras.sugar.Local;
+import gg.essential.universal.UGraphics;
 import gg.essential.util.GuiRendererInfo;
 import gg.essential.util.OwnedGlGpuTexture;
 import gg.essential.util.UnownedGlGpuTexture;
 import gg.essential.util.image.GpuTexture;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gui.render.GuiRenderer;
-import net.minecraft.client.texture.GlTexture;
+import net.minecraft.client.texture.GlTextureView;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -46,21 +47,23 @@ public class Mixin_GuiRenderer_WorkaroundBlurPassGlitch {
         if (GuiRendererInfo.INSTANCE.getCustomGuiRendererUsedThisFrame()) {
             GuiRendererInfo.INSTANCE.setCustomGuiRendererUsedThisFrame(false);
 
-            var glTex = framebuffer.getDepthAttachment();
-            if (!(glTex instanceof GlTexture)) return; // in case of third party mod changes
+            var glTex = framebuffer.getDepthAttachmentView();
+            if (!(glTex instanceof GlTextureView)) return; // in case of third party mod changes
 
             var tex = new UnownedGlGpuTexture(
                     GpuTexture.Format.DEPTH32,
-                    ((GlTexture) glTex).getGlId(),
-                    glTex.getWidth(0),
-                    glTex.getHeight(0)
+                    UGraphics.getPlatformAdapter().textureView(glTex)
             );
 
             // ensure clearTex is ready and clear
             if (clearTex == null || clearTex.getWidth() != tex.getWidth() || clearTex.getHeight() != tex.getHeight()) {
                 if (clearTex != null) clearTex.close();
                 clearTex = new OwnedGlGpuTexture(tex.getWidth(), tex.getHeight(), GpuTexture.Format.DEPTH32);
+                //#if MC >= 26.2
+                //$$ clearTex.clearDepth(0f);
+                //#else
                 clearTex.clearDepth(1f);
+                //#endif
             }
 
             tex.copyFrom(clearTex);

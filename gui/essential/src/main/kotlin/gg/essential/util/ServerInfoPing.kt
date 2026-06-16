@@ -16,7 +16,17 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import gg.essential.connectionmanager.common.packet.pingproxy.ClientPingProxyPacket
 import gg.essential.connectionmanager.common.packet.pingproxy.ServerPingProxyResponsePacket
+import gg.essential.gui.elementa.state.v2.MutableState
+import gg.essential.gui.elementa.state.v2.Observer
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.lib.caffeine.cache.Caffeine
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.util.*
@@ -100,3 +110,44 @@ class Bytes(val array: ByteArray) {
     override fun hashCode(): Int = array.contentHashCode()
 }
 
+class ServerPingInfoState(private val address: String) : State<ServerPingInfo?> {
+
+    private val state: MutableState<ServerPingInfo?> = mutableStateOf(null)
+    private var lastUpdate: Long = -1L
+    private var interested = 0
+    private var fetchJob: Job? = null
+
+    override fun Observer.get(): ServerPingInfo? {
+        return state()
+    }
+
+    suspend fun refresh(refreshIntervalMillis: Long = 5000L) {
+        if (lastUpdate + refreshIntervalMillis > System.currentTimeMillis()) {
+            return
+        }
+        try {
+            if (interested++ == 0) {
+                fetchJob = coroutineScope.launch {
+                    state.set(ServerPingInfo.fetchViaPingProxy(address))
+                    lastUpdate = System.currentTimeMillis()
+                }
+            }
+            fetchJob?.join()
+        } finally {
+            interested--
+            if (interested == 0) {
+                fetchJob?.cancel()
+            }
+        }
+    }
+
+    companion object {
+        private val servers = Caffeine.newBuilder().weakValues().build<String, ServerPingInfoState>()
+        private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Client)
+
+        fun forServer(address: String): ServerPingInfoState {
+            return servers.get(address) { ServerPingInfoState(it) }!!
+        }
+    }
+
+}

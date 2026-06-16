@@ -233,6 +233,8 @@ class ModelAnimationState(
             get() =
                 if (animation.loop == AnimationFile.Loop.HoldOnLastFrame) animTime.coerceAtMost(animation.animationLength)
                 else animTime % animation.animationLength
+        val loop: Int
+            get() = (animTime / animation.animationLength).toInt()
         val hasEnded: Boolean
             get() = animation.loop == AnimationFile.Loop.False && animTime > animation.animationLength
 

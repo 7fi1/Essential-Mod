@@ -26,6 +26,7 @@ object ScreenshotWorkerThreadFactory : ThreadFactory {
     override fun newThread(r: Runnable): Thread {
         return Thread(r, "Screenshot Worker Thread ${counter.incrementAndGet()}").also {
             it.priority = Thread.MIN_PRIORITY
+            it.isDaemon = true
         }
     }
 }

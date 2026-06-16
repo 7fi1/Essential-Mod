@@ -13,6 +13,7 @@ package gg.essential.upnp.model;
 
 import gg.essential.lib.gson.annotations.SerializedName;
 import com.sparkuniverse.toolbox.util.DateTime;
+import gg.essential.network.connectionmanager.common.model.ModLoaderType;
 import gg.essential.upnp.UPnPPrivacy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -48,12 +49,15 @@ public class UPnPSession {
     private final @Nullable @SerializedName("g") Integer protocolVersion;
     private final @Nullable @SerializedName("h") String worldName;
 
+    private final @Nullable @SerializedName("mod_loader") String modLoader;
+
     public UPnPSession(
             @NotNull final UUID hostUUID, @NotNull final String ip, int port, @NotNull final UPnPPrivacy privacy,
             @NotNull final Set<UUID> invites, @NotNull final DateTime createdAt,
 
             final @Nullable Integer protocolVersion,
-            final @Nullable String worldName
+            final @Nullable String worldName,
+            final @Nullable ModLoaderType modLoader
     ) {
         this.hostUUID = hostUUID;
         this.ip = ip;
@@ -64,6 +68,11 @@ public class UPnPSession {
 
         this.protocolVersion = protocolVersion;
         this.worldName = worldName;
+        if (modLoader == null) {
+            this.modLoader = null;
+        } else {
+            this.modLoader = modLoader.name();
+        }
     }
 
     @NotNull
@@ -101,6 +110,18 @@ public class UPnPSession {
 
     public @Nullable String getWorldName() {
         return this.worldName;
+    }
+
+    public @Nullable ModLoaderType getModLoader() {
+        try {
+            if (this.modLoader == null) {
+                return null;
+            } else {
+                return ModLoaderType.valueOf(this.modLoader);
+            }
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
     }
 
     public void setIp(@NotNull final String ip) {

@@ -15,6 +15,7 @@ import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.sps.IntegratedServerManager.SuspendingMutableState
+import gg.essential.util.UIdentifier
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import java.nio.file.Path
@@ -44,6 +45,11 @@ interface IntegratedServerManager {
     /** Current server whitelist. May be `null` if no whitelist has been applied yet. */
     val whitelist: State<Set<UUID>?>
 
+    /**
+     * Whether the server is accepting incoming LAN connections
+     */
+    val openToLan: State<Boolean>
+
     /** UUID of every player connected (and logged in) to this server. Includes the host while they are connected. */
     val connectedPlayers: ListState<UUID>
     /** [connectedPlayers] excluding the host */
@@ -69,7 +75,7 @@ interface IntegratedServerManager {
     fun setDifficultySource(source: MutableState<Difficulty>)
     fun setDifficultyLockedSource(source: MutableState<Boolean>)
     fun setDefaultGameModeSource(source: MutableState<GameMode>)
-    fun setGameRulesSource(source: SuspendingMutableState<Map<String, String>>)
+    fun setGameRulesSource(source: SuspendingMutableState<Map<UIdentifier, String>>)
     fun setCheatsEnabledSource(source: State<Boolean>)
 
     data class ServerResourcePack(val url: String, val checksum: String)

@@ -12,10 +12,13 @@
 package gg.essential.gui.friends.message.v2
 
 import com.sparkuniverse.toolbox.chat.model.Channel
+import com.sparkuniverse.toolbox.chat.model.InviteMessageContent
 import com.sparkuniverse.toolbox.chat.model.MessageContent
 import com.sparkuniverse.toolbox.chat.model.MessageContent.CosmeticGift
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Media
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Plain
+import com.sparkuniverse.toolbox.chat.model.MessageContent.ServerInvite
+import com.sparkuniverse.toolbox.chat.model.MessageContent.SPSInvite
 import com.sparkuniverse.toolbox.chat.model.MessageContent.Unknown
 import gg.essential.cosmetics.CosmeticId
 import gg.essential.gui.friends.message.MessageUtils
@@ -53,6 +56,14 @@ data class ClientMessage(
                 }
             }
 
+            is SPSInvite -> {
+                add(Part.InvitePart(content))
+            }
+
+            is ServerInvite -> {
+                add(Part.InvitePart(content))
+            }
+
             is CosmeticGift -> {
                 add(Part.Gift(content.cosmeticId))
             }
@@ -73,6 +84,7 @@ data class ClientMessage(
         }
         data class Image(val id: String) : Part
         data class Gift(val id: CosmeticId) : Part
+        data class InvitePart(val invite: InviteMessageContent) : Part
         data class Skin(val skin: gg.essential.mod.Skin) : Part
     }
 

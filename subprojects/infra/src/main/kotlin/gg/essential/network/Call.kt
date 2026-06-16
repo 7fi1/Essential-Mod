@@ -30,10 +30,6 @@ class Call(
     private var timeout: Duration = 10.seconds
     private var ignoreUnexpectedPackets: Boolean = false
 
-    fun inResponseTo(original: Packet) = apply {
-        packet.setUniqueId(original.packetUniqueId)
-    }
-
     fun timeout(duration: Duration = timeout) = apply {
         this.timeout = duration
     }

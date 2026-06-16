@@ -17,6 +17,7 @@
  */
 package gg.essential.image.imagescaling;
 
+import gg.essential.gui.screenshot.concurrent.ScreenshotWorkerThreadFactory;
 import gg.essential.gui.screenshot.downsampling.BufferBackedImage;
 import gg.essential.gui.screenshot.downsampling.PixelBuffer;
 import io.netty.buffer.ByteBuf;
@@ -42,7 +43,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ResampleOp extends AdvancedResizeOp {
     private static final ExecutorService service = new ThreadPoolExecutor(100, 100,
         0L, TimeUnit.MILLISECONDS,
-        new PriorityBlockingQueue<>(100, Comparator.comparingInt(o -> ((ResampleTask) o).targetWidth)));
+        new PriorityBlockingQueue<>(100, Comparator.comparingInt(o -> ((ResampleTask) o).targetWidth)),
+        ScreenshotWorkerThreadFactory.INSTANCE);
 
     private static final Executor backgroundService = Runnable::run;
 

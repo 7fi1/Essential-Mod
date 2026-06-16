@@ -226,7 +226,7 @@ public class ConnectionManager extends ConnectionManagerKt {
                     return true;
                 }
                 McIntegratedServerManager server = integratedServerManager.getUntracked();
-                if (server != null) {
+                if (server != null && server.getOpenToLan().getUntracked()) {
                     Set<UUID> whitelist = server.getWhitelist().getUntracked();
                     return whitelist != null && whitelist.contains(uuid);
                 }

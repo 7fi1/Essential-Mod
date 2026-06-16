@@ -21,7 +21,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class Mixin_RenderTickEvent_Final {
-    //#if MC >= 26.1
+    //#if MC >= 26.2
+    //$$ @Inject(method = "renderFrame", at = @At(value = "CONSTANT", args = "stringValue=present"))
+    //#elseif MC >= 26.1
     //$$ @Inject(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;flipFrame(Lcom/mojang/blaze3d/TracyFrameCapture;)V"))
     //#elseif MC>=12102
     //$$ @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/Window;swapBuffers(Lnet/minecraft/client/util/tracy/TracyFrameCapturer;)V"))

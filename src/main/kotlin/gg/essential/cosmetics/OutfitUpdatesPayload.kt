@@ -136,7 +136,7 @@ class OutfitUpdatesPayload(
                             },
                         )
                         3 -> Update.Skin(
-                            buf.readByte().toUByte().toInt().takeUnless { it == -1 }?.let { modelId ->
+                            buf.readByte().toInt().takeUnless { it == -1 }?.let { modelId ->
                                 Skin(buf.readString(64), Model.entries[modelId])
                             },
                         )

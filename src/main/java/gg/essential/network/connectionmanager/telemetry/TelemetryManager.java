@@ -206,7 +206,7 @@ public class TelemetryManager implements NetworkedManager {
     }
 
     public void sendAutoUpdateTelemetry() {
-        enqueue(new ClientTelemetryPacket("AUTO_UPDATE_STATE ", new HashMap<String, Object>() {{
+        enqueue(new ClientTelemetryPacket("AUTO_UPDATE_STATE", new HashMap<String, Object>() {{
             put("state", EssentialConfig.INSTANCE.getAutoUpdate());
         }}));
     }

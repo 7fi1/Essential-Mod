@@ -13,6 +13,7 @@ package gg.essential.connectionmanager.common.packet.upnp;
 
 import gg.essential.lib.gson.annotations.SerializedName;
 import gg.essential.connectionmanager.common.packet.Packet;
+import gg.essential.network.connectionmanager.common.model.ModLoaderType;
 import gg.essential.upnp.UPnPPrivacy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,12 +35,19 @@ public class ClientUPnPSessionCreatePacket extends Packet {
 
     private final @Nullable @SerializedName("e") String worldName;
 
-    public ClientUPnPSessionCreatePacket(@NotNull final String ip, final int port, @NotNull final UPnPPrivacy privacy, final @Nullable Integer protocolVersion, final @Nullable String worldName) {
+    private final @Nullable @SerializedName("mod_loader") String modLoader;
+
+    public ClientUPnPSessionCreatePacket(@NotNull final String ip, final int port, @NotNull final UPnPPrivacy privacy, final @Nullable Integer protocolVersion, final @Nullable String worldName, final @Nullable ModLoaderType modLoader) {
         this.ip = ip;
         this.port = port;
         this.privacy = privacy;
         this.protocolVersion = protocolVersion;
         this.worldName = worldName;
+        if (modLoader == null) {
+            this.modLoader = null;
+        } else {
+            this.modLoader = modLoader.name();
+        }
     }
 
     @NotNull
@@ -64,4 +72,15 @@ public class ClientUPnPSessionCreatePacket extends Packet {
         return this.worldName;
     }
 
+    public @Nullable ModLoaderType getModLoader() {
+        try {
+            if (this.modLoader == null) {
+                return null;
+            } else {
+                return ModLoaderType.valueOf(this.modLoader);
+            }
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
+    }
 }

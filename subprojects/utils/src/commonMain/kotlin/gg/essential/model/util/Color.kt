@@ -57,5 +57,12 @@ value class Color(val rgba: UInt) {
 
         fun rgba(value: UInt): Color = Color(value)
 
+        fun argb(value: UInt) = Color(
+            a = (value shr 24).toUByte(),
+            r = (value shr 16).toUByte(),
+            g = (value shr 8).toUByte(),
+            b = value.toUByte(),
+        )
+
     }
 }

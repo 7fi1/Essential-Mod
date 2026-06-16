@@ -20,6 +20,7 @@ pluginManagement {
     }
 }
 
+
 includeBuild("build-logic")
 
 if (!System.getenv().containsKey("NO_GIT_SUBMODULES")) {
@@ -75,7 +76,7 @@ for (fullName in subprojects) {
     project(fullName).projectDir = file("subprojects" + fullName.replace(':', '/'))
 }
 
-listOf(
+listOfNotNull(
     "1.8.9-forge",
 //    ,"1.8.9-vanilla"
     "1.12.2-forge",
@@ -125,6 +126,7 @@ listOf(
     "1.21.9-fabric",
     "1.21.11-fabric",
     "26.1-fabric",
+    "26.2-fabric",
 ).forEach { version ->
     include(":$version")
     project(":$version").apply {

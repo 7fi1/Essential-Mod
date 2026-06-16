@@ -11,17 +11,23 @@
  */
 package gg.essential.mixins.transformers.feature.nameplate_icon;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.handlers.OnlineIndicator;
+import gg.essential.model.ModelInstance;
 import gg.essential.universal.UMatrixStack;
 import net.minecraft.client.entity.AbstractClientPlayer;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.entity.RendererLivingEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -35,12 +41,33 @@ public class Mixin_NameplateIcon_Handle10809SneakingCopy<T extends EntityLivingB
         GlStateManager.translate(IconCosmeticRenderer.INSTANCE.getNameplateXOffset(entity), 0f, 0f);
     }
 
-    @Inject(method = "renderName(Lnet/minecraft/entity/EntityLivingBase;DDD)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;enableLighting()V"))
-    private void renderEssentialIndicator(T entityIn, double x, double y, double z, CallbackInfo ci, @Local String str) {
-        if (entityIn instanceof AbstractClientPlayer) {
-            CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) entityIn);
-            int light = (((int) OpenGlHelper.lastBrightnessY) << 16) + (int) OpenGlHelper.lastBrightnessX;
-            OnlineIndicator.drawNametagIndicator(new UMatrixStack(), cState, str, light);
+    @Inject(method = "renderName(Lnet/minecraft/entity/EntityLivingBase;DDD)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Tessellator;draw()V", shift = At.Shift.AFTER))
+    private void drawEssentialNameplateBackground(CallbackInfo ci, @Local String str, @Local(argsOnly = true) T entity) {
+        int backgroundColor = OnlineIndicator.getTextBackgroundOpacity() << 24;
+        drawEssentialNameplateExtensions(0, backgroundColor, str, entity);
+    }
+
+    @WrapOperation(method = "renderName(Lnet/minecraft/entity/EntityLivingBase;DDD)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/FontRenderer;drawString(Ljava/lang/String;III)I"))
+    private int drawEssentialNameplateForeground(
+        FontRenderer instance, String str, int x, int y, int color,
+        Operation<Integer> operation,
+        @Local(argsOnly = true) T entity
+    ) {
+        drawEssentialNameplateExtensions(color, 0, str, entity);
+        return operation.call(instance, str, x, y, color);
+    }
+
+    @Unique
+    private static void drawEssentialNameplateExtensions(int color, int backgroundColor, String str, Entity entity) {
+        int light = (((int) OpenGlHelper.lastBrightnessY) << 16) + (int) OpenGlHelper.lastBrightnessX;
+
+        ModelInstance icon = null;
+        if (entity instanceof AbstractClientPlayer) {
+            CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) entity);
+            icon = cState.nametagIcon();
         }
+
+        IconCosmeticRenderer.INSTANCE.drawNameTagIconAndVersionConsistentPadding(
+            new UMatrixStack(), color, backgroundColor, icon, str, light);
     }
 }

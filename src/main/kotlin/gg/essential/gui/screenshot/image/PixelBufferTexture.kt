@@ -13,13 +13,20 @@ package gg.essential.gui.screenshot.image
 
 import gg.essential.gui.screenshot.downsampling.ErrorImage
 import gg.essential.gui.screenshot.downsampling.PixelBuffer
+import gg.essential.universal.UGraphics
 import gg.essential.universal.UMinecraft
+import gg.essential.universal.render.UGpuFormat
+import gg.essential.universal.render.UGpuTextureView
 import net.minecraft.client.renderer.GlStateManager
 
-import net.minecraft.client.resources.IResourceManager
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL12
+import java.lang.AutoCloseable
 import java.nio.IntBuffer
+
+//#if MC >= 26.2
+//$$ import com.mojang.blaze3d.platform.NativeImage
+//#endif
 
 //#if MC>=12105
 //$$ import com.mojang.blaze3d.textures.GpuTexture
@@ -31,12 +38,6 @@ import java.nio.IntBuffer
 //$$ import net.minecraft.client.texture.GlTexture
 //#endif
 
-//#if MC<=11202
-import net.minecraft.client.renderer.texture.AbstractTexture
-//#else
-//$$ import net.minecraft.client.renderer.texture.Texture
-//#endif
-
 //#if MC>=11600 && MC<12105
 //$$ import com.mojang.blaze3d.platform.GlStateManager
 //#endif
@@ -44,12 +45,7 @@ import net.minecraft.client.renderer.texture.AbstractTexture
 /**
  * Uploads the contents of a PixelBuffer to OpenGL
  */
-class PixelBufferTexture(debugLabel: String, image: PixelBuffer) :
-//#if MC<=11202
-    AbstractTexture() {
-    //#else
-    //$$ Texture() {
-    //#endif
+class PixelBufferTexture(debugLabel: String, image: PixelBuffer) : AutoCloseable {
 
     // Whether this texture's underlying image had an error during loading
     // To be used in ScreenshotBrowser for alternate behavior
@@ -58,10 +54,20 @@ class PixelBufferTexture(debugLabel: String, image: PixelBuffer) :
     val imageWidth: Int = image.getWidth()
     val imageHeight: Int = image.getHeight()
 
+    //#if MC >= 1.21.5
+    //$$ var glTexture: GpuTexture? = null
+    //$$ val glTextureId: Int
+    //$$     get() = (glTexture as GlTexture?)?.glId ?: -1
+    //#else
+    var glTextureId: Int = -1
+    //#endif
+
+    var uGpuTextureView: UGpuTextureView? = null
+
     init {
         if(image !is ErrorImage) {
             //#if MC>=12106
-            //$$ glTexture = RenderSystem.getDevice().createTexture(debugLabel, GpuTexture.USAGE_TEXTURE_BINDING, TextureFormat.RGBA8, imageWidth, imageHeight, 1, 1)
+            //$$ glTexture = RenderSystem.getDevice().createTexture(debugLabel, GpuTexture.USAGE_TEXTURE_BINDING or GpuTexture.USAGE_COPY_DST, TextureFormat.RGBA8, imageWidth, imageHeight, 1, 1)
             //#elseif MC>=12105
             //$$ glTexture = RenderSystem.getDevice().createTexture(debugLabel, TextureFormat.RGBA8, imageWidth, imageHeight, 1)
             //#else
@@ -73,11 +79,26 @@ class PixelBufferTexture(debugLabel: String, image: PixelBuffer) :
             glTextureId = GlStateManager.generateTexture()
             //#endif
             //#endif
+
+            //#if MC >= 1.21.5
+            //$$ val ucGpuTexture = UGraphics.getPlatformAdapter().texture(glTexture!!)
+            //#else
+            val ucGpuTexture = UGraphics.getPlatformAdapter().texture(glTextureId, UGpuFormat.DEFAULT_RGBA, imageWidth, imageHeight, 1)
+            //#endif
+            uGpuTextureView = UGraphics.getDevice().createTextureView(ucGpuTexture)
         }
     }
 
     fun upload(image: PixelBuffer) {
         if (image !is ErrorImage) {
+            //#if MC >= 26.2
+            //$$ if (glTexture !is GlTexture) {
+            //$$     RenderSystem.getDevice().createCommandEncoder()
+            //$$         .writeToTexture(glTexture!!, image.prepareDirectBuffer(), 0, 0, 0, 0, imageWidth, imageHeight)
+            //$$     return
+            //$$ }
+            //#endif
+
             // We need to support both uploading on the main thread and in another async context
             if (UMinecraft.getMinecraft().isCallingFromMinecraftThread) {
                 //#if MC>=12105
@@ -130,13 +151,13 @@ class PixelBufferTexture(debugLabel: String, image: PixelBuffer) :
         }
     }
 
-    //#if MC<12104
-    //Impl handled by constructor to avoid retaining complete image
-    override fun loadTexture(resourceManager: IResourceManager) {
+    override fun close() {
+        //#if MC >= 1.21.5
+        //$$ glTexture?.close()
+        //#else
+        UGraphics.deleteTexture(glTextureId)
+        //#endif
     }
-    //#endif
-
-
 }
 
 fun glPixelStore(pname: Int, param: Int) {

@@ -12,11 +12,16 @@
 package gg.essential.util.image
 
 import gg.essential.model.util.Color
+import gg.essential.universal.render.UGpuTexture
+import gg.essential.universal.render.UGpuTextureView
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.bitmap.Bitmap
 import java.nio.FloatBuffer
 
 interface GpuTexture : AutoCloseable {
+    val uc: UGpuTexture
+    val ucView: UGpuTextureView
+
     val glId: Int
     val width: Int
     val height: Int
@@ -34,7 +39,7 @@ interface GpuTexture : AutoCloseable {
     }
 
     fun clearColor(color: Color = Color(0u))
-    fun clearDepth(depth: Float = 1f)
+    fun clearDepth(depth: Float = if (platform.usesReversedZ) 0f else 1f)
 
     fun readPixelColor(x: Int, y: Int): Color = readPixelColors(x, y, 1, 1)[0, 0]
     fun readPixelDepth(x: Int, y: Int): Float = readPixelDepths(x, y, 1, 1).get(0)

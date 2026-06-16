@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.entity.player.EntityPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -44,10 +45,24 @@ public abstract class Mixin_UpdateCosmetics {
     private static final String MAIN_PASS_LAMBDA = "method_62214";
     //#endif
 
+    // FIXME need to figure out how to deal with this system once MC rendering goes off-thread
+    //#if MC >= 26.2
+    //$$ @Unique
+    //$$ private ClientLevel world() {
+    //$$     return net.minecraft.client.Minecraft.getInstance().level;
+    //$$ }
+    //#else
     @Shadow
     private WorldClient world;
+    @Unique
+    private WorldClient world() {
+        return this.world;
+    }
+    //#endif
 
-    //#if MC >= 26.1
+    //#if MC >= 26.2
+    //$$ @Inject(method = "submitEntities", at = @At("HEAD"))
+    //#elseif MC >= 26.1
     //$$ @Inject(method = "extractLevel", at = @At(value = "CONSTANT", args = "stringValue=entities"))
     //#elseif MC>=12109
     //$$ @Inject(method = "render", at = @At(value = "CONSTANT", args = "stringValue=entities"))
@@ -60,9 +75,9 @@ public abstract class Mixin_UpdateCosmetics {
     //#endif
     private void essential$updateCosmeticsPreRender(CallbackInfo ci) {
         //#if MC>=11400
-        //$$ for (PlayerEntity player : this.world.getPlayers()) {
+        //$$ for (PlayerEntity player : world().getPlayers()) {
         //#else
-        for (EntityPlayer player : this.world.playerEntities) {
+        for (EntityPlayer player : world().playerEntities) {
         //#endif
             if (!(player instanceof AbstractClientPlayerExt)) {
                 continue;
@@ -79,7 +94,9 @@ public abstract class Mixin_UpdateCosmetics {
         }
     }
 
-    //#if MC >= 26.1
+    //#if MC >= 26.2
+    //$$ @Inject(method = "submitEntities", at = @At("RETURN"))
+    //#elseif MC >= 26.1
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;renderTranslucentFeatures()V", shift = At.Shift.AFTER))
     //#elseif MC>=12109
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/command/RenderDispatcher;render()V", shift = At.Shift.AFTER))
@@ -92,9 +109,9 @@ public abstract class Mixin_UpdateCosmetics {
     //#endif
     private void essential$updateCosmeticsPostRender(CallbackInfo ci) {
         //#if MC>=11400
-        //$$ for (PlayerEntity player : this.world.getPlayers()) {
+        //$$ for (PlayerEntity player : world().getPlayers()) {
         //#else
-        for (EntityPlayer player : this.world.playerEntities) {
+        for (EntityPlayer player : world().playerEntities) {
         //#endif
             if (!(player instanceof AbstractClientPlayerExt)) {
                 continue;

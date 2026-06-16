@@ -12,12 +12,10 @@
 package gg.essential.handlers;
 
 import gg.essential.config.EssentialConfig;
-import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.EquippedCosmetic;
 import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.data.OnboardingData;
 import gg.essential.mixins.ext.client.network.NetHandlerPlayClientExt;
-import gg.essential.universal.UMatrixStack;
 import gg.essential.universal.UMinecraft;
 import gg.essential.universal.UResolution;
 import gg.essential.util.UDrawContext;
@@ -25,6 +23,10 @@ import net.minecraft.client.network.NetHandlerPlayClient;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.text.ITextComponent;
+
+//#if MC>=12109
+//$$ import gg.essential.cosmetics.CosmeticsRenderState;
+//#endif
 
 //#if MC>=11800 && MC<12100
 //$$ import gg.essential.compat.ImmediatelyFastCompat;
@@ -38,7 +40,6 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.ResourceLocation;
 //#endif
 
-import java.awt.*;
 import java.util.Map;
 import java.util.UUID;
 
@@ -62,27 +63,6 @@ public class OnlineIndicator {
      */
     public static boolean currentlyDrawingPlayerEntityName() {
         return currentlyDrawingPlayerEntityName.get();
-    }
-
-    //#if MC<11600
-    private static final ResourceLocation whiteTexture = new ResourceLocation("essential", "textures/white.png");
-    //#endif
-
-    public static void drawNametagIndicator(
-        UMatrixStack matrixStack,
-        //#if MC>=11600
-        //$$ IRenderTypeBuffer vertexConsumerProvider,
-        //#endif
-        CosmeticsRenderState cState,
-        String str,
-        int light
-    ) {
-        IconCosmeticRenderer.INSTANCE.drawNameTagIconAndVersionConsistentPadding(
-            matrixStack,
-            //#if MC>=11600
-            //$$ vertexConsumerProvider,
-            //#endif
-            cState, str, light);
     }
 
     // Patcher mixins into this at HEAD to cancel it if the background is disabled.

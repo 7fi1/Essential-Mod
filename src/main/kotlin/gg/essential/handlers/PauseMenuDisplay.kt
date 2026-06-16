@@ -91,6 +91,8 @@ import gg.essential.gui.notification.warning
 import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.overlay.ModalManager
+import gg.essential.gui.proxies.ScreenWithProxiesHandler
+import gg.essential.gui.proxies.ScreenWithVanillaProxyElementsExt
 import gg.essential.gui.sps.InviteFriendsModal
 import gg.essential.gui.sps.WorldSelectionModal
 import gg.essential.gui.util.addTag
@@ -147,14 +149,21 @@ class PauseMenuDisplay {
         initContent = true
 
         if (EssentialConfig.essentialFull) {
-            val window = GuiUtil.addLayer(LayerPriority.AboveScreenContent)
+            //#if MC >= 26.2
+            //$$ val realScreen = net.minecraft.client.Minecraft.getInstance().gui.screen()
+            //$$ val isFriendsOverlay = realScreen is net.minecraft.client.gui.screens.friends.FriendsOverlayScreen
+            //$$ val priority = if (isFriendsOverlay) LayerPriority.BehindVanillaFriendsOverlayScreen else LayerPriority.AboveScreenContent
+            //#else
+            val priority = LayerPriority.AboveScreenContent
+            //#endif
+            val window = GuiUtil.addLayer(priority)
                 .also { layer = it }
                 .window
-            initContent(screen, window)
+            initContent(screen, window, (screen as? ScreenWithVanillaProxyElementsExt)?.`essential$getProxyHandler`())
         }
     }
 
-    fun initContent(screen: GuiScreen, window: Window) {
+    fun initContent(screen: GuiScreen, window: Window, proxyHandler: ScreenWithProxiesHandler?) {
         if (EssentialConfig.essentialMenuLayout == EssentialConfig.EssentialMenuLayout.OFF) return
 
         run { // for indent
@@ -221,9 +230,9 @@ class PauseMenuDisplay {
             } childOf window
 
             val accountManager = AccountManager()
-            RightSideBarNew(menuType, isCompact.toV2(), accountManager) childOf rightContainer
+            RightSideBarNew(menuType, proxyHandler, isCompact.toV2(), accountManager) childOf rightContainer
 
-            LeftSideBar(window, topButtonAndMultiplayer, bottomButton, rightContainer, leftContainer) childOf leftContainer
+            LeftSideBar(window, proxyHandler, topButtonAndMultiplayer, bottomButton, rightContainer, leftContainer) childOf leftContainer
 
             if (menuType == MenuType.MAIN
                 && Instant.now() < NewServerDiscoveryManager.NEW_TAG_END_DATE
@@ -319,12 +328,13 @@ class PauseMenuDisplay {
 
         // Update Notification Modal
         if (VersionData.getMajorComponents(VersionData.essentialVersion) != VersionData.getMajorComponents(VersionData.getLastSeenModal())
-            && EssentialConfig.updateModal
+            && (EssentialConfig.updateModal)
         ) {
             if (VersionData.getLastSeenModal() == VersionInfo.noSavedVersion) {
                 // If first launch, update last seen modal and don't show changelog
                 VersionData.updateLastSeenModal()
             } else {
+                // TODO: Replace with new announcement modal for news and alerts
                 GuiUtil.queueModal(UpdateNotificationModal(GuiUtil))
             }
         }

@@ -11,18 +11,39 @@
  */
 package gg.essential.mixins.transformers.server.integrated;
 
+import gg.essential.mixins.ext.network.NetworkSystemExtKt;
 import gg.essential.mixins.ext.server.integrated.IntegratedServerExt;
 import gg.essential.sps.McIntegratedServerManager;
+import net.minecraft.client.multiplayer.ThreadLanServerPing;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.integrated.IntegratedServer;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.UUID;
+
+import static gg.essential.util.HelpersKt.textTranslatable;
+
+//#if MC < 1.12
+//$$ import net.minecraft.client.resources.I18n;
+//#endif
+
 @Mixin(IntegratedServer.class)
 public abstract class Mixin_IntegratedServerManager implements IntegratedServerExt {
+    @Shadow
+    //#if MC >= 1.16
+    //$$ private int serverPort;
+    //#else
+    private boolean isPublic;
+    //#endif
+    @Shadow
+    private ThreadLanServerPing lanServerPing;
     @Unique
     private McIntegratedServerManager manager;
 
@@ -43,5 +64,31 @@ public abstract class Mixin_IntegratedServerManager implements IntegratedServerE
     @Override
     public McIntegratedServerManager getEssential$manager() {
         return manager;
+    }
+
+    @Override
+    public void essential$undoLan(@NotNull UUID host) {
+        MinecraftServer minecraftServer = (MinecraftServer) (Object) this;
+        for (EntityPlayerMP entity : ((LanConnectionsAccessor) minecraftServer.getPlayerList()).getPlayerEntityList()) {
+            if (!host.equals(entity.getUniqueID())) {
+                //#if MC >= 1.12
+                entity.connection.disconnect(textTranslatable("multiplayer.disconnect.server_shutdown"));
+                //#else
+                //$$ entity.playerNetServerHandler.kickPlayerFromServer(
+                //$$     I18n.format("multiplayer.disconnect.server_shutdown")
+                //$$ );
+                //#endif
+            }
+        }
+        NetworkSystemExtKt.removeLanEndpoint(minecraftServer.getNetworkSystem());
+        //#if MC >= 1.16
+        //$$ this.serverPort = -1;
+        //#else
+        this.isPublic = false;
+        //#endif
+        if (this.lanServerPing != null) {
+            this.lanServerPing.interrupt();
+            this.lanServerPing = null;
+        }
     }
 }

@@ -16,6 +16,7 @@ import dev.folomeev.kotgl.matrix.matrices.mutables.timesSelf
 import dev.folomeev.kotgl.matrix.vectors.vecUnitX
 import dev.folomeev.kotgl.matrix.vectors.vecUnitY
 import dev.folomeev.kotgl.matrix.vectors.vecUnitZ
+import gg.essential.model.light.Light
 import gg.essential.model.util.Quaternion
 import gg.essential.model.util.UMatrixStack
 import gg.essential.model.util.UVertexConsumer
@@ -150,7 +151,7 @@ class Bone(
         matrixStack: UMatrixStack,
         renderer: UVertexConsumer,
         geometry: RenderGeometry,
-        light: Int,
+        light: Light,
         verticalUVOffset: Float
     ) {
         if (!fullyInvisible) {

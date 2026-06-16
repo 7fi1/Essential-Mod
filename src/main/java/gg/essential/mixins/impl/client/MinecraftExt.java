@@ -13,7 +13,15 @@ package gg.essential.mixins.impl.client;
 
 import net.minecraft.util.Session;
 
+//#if MC == 1.21.5
+//$$ import net.minecraft.client.gl.Framebuffer;
+//#endif
+
 public interface MinecraftExt {
     /** Sets the private final session field and refreshes other objects that depend on the session. */
     void setSession(Session session);
+
+    //#if MC == 1.21.5
+    //$$ void essential$setFramebufferOverride(Framebuffer framebuffer);
+    //#endif
 }

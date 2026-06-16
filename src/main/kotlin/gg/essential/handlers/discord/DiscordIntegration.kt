@@ -13,15 +13,11 @@ package gg.essential.handlers.discord
 
 import dev.cbyrne.kdiscordipc.KDiscordIPC
 import dev.cbyrne.kdiscordipc.core.error.ConnectionError
-import dev.cbyrne.kdiscordipc.core.event.DiscordEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.ActivityJoinEvent
 import dev.cbyrne.kdiscordipc.core.event.impl.ErrorEvent
 import dev.cbyrne.kdiscordipc.core.event.impl.ReadyEvent
 import dev.cbyrne.kdiscordipc.data.activity.activity
 import dev.cbyrne.kdiscordipc.data.activity.largeImage
 import dev.cbyrne.kdiscordipc.data.activity.party
-import dev.cbyrne.kdiscordipc.data.activity.secrets
-import dev.cbyrne.kdiscordipc.data.activity.smallImage
 import gg.essential.Essential
 import gg.essential.config.EssentialConfig
 import gg.essential.data.VersionData
@@ -32,10 +28,9 @@ import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.handlers.discord.activity.ActivityState
 import gg.essential.handlers.discord.activity.provider.ActivityStateProvider
 import gg.essential.handlers.discord.activity.provider.impl.GameActivityStateProvider
-import gg.essential.handlers.discord.activity.provider.impl.GuiActivityStateProvider
 import gg.essential.handlers.discord.extensions.fullUsername
-import gg.essential.handlers.discord.party.PartyInformation
 import gg.essential.handlers.discord.party.PartyManager
+import gg.essential.mixins.ext.client.network.NetHandlerPlayClientExt
 import gg.essential.network.connectionmanager.skins.PlayerSkinLookup
 import gg.essential.universal.UMinecraft
 import gg.essential.util.ServerType
@@ -70,15 +65,9 @@ object DiscordIntegration {
     var spsJoinKey = UUID.randomUUID().toString()
         private set
 
-    /**
-     * The join secret that we receive when joining a party
-     */
-    var hostJoinSecret: String? = null
-
     private val scope = CoroutineScope(Job() + Dispatchers.IO + exceptionHandler)
     private val ipcPort = System.getProperty("essential.discord.ipc.port")?.toIntOrNull() ?: 0
     private val stateProviders = listOf(
-        GuiActivityStateProvider(),
         GameActivityStateProvider()
     )
 
@@ -91,7 +80,7 @@ object DiscordIntegration {
      * The current activity state
      * When this property is set, the discord client is notified of an activity change
      */
-    var state: ActivityState? = ActivityState.GUI.MainMenu
+    var state: ActivityState? = null
         set(value) {
             if (field == value) {
                 return
@@ -101,11 +90,7 @@ object DiscordIntegration {
             scope.launch { publishActivityUpdate() }
         }
 
-    /**
-     * The current party information
-     * When this property is set, the discord client is notified of an activity change
-     */
-    private var partyInformation: PartyInformation? = null
+    private var partySize: PartySize? = null
         set(value) {
             if (field == value) return
 
@@ -126,16 +111,13 @@ object DiscordIntegration {
             period = 500
         ) {
             // Set activity
-            stateProviders
+            state = stateProviders
                 .firstNotNullOfOrNull { it.provide() }
-                ?.let {
-                    state = it
-                }
 
-            // Set party information
+            // Set party size information
             // We also want to be safe at all times, and if for some reason there's an exception thrown, we don't
             // want to throw off everything else by not catching it.
-            partyInformation = providePartyInformation()
+            partySize = providePartySize()
         }
 
         with(EssentialConfig) {
@@ -169,20 +151,6 @@ object DiscordIntegration {
     private suspend fun initialize() {
         ipc.on<ReadyEvent> {
             Essential.logger.info("Connected to Discord as ${data.user.fullUsername}")
-
-            ipc.subscribe(DiscordEvent.ActivityJoinRequest)
-            ipc.subscribe(DiscordEvent.ActivityJoin)
-            ipc.subscribe(DiscordEvent.ActivityInvite)
-            ipc.subscribe(DiscordEvent.ActivitySpectate)
-
-            ipc.on<ActivityJoinEvent> {
-                try {
-                    partyManager.joinParty(data.secret)
-                    hostJoinSecret = data.secret
-                } catch (e: Exception) {
-                    Essential.logger.error("Failed to join party $data: $e", e)
-                }
-            }
 
             publishActivityUpdate()
         }
@@ -231,98 +199,41 @@ object DiscordIntegration {
         val activityState = state
         val version = VersionData.getMinecraftVersion()
 
-        val activity = activity("Playing Minecraft $version", activityState?.text) {
+        val activity = activity("Minecraft $version", activityState?.text) {
             val session = USession.activeNow()
 
             // Icon is a magic constant referencing an asset uploaded
             // via the Discord development portal
             largeImage("icon")
 
-            if (EssentialConfig.discordShowUsernameAndAvatar) {
-                val skin = PlayerSkinLookup.getSkin(session.uuid).getUntracked()
-                if (skin != null) {
-                    smallImage("https://crafthead.net/helm/${skin.hash.padStart(64, '0')}", session.username)
-                }
-            }
-
-            if (EssentialConfig.discordAllowAskToJoin) {
-                partyInformation?.let { info ->
-                    info.joinSecret?.let { secrets(join = it) }
-                    party(info.data.id, info.data.members, info.data.maximumMembers)
-                }
+            partySize?.let { (players, max) ->
+                party(UUID.randomUUID().toString(), players, max)
             }
         }
 
         ipc.activityManager.setActivity(activity)
     }
 
-    private fun providePartyInformation(): PartyInformation? =
-        when (val state = ServerType.current()) {
-            is ServerType.Multiplayer -> {
-                if (EssentialConfig.discordAllowAskToJoin) {
-                    PartyInformation(
-                        "multiplayer|${state.address}",
-                        // We use a combination of the server address and user UUID here because we don't want people
-                        // to appear like they are playing 'together' on a server. It would cause quite a few issues...
-                        PartyInformation.Data("${state.address}${USession.activeNow().uuid}", 1, 8)
-                    )
-                } else {
-                    null
-                }
-            }
-
+    private fun providePartySize(): PartySize? =
+        when (ServerType.current()) {
             is ServerType.SPS.Guest -> {
-                val uuid = "${state.hostUuid}"
-
-                val partyInfo = PartyInformation.Data(
-                    uuid,
-                    // Sometimes the playerInfoMap's size can be 0 when the server is first connecting, and discord
-                    // doesn't like parties with 0 members.
-                    Integer.max(UMinecraft.getMinecraft().connection?.playerInfoMap?.size ?: 1, 1),
-                    8
-                )
-
-                PartyInformation(hostJoinSecret, partyInfo)
+                UMinecraft.getMinecraft().connection?.let { connection ->
+                    connection.playerInfoMap.size to (connection as NetHandlerPlayClientExt).`essential$maxPlayers`
+                } ?: (1 to 8)
             }
-
             is ServerType.SPS.Host -> {
-                val integratedServer = UMinecraft.getMinecraft().integratedServer
-                val uuid = "${state.hostUuid}"
-
-                val partyInfo = PartyInformation.Data(
-                    uuid,
-                    // Sometimes the currentPlayerCount or maxPlayers can be 0 when the server is first connecting, and
-                    // discord doesn't like parties with 0 members.
-                    Integer.max(integratedServer?.currentPlayerCount ?: 1, 1),
-                    Integer.max(integratedServer?.maxPlayers ?: 8, 1)
-                )
-
-                PartyInformation("sps|$uuid|$spsJoinKey", partyInfo)
+                UMinecraft.getMinecraft().integratedServer?.let { server ->
+                    server.currentPlayerCount.coerceAtLeast(1) to server.maxPlayers.coerceAtLeast(1)
+                } ?: (1 to 8)
             }
-
-            else -> null
+            is ServerType.Singleplayer,
+            is ServerType.Multiplayer,
+            is ServerType.Realms,
+            null -> null
         }
 
-    fun getAddress(joinSecret: String): String? {
-        val hostInformation = joinSecret.split("|")
-        if (hostInformation.size != 3) {
-            Essential.logger.error("Invalid SPS joinSecret: $joinSecret")
-            return null
-        }
+    data class PartySize(val members: Int, val maxSize: Int)
 
-        val key = hostInformation[2]
-        if (key != this.spsJoinKey) {
-            Essential.logger.error("Invalid SPS key: $key ($joinSecret)")
+    private infix fun Int.to(other: Int) = PartySize(this, other)
 
-            return null
-        }
-
-        val spsManager = Essential.getInstance().connectionManager.spsManager
-        return spsManager.localSession?.ip
-    }
-
-    fun regenerateSpsJoinKey() {
-        spsJoinKey = UUID.randomUUID().toString()
-        scope.launch { publishActivityUpdate() }
-    }
 }

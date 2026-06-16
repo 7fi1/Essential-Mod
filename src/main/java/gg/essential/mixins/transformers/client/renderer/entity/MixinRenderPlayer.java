@@ -58,6 +58,7 @@ import java.util.EnumSet;
 //$$ import net.minecraft.client.renderer.IRenderTypeBuffer;
 //$$ import net.minecraft.client.renderer.model.ModelRenderer;
 //#else
+import net.minecraft.client.renderer.OpenGlHelper;
 //#endif
 
 //#if MC<=10809
@@ -138,32 +139,33 @@ public abstract class MixinRenderPlayer
     //#if MC>=11400
     //#if MC>=12102
     //#if MC>=12109
-    //$$ private void renderLeftArm(MatrixStack vMatrixStack, OrderedRenderCommandQueue queue, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //$$ private void renderLeftArm(MatrixStack vMatrixStack, OrderedRenderCommandQueue queue, int light, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
     //#else
-    //$$ private void renderLeftArm(MatrixStack vMatrixStack, VertexConsumerProvider buffers, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //$$ private void renderLeftArm(MatrixStack vMatrixStack, VertexConsumerProvider buffers, int light, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
     //#endif
     //$$     AbstractClientPlayerEntity player = MinecraftClient.getInstance().player;
     //$$     if (player == null) return;
     //#else
-    //$$ private void renderLeftArm(MatrixStack vMatrixStack, IRenderTypeBuffer buffers, int combinedLight, AbstractClientPlayerEntity player, CallbackInfo ci) {
+    //$$ private void renderLeftArm(MatrixStack vMatrixStack, IRenderTypeBuffer buffers, int light, AbstractClientPlayerEntity player, CallbackInfo ci) {
     //#endif
     //$$     UMatrixStack matrixStack = new UMatrixStack(vMatrixStack);
     //#if MC>=12109
-    //$$     RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue, combinedLight);
+    //$$     RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue);
     //#else
-    //$$     RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider(buffers, combinedLight);
+    //$$     RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider(buffers);
     //#endif
     //#else
     private void renderLeftArm(AbstractClientPlayer player, CallbackInfo ci) {
         UMatrixStack matrixStack = new UMatrixStack();
         RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider();
+        int light = ((int) OpenGlHelper.lastBrightnessX) | (((int) OpenGlHelper.lastBrightnessY) << 16);
     //#endif
         //#if MC<12102
         getMainModel().isChild = false;
         //#endif
         CosmeticsRenderState cState = new CosmeticsRenderState.Live(player);
         // render only cosmetics connected to LEFT_ARM and no other EnumParts
-        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, EnumSet.of(EnumPart.LEFT_ARM), false);
+        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, light, EnumSet.of(EnumPart.LEFT_ARM), false);
         EmoteWheel.isPlayerArmRendering = false;
     }
 
@@ -177,32 +179,33 @@ public abstract class MixinRenderPlayer
     //#if MC>=11400
     //#if MC>=12102
     //#if MC>=12109
-    //$$ private void renderRightArm(MatrixStack vMatrixStack, OrderedRenderCommandQueue queue, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //$$ private void renderRightArm(MatrixStack vMatrixStack, OrderedRenderCommandQueue queue, int light, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
     //#else
-    //$$ private void renderRightArm(MatrixStack vMatrixStack, VertexConsumerProvider buffers, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //$$ private void renderRightArm(MatrixStack vMatrixStack, VertexConsumerProvider buffers, int light, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
     //#endif
     //$$     AbstractClientPlayerEntity player = MinecraftClient.getInstance().player;
     //$$     if (player == null) return;
     //#else
-    //$$ private void renderRightArm(MatrixStack vMatrixStack, IRenderTypeBuffer buffers, int combinedLight, AbstractClientPlayerEntity player, CallbackInfo ci) {
+    //$$ private void renderRightArm(MatrixStack vMatrixStack, IRenderTypeBuffer buffers, int light, AbstractClientPlayerEntity player, CallbackInfo ci) {
     //#endif
     //$$     UMatrixStack matrixStack = new UMatrixStack(vMatrixStack);
     //#if MC>=12109
-    //$$     RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue, combinedLight);
+    //$$     RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue);
     //#else
-    //$$     RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider(buffers, combinedLight);
+    //$$     RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider(buffers);
     //#endif
     //#else
     private void renderRightArm(AbstractClientPlayer player, CallbackInfo ci) {
         UMatrixStack matrixStack = new UMatrixStack();
         RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider();
+        int light = ((int) OpenGlHelper.lastBrightnessX) | (((int) OpenGlHelper.lastBrightnessY) << 16);
     //#endif
         //#if MC<12102
         getMainModel().isChild = false;
         //#endif
         CosmeticsRenderState cState = new CosmeticsRenderState.Live(player);
         // render only cosmetics connected to RIGHT_ARM and no other EnumParts
-        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, EnumSet.of(EnumPart.RIGHT_ARM), false);
+        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, light, EnumSet.of(EnumPart.RIGHT_ARM), false);
         EmoteWheel.isPlayerArmRendering = false;
     }
 

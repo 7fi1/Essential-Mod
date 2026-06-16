@@ -15,6 +15,7 @@ import com.mojang.blaze3d.systems.RenderSystem
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
@@ -81,14 +82,22 @@ fun renderGuiRenderStateToTexture(guiRenderState: GuiRenderState): GpuTexture {
     val fogRenderer = FogRenderer()
     val guiRenderer = GuiRenderer(
         guiRenderState,
+        //#if MC >= 26.2
+        //$$ mc.gameRenderer.featureRenderDispatcher(),
+        //#else
         mc.bufferBuilders.entityVertexConsumers,
         //#if MC>=12109
         //$$ mc.gameRenderer.entityRenderCommandQueue,
         //$$ mc.gameRenderer.entityRenderDispatcher,
         //#endif
+        //#endif
         emptyList(),
     )
+    //#if MC >= 26.2
+    //$$ guiRenderer.render()
+    //#else
     guiRenderer.render(fogRenderer.getFogBuffer(FogRenderer.FogType.NONE))
+    //#endif
     guiRenderer.close()
     fogRenderer.close()
     GuiRendererInfo.customGuiRendererUsedThisFrame = true
@@ -128,7 +137,7 @@ private fun blitTextureToRenderTarget(
     buffer.pos(matrixStack, w, 0.0, 0.0).tex(1.0, 1.0).endVertex()
     buffer.pos(matrixStack, 0.0, 0.0, 0.0).tex(0.0, 1.0).endVertex()
     buffer.build()?.drawAndClose(COMPOSITE_PIPELINE) {
-        texture(0, resultColor.glId)
+        texture(0, resultColor.ucView, UGpuSampler.NEAREST)
     }
 }
 

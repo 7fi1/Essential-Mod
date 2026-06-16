@@ -493,11 +493,11 @@ private fun LayoutScope.playerPreviewInner(state: WardrobeState, modifier: Modif
         )
 
         val dragging = mutableStateOf(false)
-        val hoveredSource = mutableStateOf(stateOf<Cosmetic?>(null))
+        val hoveredSource = mutableStateOf(stateOf<CosmeticId?>(null))
         val hovered = hoveredSource.flatten()
 
         val outlineCosmetic = stateBy {
-            listOfNotNull(state.editingCosmetic()?.cosmetic, hovered().takeIf { !dragging() })
+            listOfNotNull(state.editingCosmetic()?.cosmetic?.id, hovered().takeIf { !dragging() })
         }
 
         val cosmeticHoverEffect = CosmeticHoverOutlineEffect(outlineCosmetic)
@@ -513,7 +513,8 @@ private fun LayoutScope.playerPreviewInner(state: WardrobeState, modifier: Modif
             val editingCosmeticId = state.editingCosmetic.get()?.cosmetic?.id
             state.editingCosmetic.set(null)
 
-            val hoveredCosmetic = cosmeticHoverEffect.hoveredCosmetic.get() ?: return@onLeftClick
+            val hoveredCosmeticId = cosmeticHoverEffect.hoveredCosmetic.getUntracked() ?: return@onLeftClick
+            val hoveredCosmetic = state.cosmeticsData.cosmetic(hoveredCosmeticId).getUntracked() ?: return@onLeftClick
 
             USound.playButtonPress()
             if (UKeyboard.isShiftKeyDown()) {

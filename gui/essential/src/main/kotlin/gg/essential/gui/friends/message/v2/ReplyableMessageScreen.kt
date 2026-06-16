@@ -425,6 +425,7 @@ class ReplyableMessageScreen(
             messages.add(when (part) {
                 is ClientMessage.Part.Gift -> GiftEmbedImpl(part.id, messageWrapper)
                 is ClientMessage.Part.Image -> ImageEmbedImpl(part.id, messageWrapper)
+                is ClientMessage.Part.InvitePart -> InviteEmbedImpl(part.invite, messageWrapper)
                 is ClientMessage.Part.Skin -> SkinEmbedImpl(part.skin, messageWrapper)
                 is ClientMessage.Part.Text -> ParagraphLineImpl(messageWrapper) {
                     if (EssentialConfig.chatFilterWithSource().first) part.filteredContent else part.unfilteredContent

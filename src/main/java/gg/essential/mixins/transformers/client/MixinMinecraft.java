@@ -41,9 +41,23 @@ import java.util.Objects;
 
 import static gg.essential.util.HelpersKt.toUSession;
 
+//#if MC >= 26.3
+//$$ import net.minecraft.client.multiplayer.p2p.P2PManager;
+//#endif
+
+//#if MC >= 26.2
+//$$ import net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler;
+//#endif
+
 //#if MC>=12109
 //$$ import com.llamalad7.mixinextras.sugar.Local;
 //$$ import net.minecraft.util.ApiServices;
+//$$ import org.spongepowered.asm.mixin.Unique;
+//$$ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+//#endif
+
+//#if MC == 1.21.5
+//$$ import net.minecraft.client.gl.Framebuffer;
 //$$ import org.spongepowered.asm.mixin.Unique;
 //$$ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 //#endif
@@ -96,15 +110,25 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Shadow public abstract PropertyMap getProfileProperties();
     //#endif
 
+    //#if MC >= 26.3
+    //$$ @Shadow @Mutable @Final public P2PManager p2pManager;
+    //#endif
+    //#if MC >= 26.2
+    //$$ @Shadow @Mutable @Final private RemoteFriendListUpdateHandler remoteFriendListUpdateHandler;
+    //#endif
+    //#if MC >= 1.20.4
+    //$$ @Shadow @Mutable @Final private CompletableFuture<UserApiService.UserProperties> userPropertiesFuture;
+    //#endif
     //#if MC>=11700
     //$$ @Shadow @Mutable @Final private SocialInteractionsManager socialInteractionsManager;
     //#if MC>=11900
     //#if MC>=12109
     //$$ @Unique
     //$$ private YggdrasilAuthenticationService authenticationService;
-    //$$ @Inject(method = "createUserApiService", at = @At("HEAD"))
-    //$$ private void captureAuthService(CallbackInfoReturnable<?> ci, @Local(argsOnly = true) YggdrasilAuthenticationService authenticationService) {
+    //$$ @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;createUserApiService(Lcom/mojang/authlib/yggdrasil/YggdrasilAuthenticationService;Lnet/minecraft/client/RunArgs;)Lcom/mojang/authlib/minecraft/UserApiService;"))
+    //$$ private YggdrasilAuthenticationService captureAuthService(YggdrasilAuthenticationService authenticationService) {
     //$$     this.authenticationService = authenticationService;
+    //$$     return authenticationService;
     //$$ }
     //#else
     //$$ @Shadow @Mutable @Final private YggdrasilAuthenticationService authenticationService;
@@ -211,6 +235,13 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public void setSession(Session session) {
         Session oldSession = this.session;
 
+        //#if MC >= 26.2
+        //$$ this.remoteFriendListUpdateHandler.close();
+        //#endif
+        //#if MC >= 26.3
+        //$$ this.p2pManager.shutdown();
+        //#endif
+
         this.session = session;
 
         //#if MC>=12002
@@ -228,7 +259,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
         //#endif
 
         //#if MC>=11700
-        //$$
         //#if MC>=11900
         //$$ YggdrasilAuthenticationService authenticationService = this.authenticationService;
         //#else
@@ -236,6 +266,14 @@ public abstract class MixinMinecraft implements MinecraftExt {
         //#endif
         //#if MC>=12004
         //$$ this.userApiService = authenticationService.createUserApiService(session.getAccessToken());
+        //$$ this.userPropertiesFuture = CompletableFuture.supplyAsync(() -> {
+        //$$     try {
+        //$$         return this.userApiService.fetchProperties();
+        //$$     } catch (AuthenticationException e) {
+        //$$         Essential.logger.error("Failed to fetch user properties", e);
+        //$$         return UserApiService.OFFLINE_PROPERTIES;
+        //$$     }
+        //$$ }, Util.getDownloadWorkerExecutor());
         //#else
         //$$ try {
         //#if MC>=11800
@@ -252,19 +290,37 @@ public abstract class MixinMinecraft implements MinecraftExt {
         //#endif
         //$$ }
         //#endif
-        //#if MC>=11800
+        //#endif
+
+        //#if MC >= 26.3
+        //$$ this.p2pManager = new P2PManager((Minecraft) (Object) this, session);
+        //#endif
+
+        //#if MC >= 26.2
+        //$$ var friendsService = authenticationService.createFriendsService(session.getAccessToken());
+        //$$ this.remoteFriendListUpdateHandler = new RemoteFriendListUpdateHandler(friendsService, (Minecraft) (Object) this);
+        //#endif
+
+        //#if MC >= 26.2
+        //$$ this.playerSocialManager = new PlayerSocialManager((Minecraft) (Object) this, this.userApiService, friendsService, this.remoteFriendListUpdateHandler);
+        //#elseif MC>=11800
         //$$ this.socialInteractionsManager = new SocialInteractionsManager((MinecraftClient) (Object) this, this.userApiService);
-        //#else
+        //#elseif MC>=11700
         //$$ this.socialInteractionsManager = new SocialInteractionsManager((MinecraftClient) (Object) this, this.socialInteractionsService);
         //#endif
+
+        //#if MC >= 26.2
+        //$$ if (this.playerSocialManager.isFriendListEnabled()) {
+        //$$     this.remoteFriendListUpdateHandler.start();
+        //$$ }
+        //#endif
+
         //#if MC>=12002
         //$$ this.profileKeys = ProfileKeys.create(this.userApiService, session, this.runDirectory.toPath());
         //#elseif MC>=11903
         //$$ this.profileKeys = new ProfileKeysImpl(this.userApiService, session.getProfile().getId(), this.runDirectory.toPath());
         //#elseif MC>=11900
         //$$ this.profileKeys = new ProfileKeys(this.userApiService, session.getProfile().getId(), this.runDirectory.toPath());
-        //#endif
-        //$$
         //#endif
 
         Essential.EVENT_BUS.post(new ReAuthEvent(toUSession(session)));
@@ -343,4 +399,20 @@ public abstract class MixinMinecraft implements MinecraftExt {
     private void unsetIntegratedServerManager(CallbackInfo ci) {
         Essential.getInstance().getIntegratedServerManager().set((McIntegratedServerManager) null);
     }
+
+    //#if MC == 1.21.5
+    //$$ @Unique
+    //$$ private Framebuffer framebufferOverride;
+    //$$ @Override
+    //$$ public void essential$setFramebufferOverride(Framebuffer framebuffer) {
+    //$$     this.framebufferOverride = framebuffer;
+    //$$ }
+    //$$ @Inject(method = "getFramebuffer", at = @At("HEAD"), cancellable = true)
+    //$$ private void overrideFramebuffer(CallbackInfoReturnable<Framebuffer> ci) {
+    //$$     Framebuffer override = framebufferOverride;
+    //$$     if (override != null) {
+    //$$         ci.setReturnValue(override);
+    //$$     }
+    //$$ }
+    //#endif
 }

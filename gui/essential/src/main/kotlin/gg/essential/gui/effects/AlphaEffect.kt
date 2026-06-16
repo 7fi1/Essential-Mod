@@ -18,10 +18,12 @@ import gg.essential.gui.elementa.state.v2.toV2
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
+import gg.essential.util.NEAREST
 import gg.essential.util.image.GpuTexture
 import java.awt.Color
 import java.io.Closeable
@@ -120,7 +122,7 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
             buffer.pos(matrixStack, x + width, y, 0.0).tex(1.0, 1.0).endVertex()
             buffer.pos(matrixStack, x, y, 0.0).tex(0.0, 1.0).endVertex()
         }.build()?.drawAndClose(COMPOSITE_PIPELINE) {
-            texture(0, resources.texture.glId)
+            texture(0, resources.texture.ucView, UGpuSampler.NEAREST)
         }
     }
 

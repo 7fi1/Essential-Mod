@@ -314,6 +314,9 @@ class OutfitManager(
 
         editOutfit(outfit.copy(equippedCosmetics = equippedCosmetics))
         packetQueue.enqueue(ClientCosmeticOutfitEquippedCosmeticsUpdatePacket(outfit.id, slot.toInfra(), cosmeticId))
+        outfit.cosmeticSettings[cosmeticId]?.let { persistedCosmeticSetting ->
+            packetQueue.enqueue(ClientCosmeticOutfitCosmeticSettingsUpdatePacket(outfitId, cosmeticId!!, persistedCosmeticSetting.toInfra()))
+        }
     }
 
     fun cleanUpUnusedSettingsOnOutfits() {

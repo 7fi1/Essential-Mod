@@ -13,7 +13,6 @@ package gg.essential.mixins.transformers.client;
 
 import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
-import net.minecraft.client.Keyboard;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.text.Text;
@@ -24,13 +23,27 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import java.io.File;
 import java.util.function.Consumer;
 
-@Mixin(Keyboard.class)
+//#if MC >= 26.2
+//$$ @Mixin(net.minecraft.client.Screenshot.class)
+//#else
+@Mixin(net.minecraft.client.Keyboard.class)
+//#endif
 public class Mixin_CancelVanillaScreenshotHotkey {
 
     // We want to override the Minecraft keybind from activating because we may need to wait
     // one frame so the game can render again without notifications or other screenshots
 
-    @Redirect(method = "onKey", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/ScreenshotRecorder;saveScreenshot(Ljava/io/File;Lnet/minecraft/client/gl/Framebuffer;Ljava/util/function/Consumer;)V"))
+    @Redirect(
+        //#if MC >= 26.2
+        //$$ method = "grab(Lnet/minecraft/client/Minecraft;Z)V",
+        //#else
+        method = "onKey",
+        //#endif
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/ScreenshotRecorder;saveScreenshot(Ljava/io/File;Lnet/minecraft/client/gl/Framebuffer;Ljava/util/function/Consumer;)V")
+    )
+    //#if MC >= 26.2
+    //$$ static
+    //#endif
     private void essential$screenshotTake(File gameDirectory, Framebuffer buffer, Consumer<Text> messageConsumer) {
         if (EssentialConfig.INSTANCE.getEssentialEnabled()) {
             Essential.getInstance().getConnectionManager().getScreenshotManager().handleScreenshotKeyPressed();

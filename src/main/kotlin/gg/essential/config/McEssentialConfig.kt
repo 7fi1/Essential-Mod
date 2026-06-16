@@ -21,9 +21,11 @@ import gg.essential.config.EssentialConfig.discordRichPresenceState
 import gg.essential.config.EssentialConfig.essentialEnabledState
 import gg.essential.config.EssentialConfig.friendRequestPrivacyState
 import gg.essential.config.EssentialConfig.ownCosmeticsVisibleStateWithSource
+import gg.essential.config.EssentialConfig.shareProfileLastOnline
 import gg.essential.config.EssentialConfig.chatFilterWithSource
 import gg.essential.connectionmanager.common.packet.chat.ChatUnfilteredContentSettingPacket
 import gg.essential.connectionmanager.common.packet.cosmetic.ClientCosmeticsUserEquippedVisibilityTogglePacket
+import gg.essential.connectionmanager.common.packet.profile.ClientProfileLastDisconnectVisibilityTogglePacket
 import gg.essential.connectionmanager.common.packet.relationships.privacy.FriendRequestPrivacySettingPacket
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket
 import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryCollectionCategoriesUpdatePacket
@@ -119,6 +121,27 @@ object McEssentialConfig {
                     }
                 }
                 // Unsuccessful packet means the correct value is already set, so do nothing
+            }
+        }
+
+        shareProfileLastOnline.onChange(referenceHolder) { (state, updateInfra) ->
+            if (!updateInfra) return@onChange
+            if (Essential.getInstance().connectionManager.isAuthenticated) {
+                Essential.getInstance().connectionManager.connectionScope.launch {
+                    val successful = Essential.getInstance().connectionManager.call(
+                        ClientProfileLastDisconnectVisibilityTogglePacket(state)
+                    ).awaitResponseActionPacket()
+                    if (!successful) {
+                        Notifications.error(
+                            "Error",
+                            "Failed to update 'Share last online time with friends' setting. Try again."
+                        )
+                        shareProfileLastOnline.set(!state to false)
+                    }
+                }
+            } else {
+                displayNotConnectedInformation()
+                shareProfileLastOnline.set(!state to false)
             }
         }
 

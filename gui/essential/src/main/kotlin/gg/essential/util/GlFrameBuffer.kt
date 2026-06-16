@@ -12,6 +12,7 @@
 package gg.essential.util
 
 import gg.essential.universal.UMatrixStack
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.GpuTexture
 import java.awt.Color
@@ -30,7 +31,7 @@ interface GlFrameBuffer : AutoCloseable {
     fun <T> use(block: () -> T): T
     fun useAsRenderTarget(block: (UMatrixStack, Int, Int) -> Unit)
 
-    fun drawTexture(matrixStack: UMatrixStack, x: Double, y: Double, width: Double, height: Double, color: Color)
+    fun drawTexture(matrixStack: UMatrixStack, x: Double, y: Double, width: Double, height: Double, color: Color, sampler: UGpuSampler)
 
     fun clear(clearColor: Color = Color(0, 0, 0, 0), clearDepth: Double = 1.0, clearStencil: Int = 0)
 

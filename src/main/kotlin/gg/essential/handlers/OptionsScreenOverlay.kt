@@ -31,7 +31,9 @@ import gg.essential.gui.layoutdsl.BasicYModifier
 import gg.essential.gui.layoutdsl.layout
 import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
+import gg.essential.gui.proxies.ScreenWithProxiesHandler
 import gg.essential.gui.proxies.ScreenWithProxiesHandler.Companion.mountWithProxy
+import gg.essential.gui.proxies.ScreenWithVanillaProxyElementsExt
 import gg.essential.util.GuiUtil
 import gg.essential.util.ModLoaderUtil
 import gg.essential.util.findButtonByLabel
@@ -50,10 +52,10 @@ class OptionsScreenOverlay {
         }
 
         val window = layer.window
-        init(screen, window)
+        init(screen, window, (screen as? ScreenWithVanillaProxyElementsExt)?.`essential$getProxyHandler`())
     }
 
-    fun init(screen: GuiScreen, window: Window) {
+    fun init(screen: GuiScreen, window: Window, proxyHandler: ScreenWithProxiesHandler?) {
         // This mod removes the telemetry button, causing the credits and attribution button to move to the left.
         // This makes our options button look weird, so let's put it back to the position that it was in on 1.19.2.
         // Linear issue for reference: EM-1802
@@ -89,6 +91,7 @@ class OptionsScreenOverlay {
         // use dsl for proxy mounting
         window.layout {
             mountWithProxy(
+                proxyHandler,
                 "settings",
                 BasicXModifier { SiblingConstraint(4f) boundTo bottomRightButton }.then(
                     BasicYModifier { 0.pixels boundTo bottomRightButton }

@@ -11,6 +11,7 @@
  */
 package gg.essential.model.backend
 
+import gg.essential.model.ParticleEffect
 import gg.essential.model.util.UVertexConsumer
 
 interface RenderBackend {
@@ -26,8 +27,9 @@ interface RenderBackend {
         val height: Int
     }
 
-    fun interface CommandQueue {
+    interface CommandQueue {
         fun submit(texture: Texture, translucent: Boolean, emissive: Boolean, render: (UVertexConsumer) -> Unit)
+        fun submit(renderPass: ParticleEffect.RenderPass, render: (UVertexConsumer) -> Unit)
     }
     fun interface VertexConsumerProvider {
         fun provide(texture: Texture, emissive: Boolean, block: (UVertexConsumer) -> Unit)

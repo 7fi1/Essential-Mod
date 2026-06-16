@@ -11,14 +11,33 @@
  */
 package gg.essential.mixins.transformers.server;
 
+import net.minecraft.network.ServerStatusResponse;
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(MinecraftServer.class)
 public interface MinecraftServerAccessor {
     @Accessor
     Thread getServerThread();
+
+    //#if MC >= 1.19.4
+    //$$ @Accessor
+    //$$ void setFavicon(net.minecraft.server.ServerMetadata.Favicon favicon);
+    //$$
+    //$$ @Accessor
+    //$$ void setMetadata(net.minecraft.server.ServerMetadata metadata);
+    //$$
+    //$$ @Invoker
+    //$$ java.util.Optional<net.minecraft.server.ServerMetadata.Favicon> invokeLoadFavicon();
+    //$$
+    //$$ @Invoker
+    //$$ net.minecraft.server.ServerMetadata invokeCreateMetadata();
+    //#else
+    @Invoker
+    void invokeApplyServerIconToResponse(ServerStatusResponse statusResponse);
+    //#endif
 
     //#if MC<11200
     //$$ @org.spongepowered.asm.mixin.gen.Invoker

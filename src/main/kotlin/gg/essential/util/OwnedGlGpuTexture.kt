@@ -12,86 +12,37 @@
 package gg.essential.util
 
 import gg.essential.universal.UGraphics
+import gg.essential.universal.render.UGpuTexture
+import gg.essential.universal.render.UGpuTextureView
 import gg.essential.util.image.GpuTexture
-import org.lwjgl.opengl.GL11
-import org.lwjgl.opengl.GL11.GL_DEPTH_COMPONENT
-import org.lwjgl.opengl.GL11.GL_FLOAT
-import org.lwjgl.opengl.GL11.GL_NEAREST
-import org.lwjgl.opengl.GL11.GL_RGBA
-import org.lwjgl.opengl.GL11.GL_RGBA8
-import org.lwjgl.opengl.GL11.GL_TEXTURE_2D
-import org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER
-import org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER
-import org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE
-import org.lwjgl.opengl.GL11.glTexImage2D
-import org.lwjgl.opengl.GL11.glTexParameteri
-import org.lwjgl.opengl.GL14.GL_DEPTH_COMPONENT32
 import org.lwjgl.opengl.GL30.GL_DEPTH24_STENCIL8
 import org.lwjgl.opengl.GL30.GL_DEPTH_STENCIL
 import org.lwjgl.opengl.GL30.GL_UNSIGNED_INT_24_8
-import java.nio.ByteBuffer
-
-//#if MC>=11600
-//$$ import com.mojang.blaze3d.platform.GlStateManager
-//#else
-import net.minecraft.client.renderer.GlStateManager
-//#endif
 
 class OwnedGlGpuTexture(
     override val width: Int,
     override val height: Int,
-    private val format: GpuTexture.Format,
+    format: GpuTexture.Format,
 ) : GlGpuTexture(format) {
-    override val glId: Int
-
-    init {
-        // Note: Must allocate via GlStateManager because we must use it to deallocate as well (see [delete])
-        //       and GlStateManager does some internal counting on newer versions.
-        //#if MC>=11600
-        //$$ glId = GlStateManager.genTexture()
-        //#else
-        glId = GlStateManager.generateTexture()
-        //#endif
-
-        UGraphics.configureTexture(glId) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-            glTexImage2D(
-                GL_TEXTURE_2D,
-                0,
-                when (format) {
-                    GpuTexture.Format.RGBA8 -> GL_RGBA8
-                    GpuTexture.Format.DEPTH24_STENCIL8 -> GL_DEPTH24_STENCIL8
-                    GpuTexture.Format.DEPTH32 -> GL_DEPTH_COMPONENT32
-                },
-                width,
-                height,
-                0,
-                when (format) {
-                    GpuTexture.Format.RGBA8 -> GL_RGBA
-                    GpuTexture.Format.DEPTH24_STENCIL8 -> GL_DEPTH_STENCIL
-                    GpuTexture.Format.DEPTH32 -> GL_DEPTH_COMPONENT
-                },
-                when (format) {
-                    GpuTexture.Format.RGBA8 -> GL_UNSIGNED_BYTE
-                    GpuTexture.Format.DEPTH24_STENCIL8 -> GL_UNSIGNED_INT_24_8
-                    GpuTexture.Format.DEPTH32 -> GL_FLOAT
-                },
-                null as ByteBuffer?,
-            )
-        }
-    }
-
-    private var closed = false
-    override fun close() {
-        if (!closed) {
-            // Note: Must use GlStateManager to deallocate as otherwise the caching in its `bindTexture` can break!
-            //#if MC>=11600
-            //$$ GlStateManager.deleteTexture(glId)
+    override var uc: UGpuTexture = UGraphics.getDevice().createTexture(
+        null,
+        UGpuTexture.Usage.COPY_SRC + UGpuTexture.Usage.COPY_DST + UGpuTexture.Usage.RENDER_ATTACHMENT + UGpuTexture.Usage.TEXTURE_BINDING,
+        when (format) {
+            GpuTexture.Format.RGBA8 -> UGraphics.getPlatformAdapter().defaultGpuFormatRgba
+            //#if MC >= 26.2
+            //$$ GpuTexture.Format.DEPTH24_STENCIL8 -> UGraphics.getPlatformAdapter().gpuFormat(com.mojang.blaze3d.GpuFormat.D24_UNORM_S8_UINT)
             //#else
-            GlStateManager.deleteTexture(glId)
+            GpuTexture.Format.DEPTH24_STENCIL8 -> UGraphics.getPlatformAdapter().gpuFormat(GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8)
             //#endif
-            closed = true
-        }
+            GpuTexture.Format.DEPTH32 -> UGraphics.getPlatformAdapter().defaultGpuFormatDepth
+        },
+        width,
+        height,
+    )
+    override var ucView: UGpuTextureView = UGraphics.getDevice().createTextureView(uc)
+
+    override fun close() {
+        ucView.close()
+        uc.close()
     }
 }

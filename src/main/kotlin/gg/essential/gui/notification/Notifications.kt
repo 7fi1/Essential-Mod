@@ -190,7 +190,9 @@ object NotificationsImpl : Notifications, NotificationsManager {
     }
 
     private val blocked: Boolean
-        //#if MC>=11600
+        //#if MC >= 26.2
+        //$$ get() = beforeFirstDraw || mc.gui.overlay() != null
+        //#elseif MC>=11600
         //$$ get() = beforeFirstDraw || mc.loadingGui != null
         //#else
         get() = beforeFirstDraw

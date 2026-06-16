@@ -23,11 +23,16 @@ import org.spongepowered.asm.mixin.injection.Slice;
 public abstract class Mixin_AllowMovementDuringScreens_HandleKeybinds {
     @ModifyExpressionValue(
         method = "tick",
+        //#if MC >= 26.2
+        //$$ at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;screen()Lnet/minecraft/client/gui/screens/Screen;", ordinal = 1),
+        //$$ slice = @Slice(from = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;tick()V"))
+        //#else
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/MinecraftClient;currentScreen:Lnet/minecraft/client/gui/screen/Screen;", ordinal = 0),
         //#if MC>=12102
         //$$ slice = @Slice(from = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/hud/DebugHud;shouldShowDebugHud()Z"))
         //#else
         slice = @Slice(from = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/Screen;wrapScreenError(Ljava/lang/Runnable;Ljava/lang/String;Ljava/lang/String;)V"))
+        //#endif
         //#endif
     )
     private Screen essential$emoteWheelAllowsMovement(Screen screen) {

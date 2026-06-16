@@ -37,7 +37,11 @@ dependencies {
     implementation("org.ow2.asm:asm-commons:9.9.1")
     implementation ("com.google.guava:guava:30.1.1-jre")
 
-    implementation("gg.essential:essential-gradle-toolkit:0.7.0-alpha.4")
+    implementation("gg.essential:essential-gradle-toolkit:0.7.1")
+    // TODO remove once preprocessor+EGT are updated
+    implementation("com.github.replaymod:remap:651e2e0a2!!") {
+        exclude("org.jetbrains.kotlin", "kotlin-compiler-embeddable")
+    }
 }
 
 gradlePlugin {

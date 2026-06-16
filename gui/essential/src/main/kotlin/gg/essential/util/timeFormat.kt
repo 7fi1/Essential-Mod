@@ -13,7 +13,9 @@ package gg.essential.util
 
 import gg.essential.config.EssentialConfig
 import gg.essential.gui.elementa.state.v2.ObservedDuration
+import gg.essential.gui.elementa.state.v2.ObservedInstant
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -91,3 +93,16 @@ private val millisTime = arrayOf(
     ChronoUnit.MINUTES,
 )
 
+fun formatTimeDifference(startTime: Instant, endTime: ObservedInstant): String {
+    val delta = endTime.since(startTime).toMillis()
+
+    for (chronoUnit in millisTime) {
+        val time = delta / chronoUnit.duration.toMillis()
+        if (time.greaterOrEqual(1)) {
+            val timeName = chronoUnit.name.lowercase()
+            return "$time ${if (time.greater(1)) timeName else timeName.removeSuffix("s")}"
+        }
+    }
+
+    return "a moment"
+}

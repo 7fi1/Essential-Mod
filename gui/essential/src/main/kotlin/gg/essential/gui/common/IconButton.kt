@@ -78,11 +78,12 @@ class IconButton(
 
     constructor(
         imageFactory: ImageFactory,
-        buttonText: State<String>
+        buttonText: State<String>,
+        enabled: State<Boolean> = BasicState(true),
     ) : this(
         BasicState(imageFactory),
         BasicState(""),
-        BasicState(true),
+        enabled,
         buttonText,
         BasicState(true),
         BasicState(true),

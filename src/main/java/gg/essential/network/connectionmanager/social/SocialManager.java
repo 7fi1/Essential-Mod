@@ -12,13 +12,11 @@
 package gg.essential.network.connectionmanager.social;
 
 import com.google.common.collect.Maps;
-import gg.essential.connectionmanager.common.packet.social.SocialDiscordRequestJoinServerPacket;
 import gg.essential.connectionmanager.common.packet.social.SocialInviteToServerCancelPacket;
 import gg.essential.connectionmanager.common.packet.social.SocialInviteToServerPacket;
 import gg.essential.event.network.server.ServerLeaveEvent;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.NetworkedManager;
-import gg.essential.network.connectionmanager.social.handler.SocialDiscordRequestJoinServerPacketHandler;
 import gg.essential.network.connectionmanager.social.handler.SocialInviteToServerCancelPacketHandler;
 import gg.essential.network.connectionmanager.social.handler.SocialInviteToServerPacketHandler;
 import gg.essential.util.UUIDUtil;
@@ -45,7 +43,6 @@ public class SocialManager implements NetworkedManager {
     public SocialManager(@NotNull final ConnectionManager connectionManager) {
         connectionManager.registerPacketHandler(SocialInviteToServerPacket.class, new SocialInviteToServerPacketHandler());
         connectionManager.registerPacketHandler(SocialInviteToServerCancelPacket.class, new SocialInviteToServerCancelPacketHandler(this));
-        connectionManager.registerPacketHandler(SocialDiscordRequestJoinServerPacket.class, new SocialDiscordRequestJoinServerPacketHandler());
         this.connectionManager = connectionManager;
     }
 

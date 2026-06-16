@@ -14,6 +14,7 @@ package gg.essential.util
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UResolution
+import gg.essential.universal.render.UGpuSampler
 import gg.essential.universal.render.URenderPipeline
 import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
@@ -129,7 +130,7 @@ class GlFrameBufferImpl(
         }
     }
 
-    override fun drawTexture(matrixStack: UMatrixStack, x: Double, y: Double, width: Double, height: Double, color: Color) {
+    override fun drawTexture(matrixStack: UMatrixStack, x: Double, y: Double, width: Double, height: Double, color: Color, sampler: UGpuSampler) {
         matrixStack.push()
         matrixStack.scale(1f, 1f, 50f)
 
@@ -144,7 +145,7 @@ class GlFrameBufferImpl(
         worldRenderer.pos(matrixStack, x + width, y, 0.0).tex(1.0, 1.0).color(red, green, blue, alpha).endVertex()
         worldRenderer.pos(matrixStack, x, y, 0.0).tex(0.0, 1.0).color(red, green, blue, alpha).endVertex()
         worldRenderer.build()?.drawAndClose(PIPELINE) {
-            texture(0, texture.glId)
+            texture(0, texture.ucView, sampler)
         }
 
         matrixStack.pop()

@@ -26,6 +26,16 @@ import org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
+//#if MC >= 26.2
+//$$ import com.mojang.blaze3d.buffers.GpuBuffer
+//$$ import com.mojang.blaze3d.systems.RenderSystem
+//$$ import org.joml.Vector4f
+//#endif
+
+//#if MC >= 1.21.5
+//$$ import net.minecraft.client.texture.GlTexture
+//#endif
+
 //#if MC>=12105
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
 //#else
@@ -47,7 +57,35 @@ import net.minecraft.client.renderer.OpenGlHelper.glGenFramebuffers
 //#endif
 
 abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture {
+    override val glId: Int
+        //#if MC >= 1.21.5
+        //$$ get() = (UGraphics.getPlatformAdapter().texture(uc) as GlTexture).glId
+        //#else
+        get() = UGraphics.getPlatformAdapter().texture(uc)
+        //#endif
+
+    //#if MC >= 26.2
+    //$$ val b3d: com.mojang.blaze3d.textures.GpuTexture
+    //$$     get() = UGraphics.getPlatformAdapter().texture(uc)
+    //#endif
+
     override fun copyFrom(sources: Iterable<GpuTexture.CopyOp>) {
+        //#if MC >= 26.2
+        //$$ // B3D's copyTextureToTexture is broken on OpenGL, it passes the wrong arguments to the lower layer
+        //$$ if (b3d is GlTexture) {
+        //$$     return copyFromOpenGl(sources)
+        //$$ }
+        //$$ for ((src, srcX, srcY, destX, destY, width, height) in sources) {
+        //$$     src as GlGpuTexture
+        //$$     RenderSystem.getDevice().createCommandEncoder()
+        //$$         .copyTextureToTexture(src.b3d, this.b3d, 0, destX, destY, srcX, srcY, width, height)
+        //$$ }
+        //#else
+        return copyFromOpenGl(sources)
+        //#endif
+    }
+
+    private fun copyFromOpenGl(sources: Iterable<GpuTexture.CopyOp>) {
         val prevScissor = GL11.glGetBoolean(GL11.GL_SCISSOR_TEST)
         if (prevScissor) GL11.glDisable(GL11.GL_SCISSOR_TEST)
 
@@ -79,6 +117,10 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
     }
 
     override fun clearColor(color: Color) {
+        //#if MC >= 26.2
+        //$$ RenderSystem.getDevice().createCommandEncoder()
+        //$$     .clearColorTexture(b3d, Vector4f(color.r.toFloat(), color.g.toFloat(), color.b.toFloat(), color.a.toFloat()).div(255f))
+        //#else
         val prevDrawFrameBufferBinding = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING)
         glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, colorWriteFrameBuffer)
         glFramebufferTexture2D(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, glId, 0)
@@ -95,9 +137,14 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
 
         glFramebufferTexture2D(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, 0, 0)
         glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFrameBufferBinding)
+        //#endif
     }
 
     override fun clearDepth(depth: Float) {
+        //#if MC >= 26.2
+        //$$ RenderSystem.getDevice().createCommandEncoder()
+        //$$     .clearDepthTexture(b3d, depth.toDouble())
+        //#else
         val prevDrawFrameBufferBinding = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING)
         glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, depthWriteFrameBuffer)
         glFramebufferTexture2D(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, glId, 0)
@@ -112,8 +159,10 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
 
         glFramebufferTexture2D(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, 0, 0)
         glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFrameBufferBinding)
+        //#endif
     }
 
+    //#if MC < 26.2
     private fun glClear(bits: Int) {
         val previousScissorState = GL11.glGetBoolean(GL11.GL_SCISSOR_TEST)
         GL11.glDisable(GL11.GL_SCISSOR_TEST)
@@ -124,8 +173,39 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
             GL11.glEnable(GL11.GL_SCISSOR_TEST)
         }
     }
+    //#endif
 
     override fun readPixelColors(x: Int, y: Int, width: Int, height: Int): Bitmap {
+        //#if MC >= 26.2
+        //$$ if (format != GpuTexture.Format.RGBA8) {
+        //$$     throw UnsupportedOperationException("Currently only RGBA8 format is supported.")
+        //$$ }
+        //$$
+        //$$ val bufferSize = width * height * 4
+        //$$ val buffer = RenderSystem.getDevice().createBuffer(
+        //$$     { "readPixelColors buffer" },
+        //$$     GpuBuffer.USAGE_COPY_DST or GpuBuffer.USAGE_MAP_READ,
+        //$$     bufferSize.toLong(),
+        //$$ )
+        //$$ try {
+        //$$     val commandEncoder = RenderSystem.getDevice().createCommandEncoder()
+        //$$     commandEncoder.copyTextureToBuffer(b3d, buffer, 0, {}, 0, x, y, width, height)
+        //$$     val fence = commandEncoder.createFence()
+        //$$     try {
+        //$$         commandEncoder.submit()
+        //$$         fence.awaitCompletion(Long.MAX_VALUE)
+        //$$     } finally {
+        //$$         fence.close()
+        //$$     }
+        //$$     buffer.map(true, false).use { mappedView ->
+        //$$         // Note: `mappedView` is only valid until closed by above `use`, so need to copy it before returning
+        //$$         val byteBuffer = ByteBuffer.allocate(bufferSize).put(mappedView.data())
+        //$$         return ByteBufferBitmap(width, height, byteBuffer)
+        //$$     }
+        //$$ } finally {
+        //$$     buffer.close()
+        //$$ }
+        //#else
         val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
         glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, colorReadFrameBuffer)
         glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, glId, 0)
@@ -133,9 +213,52 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
         glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, 0, 0)
         glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
         return result
+        //#endif
     }
 
     override fun readPixelDepths(x: Int, y: Int, width: Int, height: Int): FloatBuffer {
+        //#if MC >= 26.2
+        //$$ if (format != GpuTexture.Format.DEPTH32) {
+        //$$     throw UnsupportedOperationException("Currently only DEPTH32 format is supported.")
+        //$$ }
+        //$$
+        //$$ // B3D's copyTextureToBuffer doesn't work properly for depth textures, it always uses the color attachment
+        //$$ // of its internal framebuffer.
+        //$$ // The Vulkan one seems fine.
+        //$$ if (b3d is GlTexture) {
+        //$$     return readPixelDepthsOpenGl(x, y, width, height)
+        //$$ }
+        //$$
+        //$$ val bufferSize = width * height * 4
+        //$$ val buffer = RenderSystem.getDevice().createBuffer(
+        //$$     { "readPixelDepths buffer" },
+        //$$     GpuBuffer.USAGE_COPY_DST or GpuBuffer.USAGE_MAP_READ,
+        //$$     bufferSize.toLong(),
+        //$$ )
+        //$$ try {
+        //$$     val commandEncoder = RenderSystem.getDevice().createCommandEncoder()
+        //$$     commandEncoder.copyTextureToBuffer(b3d, buffer, 0, {}, 0, x, y, width, height)
+        //$$     val fence = commandEncoder.createFence()
+        //$$     try {
+        //$$         commandEncoder.submit()
+        //$$         fence.awaitCompletion(Long.MAX_VALUE)
+        //$$     } finally {
+        //$$         fence.close()
+        //$$     }
+        //$$     buffer.map(true, false).use { mappedView ->
+        //$$         // Note: `mappedView` is only valid until closed by above `use`, so need to copy it before returning
+        //$$         val byteBuffer = BufferUtils.createByteBuffer(bufferSize).put(mappedView.data())
+        //$$         return byteBuffer.rewind().asFloatBuffer()
+        //$$     }
+        //$$ } finally {
+        //$$     buffer.close()
+        //$$ }
+        //#else
+        return readPixelDepthsOpenGl(x, y, width, height)
+        //#endif
+    }
+
+    private fun readPixelDepthsOpenGl(x: Int, y: Int, width: Int, height: Int): FloatBuffer {
         val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
         glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, depthReadFrameBuffer)
         glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, glId, 0)

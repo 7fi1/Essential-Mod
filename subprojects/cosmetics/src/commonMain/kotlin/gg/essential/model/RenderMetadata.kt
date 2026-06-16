@@ -13,11 +13,12 @@ package gg.essential.model
 
 import gg.essential.model.backend.PlayerPose
 import gg.essential.model.backend.RenderBackend
+import gg.essential.model.light.Light
 
 data class RenderMetadata(
     val pose: PlayerPose,
     val skin: RenderBackend.Texture,
-    val light: Int,
+    val light: Light,
     val side: Side?,
     val hiddenBones: Set<String>,
     val positionAdjustment: Vector3,

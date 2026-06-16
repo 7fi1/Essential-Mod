@@ -819,12 +819,22 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
             EssentialSounds.INSTANCE.playScreenshotSound();
         }
 
-        //#if MC<=11202
-        screenshotMessageCallback(ScreenShotHelper.saveScreenshot(mc.mcDataDir, mc.displayWidth, mc.displayHeight, mc.getFramebuffer()));
-        //#elseif MC<11700
-        //$$  ScreenShotHelper.saveScreenshot(mc.gameDir, mc.getMainWindow().getWidth(), mc.getMainWindow().getHeight(), mc.getFramebuffer(), message -> screenshotMessageCallback(message));
+        //#if MC >= 1.16
+        //$$ ScreenShotHelper.saveScreenshot(
+        //$$     mc.gameDir,
+            //#if MC < 1.17
+            //$$ mc.getMainWindow().getWidth(),
+            //$$ mc.getMainWindow().getHeight(),
+            //#endif
+            //#if MC >= 26.2
+            //$$ mc.gameRenderer.mainRenderTarget(),
+            //#else
+            //$$ mc.getFramebuffer(),
+            //#endif
+        //$$     this::screenshotMessageCallback
+        //$$ );
         //#else
-        //$$  ScreenshotRecorder.saveScreenshot(mc.runDirectory, mc.getFramebuffer(), message -> screenshotMessageCallback(message));
+        screenshotMessageCallback(ScreenShotHelper.saveScreenshot(mc.mcDataDir, mc.displayWidth, mc.displayHeight, mc.getFramebuffer()));
         //#endif
 
         connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_TAKEN"));

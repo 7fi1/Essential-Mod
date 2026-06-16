@@ -9,25 +9,19 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
-package gg.essential.connectionmanager.common.packet.social;
+package gg.essential.connectionmanager.common.packet.profile;
 
-import gg.essential.lib.gson.annotations.SerializedName;
 import gg.essential.connectionmanager.common.packet.Packet;
-import org.jetbrains.annotations.Nullable;
 
-public class ClientSocialDiscordRequestJoinServerResponsePacket extends Packet {
+public class ServerProfileLastDisconnectVisibilityPacket extends Packet {
 
-    @SerializedName("a")
-    @Nullable
-    private final String address;
+    private final boolean state;
 
-    public ClientSocialDiscordRequestJoinServerResponsePacket(@Nullable final String address) {
-        this.address = address;
+    public ServerProfileLastDisconnectVisibilityPacket(final boolean state) {
+        this.state = state;
     }
 
-    @Nullable
-    public String getAddress() {
-        return this.address;
+    public boolean getState() {
+        return this.state;
     }
-
 }

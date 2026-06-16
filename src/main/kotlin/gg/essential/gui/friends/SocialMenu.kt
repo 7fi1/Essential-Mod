@@ -336,6 +336,10 @@ class SocialMenu(
 
         @JvmStatic
         fun getInstance(): SocialMenu? {
+            //#if MC >= 26.2
+            //$$ @Suppress("SENSELESS_COMPARISON")
+            //$$ if (net.minecraft.client.Minecraft.getInstance().gui == null) return null
+            //#endif
             return GuiUtil.openedScreen() as? SocialMenu
         }
     }

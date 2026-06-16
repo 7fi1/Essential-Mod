@@ -20,8 +20,10 @@ import gg.essential.model.RenderMetadata
 import gg.essential.model.backend.PlayerPose
 import gg.essential.model.backend.RenderBackend
 import gg.essential.model.backend.atlas.TextureAtlas
+import gg.essential.model.light.Light
 import gg.essential.model.molang.MolangQueryEntity
 import gg.essential.model.util.UMatrixStack
+import gg.essential.model.util.UVertexConsumer
 import gg.essential.network.cosmetics.Cosmetic
 
 class WearablesManager(
@@ -126,29 +128,34 @@ class WearablesManager(
 
     fun render(
         matrixStack: UMatrixStack,
-        queue: RenderBackend.CommandQueue,
+        queueProvider: CommandQueueProvider,
+        light: Light,
         pose: PlayerPose,
         skin: RenderBackend.Texture,
         parts: Set<EnumPart> = EnumPart.values().toSet(),
     ) {
         val atlas = translucentTextureAtlas
         for ((_, model) in models) {
+            val queue = queueProvider.forCosmetic(model.cosmetic.id)
             val modelQueue = if (model.model.translucent && atlas != null) {
-                RenderBackend.CommandQueue { texture, translucent, emissive, render ->
-                    queue.submit(atlas.atlasTexture, translucent, emissive) { vertexConsumer ->
-                        render(atlas.offsetVertexConsumer(texture, vertexConsumer))
+                object : RenderBackend.CommandQueue by queue {
+                    override fun submit(texture: RenderBackend.Texture, translucent: Boolean, emissive: Boolean, render: (UVertexConsumer) -> Unit) {
+                        queue.submit(atlas.atlasTexture, translucent, emissive) { vertexConsumer ->
+                            render(atlas.offsetVertexConsumer(texture, vertexConsumer))
+                        }
                     }
                 }
             } else {
                 queue
             }
-            render(matrixStack, modelQueue, model, pose, skin, parts)
+            render(matrixStack, modelQueue, light, model, pose, skin, parts)
         }
     }
 
     fun render(
         matrixStack: UMatrixStack,
         queue: RenderBackend.CommandQueue,
+        light: Light,
         model: ModelInstance,
         pose: PlayerPose,
         skin: RenderBackend.Texture,
@@ -159,7 +166,7 @@ class WearablesManager(
         val renderMetadata = RenderMetadata(
             pose,
             skin,
-            0,
+            light,
             state.sides[cosmetic.id],
             state.hiddenBones[cosmetic.id] ?: emptySet(),
             state.getPositionAdjustment(cosmetic),
@@ -178,6 +185,10 @@ class WearablesManager(
                 pendingEvents.clear()
             }
         }
+    }
+
+    fun interface CommandQueueProvider {
+        fun forCosmetic(cosmetic: CosmeticId): RenderBackend.CommandQueue
     }
 
     companion object {

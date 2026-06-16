@@ -16,7 +16,6 @@ import gg.essential.cosmetics.CosmeticsState;
 import gg.essential.cosmetics.EquippedCosmetic;
 import gg.essential.gui.common.CosmeticHoverOutlineEffect;
 import gg.essential.mod.cosmetics.CosmeticSlot;
-import gg.essential.network.cosmetics.Cosmetic;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.layers.LayerCape;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static gg.essential.mod.cosmetics.CapeDisabledKt.CAPE_DISABLED_COSMETIC;
+import static gg.essential.mod.cosmetics.CapeDisabledKt.CAPE_DISABLED_COSMETIC_ID;
 
 //#if MC>=12109
 //$$ import net.minecraft.client.render.command.OrderedRenderCommandQueue;
@@ -106,9 +105,9 @@ public abstract class Mixin_CosmeticHoverOutline_Cape
         //#endif
         CosmeticsState cosmeticsState = cState.wearablesManager().getState();
         EquippedCosmetic equippedCosmetic = cosmeticsState.getCosmetics().get(CosmeticSlot.CAPE);
-        Cosmetic cosmetic = equippedCosmetic != null ? equippedCosmetic.getCosmetic() : null;
+        String cosmetic = equippedCosmetic != null ? equippedCosmetic.getCosmetic().getId() : null;
         if (cosmetic == null) {
-            cosmetic = CAPE_DISABLED_COSMETIC;
+            cosmetic = CAPE_DISABLED_COSMETIC_ID;
         }
 
         if (!outlinePass) {
