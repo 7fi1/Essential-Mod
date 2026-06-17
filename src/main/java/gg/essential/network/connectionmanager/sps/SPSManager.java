@@ -350,7 +350,11 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             //#if MC >= 26.2
             //$$ MinecraftServer.MultiplayerScope.LAN,
             //#endif
-        //$$     currentGameMode,
+            //#if MC >= 26.2
+            //$$ null,
+            //#else
+            //$$ currentGameMode,
+            //#endif
         //$$     false,
         //$$     port
         //$$ );
