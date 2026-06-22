@@ -485,6 +485,21 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
     override val outputDepthTextureOverride: GpuTexture? get() = null
     //#endif
 
+    override val irisReversesZ: Boolean
+        //#if MC >= 26.2
+        //$$ get() {
+        //$$     if (ModLoaderUtil.isModLoaded("iris")) {
+        //$$         // Separate method for class loading reasons
+        //$$         fun value() = net.irisshaders.iris.api.v0.IrisApi.getInstance().isShaderPackInUse
+        //$$         return value()
+        //$$     } else {
+        //$$         return false
+        //$$     }
+        //$$ }
+        //#else
+        get() = false
+        //#endif
+
     override val isZZeroToOne: Boolean
         //#if MC >= 26.2
         //$$ get() = RenderSystem.getDevice().deviceInfo.isZZeroToOne

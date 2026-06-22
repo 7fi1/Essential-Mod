@@ -317,7 +317,9 @@ open class UI3DPlayer(
     private fun drawWithOrthographicProjection(stack: UMatrixStack) {
         if (platform.usesReversedZ) {
             clearDepthTexture()
-            stack.scale(1f, 1f, -1f)
+            if (!platform.irisReversesZ) {
+                stack.scale(1f, 1f, -1f)
+            }
         }
 
         // Center player within component
@@ -407,10 +409,13 @@ open class UI3DPlayer(
         )
         projectionMatrix.scale(scaleX, scaleY, 1f)
         // For older versions, we use gluPerspective on the OpenGL stack itself
-        //#if MC >= 26.2
-        //$$ projectionMatrix.peek().model.mul(Matrix4f().perspective(Math.toRadians(camera.fov.toDouble()).toFloat(), getWidth() / getHeight(), 20f, 0.5f, RenderSystem.getDevice().deviceInfo.isZZeroToOne))
-        //#elseif MC>=11903
-        //$$ projectionMatrix.peek().model.mul(Matrix4f().perspective(Math.toRadians(camera.fov.toDouble()).toFloat(), getWidth() / getHeight(), 0.5f, 20f))
+        //#if MC>=11903
+        //$$ var zNear = 0.5f
+        //$$ var zFar = 20f
+        //$$ if (platform.usesReversedZ && !platform.irisReversesZ) {
+        //$$     zNear = zFar.also { zFar = zNear }
+        //$$ }
+        //$$ projectionMatrix.peek().model.mul(Matrix4f().perspective(Math.toRadians(camera.fov.toDouble()).toFloat(), getWidth() / getHeight(), zNear, zFar, platform.isZZeroToOne))
         //#elseif MC>=11400
         //$$ projectionMatrix.peek().model.mul(Matrix4f.perspective(camera.fov.toDouble(), getWidth() / getHeight(), 0.5f, 20f))
         //#endif
@@ -1178,7 +1183,13 @@ open class UI3DPlayer(
         // We put the logical camera far away such that any facing-towards-camera logic (e.g. billboard particles,
         // transparency sorting, etc.) will behave close enough to correctly that we don't need to special case
         // orthographic projection in all of them.
-        private const val ORTHOGRAPHIC_CAMERA_DISTANCE = 100f
+        // Note: Some servers (CubeCraft and OriginRealms) have custom resource packs which override the entity core
+        //       shader with one which treat certain vertices (those that use a 64 pixels wide texture, are rendered
+        //       with orthographic projection, and have Z < -100) completely differently, to render custom geometry.
+        //       This can corrupt our menu player if it happens to fit all these conditions, which it does when
+        //       this camera distance is close to 100 or greater.
+        //       As such, a value substantially below 100 is chosen, so none of our geometry ends up with z < -100.
+        private const val ORTHOGRAPHIC_CAMERA_DISTANCE = 80f
 
         // Padding constant in terms of percentage of additional width and height.
         // This accounts for both the extra space needed for rotation, as well as

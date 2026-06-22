@@ -179,8 +179,20 @@ interface GuiEssentialPlatform {
      * See https://developer.nvidia.com/blog/visualizing-depth-precision/.
      *
      * Note that Elementa uses regular Z on all versions.
+     *
+     * Note that Iris will revert to regular Z when a shader pack is active. That however will not be reflected by
+     * this property, because it will also automatically flip all your depth values when interacting via B3D.
+     * Our GpuTexture will also automatically flip depth values accordingly.
+     * This change is however observable when reading from a depth texture in a shader, so one needs to account for it
+     * there. See [irisReversesZ].
      */
     val usesReversedZ: Boolean get() = mcVersion >= 26_02_00
+
+    /**
+     * Whether Iris is presently reversing Z.
+     * Happens on 26.2+ when a shader pack is active. See the respective paragraph in [usesReversedZ].
+     */
+    val irisReversesZ: Boolean
 
     /**
      * Whether clip space is [-1, 1] (like conventional OpenGL) or [0, 1] (like Vulkan).

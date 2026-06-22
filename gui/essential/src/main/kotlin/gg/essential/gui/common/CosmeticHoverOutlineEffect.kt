@@ -161,6 +161,7 @@ class CosmeticHoverOutlineEffect(
             texture("TargetSampler", renderResult.depth.ucView, UGpuSampler.NEAREST)
             uniform("OneTexel", 1f / renderResult.color.width, 1f / renderResult.color.height)
             uniform("OutlineWidth", UMinecraft.guiScale * 2)
+            uniform("ReversedZ", if (platform.usesReversedZ && !platform.irisReversesZ) 1 else 0)
         }
     }
 
@@ -271,10 +272,16 @@ class CosmeticHoverOutlineEffect(
             uniform sampler2D TargetSampler;
             uniform vec2 OneTexel;
             uniform int OutlineWidth;
+            uniform int ReversedZ;
             varying vec2 texCoord;
             
             float depth2D(sampler2D s, vec2 coord) {
-                return ${if (platform.usesReversedZ) "1 -" else ""} texture2D(s, coord).r;
+                float z = texture2D(s, coord).r;
+                if (ReversedZ == 1) {
+                    return 1 - z;
+                } else {
+                    return z;
+                }
             }
             
             vec4 query(vec2 offset) {

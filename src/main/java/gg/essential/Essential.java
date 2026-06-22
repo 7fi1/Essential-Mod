@@ -34,6 +34,7 @@ import gg.essential.event.client.PostInitializationEvent;
 import gg.essential.event.client.PreInitializationEvent;
 import gg.essential.event.client.ReAuthEvent;
 import gg.essential.event.essential.TosAcceptedEvent;
+import gg.essential.event.gui.GuiDrawScreenEvent;
 import gg.essential.event.render.RenderTickEvent;
 import gg.essential.forge.EssentialForgeMod;
 import gg.essential.gui.EssentialPalette;
@@ -86,6 +87,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+//#if MC == 26.2
+//$$ import org.lwjgl.opengl.ARBClipControl;
+//$$ import org.lwjgl.opengl.GL;
+//#endif
 
 //#if MC>=11400
 //#else
@@ -225,6 +231,23 @@ public class Essential implements EssentialAPI {
     @Subscribe
     public void postInit(PostInitializationEvent event) {
         gameRules = new EssentialGameRules();
+
+        // Workaround for Iris 1.11.1 on 26.2 not properly setting clip control on boot when a shader pack is active
+        EVENT_BUS.register(new Object() {
+            @Subscribe
+            public void handleDraw(GuiDrawScreenEvent.Priority event) {
+                //#if MC == 26.3
+                //$$ TODO check if this is still needed
+                //#else
+                //#if MC == 26.2
+                //$$ if (ModLoaderUtil.INSTANCE.isModLoaded("iris") && !GuiEssentialPlatform.Companion.getPlatform().isZZeroToOne() && GL.getCapabilities().GL_ARB_clip_control) {
+                //$$     ARBClipControl.glClipControl(ARBClipControl.GL_LOWER_LEFT, ARBClipControl.GL_NEGATIVE_ONE_TO_ONE);
+                //$$ }
+                //#endif
+                //#endif
+                EVENT_BUS.unregister(this);
+            }
+        });
     }
 
     public void registerListener(Object o) {

@@ -13,6 +13,7 @@ package gg.essential.util
 
 import gg.essential.model.util.Color
 import gg.essential.universal.UGraphics
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.GpuTexture
 import gg.essential.util.image.bitmap.Bitmap
 import gg.essential.util.image.bitmap.MutableBitmap
@@ -340,6 +341,11 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
                 GL_FLOAT,
                 floatBuffer,
             )
+            if (platform.irisReversesZ) {
+                for (i in 0 until width * height) {
+                    floatBuffer.put(i, 1 - floatBuffer.get(i))
+                }
+            }
             return floatBuffer
         }
     }
